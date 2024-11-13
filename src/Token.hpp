@@ -12,18 +12,51 @@ namespace yapl {
 enum class TOKEN_TYPE
 {
     DEFAULT = -1,
-    PLUS = 0,
-    MINUS,
-    MUL,
-    DIV,
-    LPAREN,
-    RPAREN,
-    SQOUTE,
-    DQOUTE,
-    IDENTIFIER,
+    // LITERALS
     INTEGER,
     FLOAT,
     STRING,
+    FSTRING, // ????
+    BOOL,
+
+    // OPERATORS
+    PLUS,
+    MINUS,
+    TIMES,
+    SLASH,
+    PERIOD,
+    NOT,
+    EQ,
+    LT,
+    GT,
+    LQ,
+    GQ,
+    ARROW, // =>
+
+    // SEPARATORS
+    LPAREN,
+    RPAREN,
+    LBRACK,
+    RBRACK,
+    LSQBRACK,
+    RSQBRACK,
+    SEMICOLON,
+    COMMA,
+
+    // KEYWORDS
+    IF,
+    ELSE,
+    FOR,
+    FN,
+    VAR,
+    LET,
+    CONST,
+    RETURN,
+    WHILE,
+
+    // UNIQUE
+    IDENTIFIER,
+    TT_EOF,
 };
 
 struct Token

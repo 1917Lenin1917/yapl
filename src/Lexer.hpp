@@ -25,8 +25,14 @@ public:
 
 private:
     Token make_number();
+    Token make_string();
+    Token make_format_string();
+    Token make_identifier_or_keyword();
 
 };
+
+bool is_numeric(char c);
+bool is_letter(char c);
 
 }
 

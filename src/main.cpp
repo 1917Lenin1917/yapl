@@ -5,7 +5,7 @@
 
 int main()
 {
-    const char* text = "(111111 + 22) * 3 / 69.69";
+    const char* text = "fn bar() { const foo = 23; return `{foo}`; }";
     yapl::Lexer lexer {text};
     auto tokens = lexer.make_tokens();
 
