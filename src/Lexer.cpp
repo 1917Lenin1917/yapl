@@ -14,6 +14,7 @@ std::vector<Token> Lexer::make_tokens()
     while (m_pos != text_len)
     {
         m_pos += 1;
+        if (m_pos == text_len) { return tokens; }
         switch (char c = m_text[m_pos])
         {
             case '\0': { tokens.emplace_back(TOKEN_TYPE::TT_EOF); break; }

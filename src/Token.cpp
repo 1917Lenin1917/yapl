@@ -18,7 +18,7 @@ std::string ttype_to_string(TOKEN_TYPE tt)
         case TOKEN_TYPE::BOOL:       { return "BOOL"; }
 
         // OPERATORS
-        case TOKEN_TYPE::PLUS:       { return "PLUS"; }
+        case TOKEN_TYPE::PLUS:       { return std::string("PLUS"); }
         case TOKEN_TYPE::MINUS:      { return "MINUS"; }
         case TOKEN_TYPE::TIMES:      { return "TIMES"; }
         case TOKEN_TYPE::SLASH:      { return "SLASH"; }
@@ -64,6 +64,7 @@ std::string print_token(const Token &token)
 {
     if (token.value != nullptr)
         return std::format("{}:{}", ttype_to_string(token.type), token.value);
-    return std::format("{}", ttype_to_string(token.type));
+    // return std::format("{}", ttype_to_string(token.type));
+    return ttype_to_string(token.type);
 }
 }

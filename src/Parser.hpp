@@ -8,23 +8,27 @@
 #include <vector>
 
 #include "Token.hpp"
+#include "Interpreter.hpp"
 
+using namespace yapl;
 
 namespace yapl {
 
 class BaseASTNode
 {
 public:
+  virtual ~BaseASTNode() = default;
+
   BaseASTNode() = default;
 
   virtual std::string print() = 0;
-  virtual int evaluate() = 0;
+  virtual int visit(Visitor& visitor) = 0;
 };
 
 class LiteralASTNode : public BaseASTNode
 {
-  Token token;
 public:
+  Token token;
   explicit LiteralASTNode(const Token& t)
     :BaseASTNode(), token(t) {}
 
@@ -32,7 +36,7 @@ public:
   {
     return "literal:(" + std::string(token.value) + ")";
   }
-  int evaluate() override
+  int visit(Visitor& visitor) override
   {
     // TODO: add more types
     return std::stoi(token.value);
@@ -51,11 +55,19 @@ public:
     return "identifier:(" + std::string(token.value) + ")";
   }
 
-  int evaluate() override { return 0; }
+  int visit(Visitor& visitor) override
+  {
+    if (visitor.interpreter.vars.contains(token.value))
+      return visitor.interpreter.vars[token.value]->value;
+
+    std::cout << "Unknown variable " << token.value << " ";
+    return 0; // Encapsulate later
+  }
 };
 
 class VariableASTNode : public BaseASTNode
 {
+public:
   Token type;
   Token name;
   std::unique_ptr<BaseASTNode> value;
@@ -70,24 +82,44 @@ public:
     return "variable:(" + print_token(type) + " " + name.value + " = " + value->print() + ")";
   }
 
-  int evaluate() override { return 0; }; // TODO
+  int visit(Visitor& visitor) override
+  {
+    if (visitor.interpreter.vars.contains(name.value))
+    {
+      std::cout << "Var already defined!\n";
+      return 0;
+    }
+    int v = 0;
+    if (value != nullptr)
+      v = value->visit(visitor);
+    visitor.interpreter.vars[name.value] = std::make_unique<Variable>(type.type == TOKEN_TYPE::CONST, v);
+
+    return v;
+  }; // TODO
 };
 
 class UnaryOpASTNode : public BaseASTNode
 {
   Token op;
   std::unique_ptr<BaseASTNode> RHS;
+public:
+  UnaryOpASTNode(const Token& t, std::unique_ptr<BaseASTNode> RHS)
+    :BaseASTNode(), op(t), RHS(std::move(RHS)) {}
 
   std::string print() override
   {
     return "unary:(" + print_token(op) + " " + RHS->print() + ")";
   }
 
-  int evaluate() override
+  int visit(Visitor& visitor) override
   {
-    if (op.type == TOKEN_TYPE::MINUS)
-      return -RHS->evaluate();
-    return 0; // ???
+    switch (op.type)
+    {
+      case TOKEN_TYPE::MINUS: { return -RHS->visit(visitor); }
+      case TOKEN_TYPE::PLUS: { return +RHS->visit(visitor); }
+      case TOKEN_TYPE::NOT: { return !RHS->visit(visitor); }
+      default: { std::cout << "Unary unhandled default\n"; return 0; }
+    }
   }
 };
 
@@ -104,21 +136,76 @@ public:
     return "binary:(" + LHS->print() + " " + print_token(op) + " " + RHS->print() + ")";
   }
 
-  int evaluate() override
+  int visit(Visitor& visitor) override
   {
-    auto lhs = LHS->evaluate();
-    auto rhs = RHS->evaluate();
+    auto lhs = LHS->visit(visitor);
+    auto rhs = RHS->visit(visitor);
     if (op.type == TOKEN_TYPE::PLUS)
-      return LHS->evaluate() + RHS->evaluate();
+      return lhs + rhs;
     if (op.type == TOKEN_TYPE::TIMES)
-      return LHS->evaluate() * RHS->evaluate();
+      return lhs * rhs;
     if (op.type == TOKEN_TYPE::MINUS)
-      return LHS->evaluate() - RHS->evaluate();
+      return lhs - rhs;
     if (op.type == TOKEN_TYPE::SLASH)
-      return LHS->evaluate() / RHS->evaluate();
+      return lhs / rhs;
   }
 };
 
+class StatementASTNode : public BaseASTNode
+{
+  Token identifier;
+  std::unique_ptr<BaseASTNode> RHS;
+public:
+  StatementASTNode(const Token& t, std::unique_ptr<BaseASTNode> r)
+    :BaseASTNode(), identifier(t), RHS(std::move(r)) {}
+
+  std::string print() override
+  {
+    return "stmnt:(" + print_token(identifier) + " " + RHS->print() + ")";
+  }
+  int visit(Visitor& visitor) override
+  {
+    if (visitor.interpreter.vars.contains(identifier.value) )
+    {
+      if (visitor.interpreter.vars[identifier.value]->is_constant)
+      {
+        std::cout << "Var is constant!\n";
+        return 0;
+      }
+      visitor.interpreter.vars[identifier.value]->value = RHS->visit(visitor);
+      return visitor.interpreter.vars[identifier.value]->value;
+    }
+    std::cout << "Unknown identifier " << identifier.value << "\n";
+    return 0;
+  }; // What about types??
+};
+
+class RootASTNode : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<BaseASTNode>> nodes;
+  RootASTNode()
+    :BaseASTNode() {}
+
+  std::string print() override
+  {
+    std::string res{"root:(\n"};
+    for (const auto& i : nodes)
+    {
+      res += " " + i->print() + ";\n";
+    }
+    return res + ")";
+  }
+
+  int visit(Visitor& visitor) override
+  {
+    for (int i = 0; i < nodes.size(); i++)
+    {
+      std::cout << nodes[i]->visit(visitor) << "\n";
+    }
+    return 0;
+  }
+};
 class Parser
 {
 private:
@@ -129,8 +216,7 @@ public:
   explicit Parser(const std::vector<Token>& tokens)
     :m_tokens(tokens), m_pos(0) {}
 
-  std::unique_ptr<BaseASTNode> generate_ast();
-  Token advance();
+  void advance();
 
   std::unique_ptr<BaseASTNode> parse_literal()
   {
@@ -162,8 +248,23 @@ public:
       case TOKEN_TYPE::BOOL: { return parse_literal(); }
       case TOKEN_TYPE::IDENTIFIER: { return parse_identifier(); }
       case TOKEN_TYPE::LPAREN: { return parse_paren_expr(); }
-
+      case TOKEN_TYPE::PLUS:
+      case TOKEN_TYPE::MINUS:
+      case TOKEN_TYPE::NOT: { return parse_unary(); }
     }
+  }
+
+  std::unique_ptr<BaseASTNode> parse_unary()
+  {
+    auto op = m_tokens[m_pos];
+    advance();
+    std::unique_ptr<BaseASTNode> expr;
+    if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
+      expr = parse_paren_expr();
+    else
+      expr = parse_primary_expr();
+
+    return std::make_unique<UnaryOpASTNode>(op, std::move(expr));
   }
 
   std::unique_ptr<BaseASTNode> parse_paren_expr()
@@ -244,6 +345,52 @@ public:
     advance();
     auto expr = parse_expr();
     return std::make_unique<VariableASTNode>(decl_token, name_identifier, std::move(expr));
+  }
+
+  // statement :: identifier = expr
+  // statement :: identifier
+  std::unique_ptr<BaseASTNode> parse_statement_or_ident()
+  {
+    const auto& identifier = m_tokens[m_pos];
+    advance(); // eat id
+    if (m_tokens[m_pos].type != TOKEN_TYPE::EQ)
+    {
+      m_pos--;
+      return parse_expr();
+      // return std::make_unique<IdentifierASTNode>(identifier); // if there is no =, then this is just an identifier, e.g. 1 + foo
+      // std::cout << "Expected eq\n";
+      // return nullptr;
+    }
+    advance(); // eat eq
+    auto expr = parse_expr();
+
+    std::unique_ptr<StatementASTNode> stmnt = std::make_unique<StatementASTNode>(identifier, std::move(expr));
+    return std::move(stmnt);
+  }
+
+  // root = (var_decl | expr | ... ;)*
+  std::unique_ptr<BaseASTNode> parse_root()
+  {
+    auto root = std::make_unique<RootASTNode>();
+    while (m_pos < m_tokens.size())
+    {
+      switch (m_tokens[m_pos].type)
+      {
+        case TOKEN_TYPE::TT_EOF: { return root; }
+        case TOKEN_TYPE::VAR:
+        case TOKEN_TYPE::CONST:
+        case TOKEN_TYPE::LET: { root->nodes.push_back(std::move(parse_var_decl())); break; }
+        case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; }
+        default: { root->nodes.push_back(std::move(parse_expr())); break; }
+      }
+      if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+      {
+        std::cout << "Excpected a semicolon;\n";
+        return nullptr;
+      }
+      advance(); // eat ;
+    }
+    return root;
   }
 
   //
