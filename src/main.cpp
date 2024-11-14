@@ -2,16 +2,17 @@
 #include <iostream>
 
 #include "Lexer.hpp"
+#include "Parser.hpp"
+
+using namespace yapl;
 
 int main()
 {
-    const char* text = "fn bar() { const foo = 23; return `{foo}`; }";
-    yapl::Lexer lexer {text};
+    const char* text = "const penis = 420 * (foo + 27 * 222) / 123.0 - bar";
+    Lexer lexer {text};
     auto tokens = lexer.make_tokens();
 
-    for (const auto& token : tokens)
-    {
-        std::cout << yapl::print_token(token) << " ";
-    }
-
+    Parser parser {tokens};
+    auto ast = parser.parse_var_decl();
+    std::cout << ast->print();
 }

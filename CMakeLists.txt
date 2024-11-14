@@ -7,7 +7,9 @@ include_directories(${CMAKE_SOURCE_DIR}/includes)
 
 add_executable(yapl src/main.cpp
         src/Lexer.cpp
-        src/Token.cpp)
+        src/Token.cpp
+        src/Parser.cpp
+        src/Parser.hpp)
 
 add_subdirectory(externals/Catch2)
 add_executable(tests
