@@ -18,6 +18,7 @@ public:
   BaseASTNode() = default;
 
   virtual std::string print() = 0;
+  virtual int evaluate() = 0;
 };
 
 class LiteralASTNode : public BaseASTNode
@@ -30,6 +31,11 @@ public:
   std::string print() override
   {
     return "literal:(" + std::string(token.value) + ")";
+  }
+  int evaluate() override
+  {
+    // TODO: add more types
+    return std::stoi(token.value);
   }
 };
 
@@ -44,6 +50,8 @@ public:
   {
     return "identifier:(" + std::string(token.value) + ")";
   }
+
+  int evaluate() override { return 0; }
 };
 
 class VariableASTNode : public BaseASTNode
@@ -61,6 +69,8 @@ public:
       return "variable:(" + print_token(type) + " " + name.value + ")";
     return "variable:(" + print_token(type) + " " + name.value + " = " + value->print() + ")";
   }
+
+  int evaluate() override { return 0; }; // TODO
 };
 
 class UnaryOpASTNode : public BaseASTNode
@@ -71,6 +81,13 @@ class UnaryOpASTNode : public BaseASTNode
   std::string print() override
   {
     return "unary:(" + print_token(op) + " " + RHS->print() + ")";
+  }
+
+  int evaluate() override
+  {
+    if (op.type == TOKEN_TYPE::MINUS)
+      return -RHS->evaluate();
+    return 0; // ???
   }
 };
 
@@ -85,6 +102,20 @@ public:
   std::string print() override
   {
     return "binary:(" + LHS->print() + " " + print_token(op) + " " + RHS->print() + ")";
+  }
+
+  int evaluate() override
+  {
+    auto lhs = LHS->evaluate();
+    auto rhs = RHS->evaluate();
+    if (op.type == TOKEN_TYPE::PLUS)
+      return LHS->evaluate() + RHS->evaluate();
+    if (op.type == TOKEN_TYPE::TIMES)
+      return LHS->evaluate() * RHS->evaluate();
+    if (op.type == TOKEN_TYPE::MINUS)
+      return LHS->evaluate() - RHS->evaluate();
+    if (op.type == TOKEN_TYPE::SLASH)
+      return LHS->evaluate() / RHS->evaluate();
   }
 };
 
@@ -145,7 +176,7 @@ public:
     if (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
     {
       // TODO: add better logger
-      std::cout << "Expected a ) token\n";
+      std::cerr << "Expected a ) token at " << __FILE__ << " " <<  __LINE__ << " " << __func__ << "\n";
       return nullptr;
     }
     advance();

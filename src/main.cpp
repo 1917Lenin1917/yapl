@@ -6,13 +6,14 @@
 
 using namespace yapl;
 
+
 int main()
 {
-    const char* text = "const penis = 420 * (foo + 27 * 222) / 123.0 - bar";
+    const char* text = "(1 + (8 * 2))";
     Lexer lexer {text};
     auto tokens = lexer.make_tokens();
 
     Parser parser {tokens};
-    auto ast = parser.parse_var_decl();
-    std::cout << ast->print();
+    auto ast = parser.parse_expr();
+    std::cout << ast->print() << "\n" << ast->evaluate();
 }
