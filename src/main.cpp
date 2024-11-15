@@ -1,7 +1,5 @@
 #include <chrono>
-#include <format>
 #include <iostream>
-#include <fstream>
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
@@ -28,12 +26,12 @@ void run()
 
 int main()
 {
-  // run();
-  // return 0;
+  run();
+  return 0;
   // std::ifstream t("C:\\_projects\\yapl\\test.txt");
   // std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
   // std::string text {"fn penis(): int { let a = 5; }; fn bebra(a: int, b: int): int { a + b; };"};
-  std::string text{"bebra();"};
+  std::string text{"fn foo(a: int, b: int): int { return a + b; }; foo(5, 5);"};
 
   Lexer lexer {text};
   auto ltime1 = std::chrono::system_clock::now();

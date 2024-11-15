@@ -124,7 +124,7 @@ Token Lexer::make_identifier_or_keyword()
     {
         m_pos += 1;
         char c = m_text[m_pos];
-        if (!(is_letter(c) || is_numeric(c)))
+        if (!(is_letter(c) || is_numeric(c) || c == '_'))
         {
             m_pos--;
             break;
