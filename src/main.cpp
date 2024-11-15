@@ -28,11 +28,12 @@ void run()
 
 int main()
 {
-  run();
-  return 0;
+  // run();
+  // return 0;
   // std::ifstream t("C:\\_projects\\yapl\\test.txt");
   // std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
-  std::string text {"--1"};
+  // std::string text {"fn penis(): int { let a = 5; }; fn bebra(a: int, b: int): int { a + b; };"};
+  std::string text{"bebra();"};
 
   Lexer lexer {text};
   auto ltime1 = std::chrono::system_clock::now();
@@ -46,6 +47,7 @@ int main()
   auto ast = parser.parse_root();
   auto rtime2 = std::chrono::system_clock::now();
   std::cout << "Parsing took: " << std::chrono::duration_cast<std::chrono::milliseconds>(rtime2-rtime1) << "\n";
+  std::cout << std::endl;
   std::cout << ast->print() << "\n";
 
   Interpreter intp;

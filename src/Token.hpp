@@ -41,6 +41,7 @@ enum class TOKEN_TYPE
     LSQBRACK,
     RSQBRACK,
     SEMICOLON,
+    COLON,
     COMMA,
 
     // KEYWORDS

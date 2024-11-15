@@ -38,6 +38,7 @@ std::vector<Token> Lexer::make_tokens()
             case '[': { tokens.emplace_back(TOKEN_TYPE::LSQBRACK); break; }
             case ']': { tokens.emplace_back(TOKEN_TYPE::RSQBRACK); break; }
             case ';': { tokens.emplace_back(TOKEN_TYPE::SEMICOLON); break; }
+            case ':': { tokens.emplace_back(TOKEN_TYPE::COLON); break; }
             case ',': { tokens.emplace_back(TOKEN_TYPE::COMMA); break; }
             case '\'':
             case '\"': { tokens.push_back(make_string()); break; }

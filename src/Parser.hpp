@@ -180,6 +180,75 @@ public:
   }; // What about types??
 };
 
+class FunctionArgumentASTNode : public BaseASTNode
+{
+public:
+  Token name;
+  Token type;
+
+  FunctionArgumentASTNode(const Token& n, const Token& t)
+    :BaseASTNode(), name(n), type(t) {}
+
+
+  std::string print() override { return ""; };
+  int visit(Visitor &visitor) override { return 0; };
+};
+
+class FunctionArgumentListASTNode : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
+  FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args)
+    :BaseASTNode(), args(std::move(args)) {}
+
+  std::string print() override { return ""; };
+  int visit(Visitor &visitor) override { return 0; };
+};
+
+
+class FunctionDeclASTNode : public BaseASTNode
+{
+public:
+  Token name;
+  std::unique_ptr<FunctionArgumentListASTNode> args;
+  Token return_type;
+
+  FunctionDeclASTNode(const Token& n, std::unique_ptr<FunctionArgumentListASTNode> args, const Token& rt)
+    :BaseASTNode(), name(n), args(std::move(args)), return_type(rt) {}
+
+  std::string print() override { return ""; };
+  int visit(Visitor &visitor) override { return 0; };
+};
+
+// fn penis(a: uint64, b: str): str {
+//    return b * a;
+// }
+class ScopeASTNode : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<BaseASTNode>> nodes;
+  ScopeASTNode()
+    :BaseASTNode() {}
+
+  std::string print() override { return ""; };
+  int visit(Visitor &visitor) override { return 0; };
+};
+
+class FunctionASTNode : public BaseASTNode
+{
+public:
+  // std::unique_ptr<FunctionDeclASTNode> decl;
+  // std::unique_ptr<ScopeASTNode> body;
+  std::unique_ptr<BaseASTNode> decl;
+  std::unique_ptr<BaseASTNode> body;
+
+  FunctionASTNode(std::unique_ptr<BaseASTNode> decl, std::unique_ptr<BaseASTNode> body)
+    :BaseASTNode(), decl(std::move(decl)), body(std::move(body)) {}
+
+  std::string print() override { return ""; };
+  int visit(Visitor &visitor) override { return 0; };
+};
+
 class RootASTNode : public BaseASTNode
 {
 public:
@@ -349,23 +418,131 @@ public:
 
   // statement :: identifier = expr
   // statement :: identifier
+  // statement :: identifier()
+  // statement :: identifier(args...)
   std::unique_ptr<BaseASTNode> parse_statement_or_ident()
   {
     const auto& identifier = m_tokens[m_pos];
     advance(); // eat id
+    if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
+    {
+      // function call;
+      return nullptr; // TODO: add
+    }
     if (m_tokens[m_pos].type != TOKEN_TYPE::EQ)
     {
       m_pos--;
       return parse_expr();
-      // return std::make_unique<IdentifierASTNode>(identifier); // if there is no =, then this is just an identifier, e.g. 1 + foo
-      // std::cout << "Expected eq\n";
-      // return nullptr;
     }
     advance(); // eat eq
     auto expr = parse_expr();
 
     std::unique_ptr<StatementASTNode> stmnt = std::make_unique<StatementASTNode>(identifier, std::move(expr));
     return std::move(stmnt);
+  }
+
+  std::unique_ptr<FunctionArgumentListASTNode> parse_function_arguments()
+  {
+    if (m_tokens[m_pos].type != TOKEN_TYPE::LPAREN)
+    {
+      std::cout << "Expected ( after function identifier\n";
+      return nullptr;
+    }
+    advance(); // eat (
+    std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
+    while (m_pos < m_tokens.size())
+    {
+      if (m_tokens[m_pos].type == TOKEN_TYPE::RPAREN)
+      {
+        advance(); // eat )
+        break;
+      }
+      // parse an argument
+      Token identifier = m_tokens[m_pos];
+      if (identifier.type != TOKEN_TYPE::IDENTIFIER)
+      {
+        std::cout << "Expected argument name\n";
+        return nullptr;
+      }
+      advance(); // eat ident
+      if (m_tokens[m_pos].type != TOKEN_TYPE::COLON)
+      {
+        std::cout << "Expected a colon\n";
+        return nullptr;
+      }
+      advance(); // eat :
+      Token type = m_tokens[m_pos];
+      if (type.type != TOKEN_TYPE::IDENTIFIER)
+      {
+        std::cout << "Expected a type identifier\n";
+        return nullptr;
+      }
+      advance(); // eat type
+      if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+        advance(); // eat comma
+
+      args.push_back(std::move(std::make_unique<FunctionArgumentASTNode>(identifier, type)));
+    }
+    return std::move(std::make_unique<FunctionArgumentListASTNode>(args));
+  }
+
+  std::unique_ptr<BaseASTNode> parse_function_declaration()
+  {
+    advance(); // eat fn
+    auto fname = m_tokens[m_pos];
+    if (fname.type != TOKEN_TYPE::IDENTIFIER)
+    {
+      std::cout << "Expected an identifier after fn keyword\n";
+      return nullptr;
+    }
+    advance(); // eat identifier
+    auto fargs = parse_function_arguments();
+    if (fargs == nullptr)
+    {
+      std::cout << "Error parsing arguments";
+      return nullptr;
+    }
+    advance(); // eat :
+    // TODO: add checks later
+    auto ftype = m_tokens[m_pos];
+    advance(); // eat type
+
+    return std::move(std::make_unique<FunctionDeclASTNode>(fname, std::move(fargs), ftype));
+  }
+
+  std::unique_ptr<BaseASTNode> parse_scope()
+  {
+    // todo: add checks
+    advance(); // eat {
+    auto scope = std::make_unique<ScopeASTNode>();
+    while (m_pos < m_tokens.size())
+    {
+      switch (m_tokens[m_pos].type)
+      {
+        case TOKEN_TYPE::RBRACK: { advance(); return scope; }
+        case TOKEN_TYPE::VAR:
+        case TOKEN_TYPE::CONST:
+        case TOKEN_TYPE::LET: { scope->nodes.push_back(std::move(parse_var_decl())); break; }
+        case TOKEN_TYPE::IDENTIFIER: { scope->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
+        case TOKEN_TYPE::FN: { scope->nodes.push_back(std::move(parse_function())); break; }
+        default: { scope->nodes.push_back(std::move(parse_expr())); break; }
+      }
+      if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+      {
+        std::cout << "Excpected a semicolon;\n";
+        return nullptr;
+      }
+      advance(); // eat ;
+    }
+    return scope;
+  }
+
+  std::unique_ptr<BaseASTNode> parse_function()
+  {
+    auto decl = parse_function_declaration();
+    auto body = parse_scope();
+
+    return std::move(std::make_unique<FunctionASTNode>(std::move(decl), std::move(body)));
   }
 
   // root = (var_decl | expr | ... ;)*
@@ -380,7 +557,8 @@ public:
         case TOKEN_TYPE::VAR:
         case TOKEN_TYPE::CONST:
         case TOKEN_TYPE::LET: { root->nodes.push_back(std::move(parse_var_decl())); break; }
-        case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; }
+        case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
+        case TOKEN_TYPE::FN: { root->nodes.push_back(std::move(parse_function())); break; }
         default: { root->nodes.push_back(std::move(parse_expr())); break; }
       }
       if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)

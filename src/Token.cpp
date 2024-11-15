@@ -38,6 +38,7 @@ std::string ttype_to_string(TOKEN_TYPE tt)
         case TOKEN_TYPE::LSQBRACK:     { return "LSQBRACK"; }
         case TOKEN_TYPE::RSQBRACK:     { return "RSQBRACK"; }
         case TOKEN_TYPE::SEMICOLON:     { return "SEMICOLON"; }
+        case TOKEN_TYPE::COLON:     { return "COLON"; }
         case TOKEN_TYPE::COMMA:     { return "COMMA"; }
 
         // KEYWORDS
