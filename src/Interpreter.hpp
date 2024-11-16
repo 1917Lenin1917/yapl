@@ -24,6 +24,8 @@ struct Function
   std::unordered_map<std::string, std::unique_ptr<Variable>> vars;
 
 	std::unique_ptr<BaseASTNode> ast;
+	int return_value = -1;
+	bool should_return = false;
 };
 
 class Interpreter {

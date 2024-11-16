@@ -309,6 +309,9 @@ public:
 			auto& f_arg = visitor.interpreter.functions[name.value]->args[visitor.interpreter.functions[name.value]->arg_names[i]];
 			f_arg->value = args[i]->visit(visitor);
 		}
+	  //set defaults
+	  visitor.interpreter.functions[name.value]->should_return = false;
+	  visitor.interpreter.functions[name.value]->return_value = -1;
 
 		visitor.interpreter.active_func = name.value;
 		auto v = visitor.interpreter.functions[name.value]->ast->visit(visitor);
@@ -325,7 +328,17 @@ public:
 		:expr(std::move(e)) {}
 
 	std::string print() override { return "return:(" + expr->print() + ")"; }
-	int visit(Visitor &visitor) override { return expr->visit(visitor); }
+	int visit(Visitor &visitor) override
+	{
+	  auto var = expr->visit(visitor);
+    if (!visitor.interpreter.active_func.empty())
+    {
+      auto& func = visitor.interpreter.functions[visitor.interpreter.active_func];
+      func->should_return = true;
+      func->return_value = var;
+    }
+	  return var;
+	}
 };
 
 // fn penis(a: uint64, b: str): str {
@@ -350,6 +363,13 @@ public:
   int visit(Visitor &visitor) override 
 	{
 		for (const auto& i : nodes) {
+		  if (!visitor.interpreter.active_func.empty())
+		  {
+        auto& func = visitor.interpreter.functions[visitor.interpreter.active_func];
+		    if (func->should_return)
+		      return func->return_value;
+		  }
+
 			// return after we hit first return statement;
 			if (dynamic_cast<ReturnStatementASTNode*>(i.get()) != nullptr) {
 				return i->visit(visitor);
@@ -358,6 +378,12 @@ public:
 			// std::cout << i->visit(visitor) << " ";
 		}
 
+    if (!visitor.interpreter.active_func.empty())
+    {
+      auto& func = visitor.interpreter.functions[visitor.interpreter.active_func];
+      if (func->should_return)
+        return func->return_value;
+    }
 		return 0;
 	};
 };
