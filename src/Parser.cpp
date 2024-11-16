@@ -279,6 +279,28 @@ std::unique_ptr<BaseASTNode> Parser::parse_return()
 	return std::move(ret);
 }
 
+std::unique_ptr<BaseASTNode> Parser::parse_ifelse_statement()
+{
+	advance(); // eat if
+	auto condition = parse_expr();
+	auto true_scope = parse_scope();
+	if (m_pos < m_tokens.size() && m_tokens[m_pos].type == TOKEN_TYPE::ELSE)
+	{
+		advance(); // eat else
+		if (m_pos < m_tokens.size() && m_tokens[m_pos].type == TOKEN_TYPE::IF)
+		{
+			// this is another if statement then
+			auto false_scope = parse_ifelse_statement();
+			return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope), std::move(false_scope));
+		}
+		auto false_scope = parse_scope();
+		return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope), std::move(false_scope));
+	}
+	// if no else block
+	return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope));
+}
+
+
 std::unique_ptr<BaseASTNode> Parser::parse_scope()
 {
 	// todo: add checks
@@ -295,7 +317,8 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 			case TOKEN_TYPE::CONST:
 			case TOKEN_TYPE::LET: { scope->nodes.push_back(std::move(parse_var_decl())); break; }
 			case TOKEN_TYPE::IDENTIFIER: { scope->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
-			case TOKEN_TYPE::FN: { scope->nodes.push_back(std::move(parse_function())); break; }
+			// case TOKEN_TYPE::FN: { scope->nodes.push_back(std::move(parse_function())); break; }
+			case TOKEN_TYPE::IF: { scope->nodes.push_back(std::move(parse_ifelse_statement())); break; }
 			default: { scope->nodes.push_back(std::move(parse_expr())); break; }
 		}
 		if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
@@ -317,6 +340,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function()
 	return std::move(std::make_unique<FunctionASTNode>(std::move(decl), std::move(body)));
 }
 
+// this is sorta wrong, change later
 std::unique_ptr<BaseASTNode> Parser::parse_root()
 {
 	auto root = std::make_unique<RootASTNode>();
@@ -330,6 +354,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 			case TOKEN_TYPE::LET: { root->nodes.push_back(std::move(parse_var_decl())); break; }
 			case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
 			case TOKEN_TYPE::FN: { root->nodes.push_back(std::move(parse_function())); break; }
+			case TOKEN_TYPE::IF: { root->nodes.push_back(std::move(parse_ifelse_statement())); break; }
 			default: { root->nodes.push_back(std::move(parse_expr())); break; }
 		}
 		if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)

@@ -158,7 +158,17 @@ public:
       return lhs - rhs;
     if (op.type == TOKEN_TYPE::SLASH)
       return lhs / rhs;
-		return 0;
+    if (op.type == TOKEN_TYPE::LT)
+      return lhs < rhs;
+    if (op.type == TOKEN_TYPE::GT)
+      return lhs > rhs;
+    if (op.type == TOKEN_TYPE::LQ)
+      return lhs <= rhs;
+    if (op.type == TOKEN_TYPE::GQ)
+      return lhs >= rhs;
+    if (op.type == TOKEN_TYPE::EQ)
+      return lhs == rhs;
+		return -1;
   }
 };
 
@@ -373,6 +383,28 @@ public:
 	};
 };
 
+class IfElseExpressionASTNode : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> condition;
+  std::unique_ptr<BaseASTNode> true_scope;
+  std::unique_ptr<BaseASTNode> false_scope;
+
+  IfElseExpressionASTNode(std::unique_ptr<BaseASTNode> cond, std::unique_ptr<BaseASTNode> ts, std::unique_ptr<BaseASTNode> fs = nullptr)
+    :BaseASTNode(), condition(std::move(cond)), true_scope(std::move(ts)), false_scope(std::move(fs)) {}
+
+  std::string print() override
+  {
+    return "if:(" + condition->print() + " " + true_scope->print() + ")";
+  }
+  int visit(Visitor &visitor) override
+  {
+    if (condition->visit(visitor) == true)
+      return true_scope->visit(visitor);
+    return false_scope->visit(visitor);
+  }
+};
+
 class RootASTNode : public BaseASTNode
 {
 public:
@@ -429,6 +461,7 @@ public:
   std::unique_ptr<BaseASTNode> parse_statement_or_ident();
   std::unique_ptr<BaseASTNode> parse_function_arguments();
   std::unique_ptr<BaseASTNode> parse_function_declaration();
+  std::unique_ptr<BaseASTNode> parse_ifelse_statement();
   std::unique_ptr<BaseASTNode> parse_scope();
   std::unique_ptr<BaseASTNode> parse_function();
 
@@ -440,6 +473,11 @@ public:
   {
     switch (t.type)
     {
+      case TOKEN_TYPE::LT: { return 10; }
+      case TOKEN_TYPE::GT: { return 10; }
+      case TOKEN_TYPE::LQ: { return 10; }
+      case TOKEN_TYPE::GQ: { return 10; }
+      case TOKEN_TYPE::EQ: { return 10; }
       case TOKEN_TYPE::PLUS: { return 20; }
       case TOKEN_TYPE::MINUS: { return 20; }
       case TOKEN_TYPE::TIMES: { return 40; }

@@ -26,12 +26,13 @@ void run()
 
 int main()
 {
-  run();
-  return 0;
+  // run();
+  // return 0;
   // std::ifstream t("C:\\_projects\\yapl\\test.txt");
   // std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
   // std::string text {"fn penis(): int { let a = 5; }; fn bebra(a: int, b: int): int { a + b; };"};
-  std::string text{"fn foo(a: int, b: int): int { return a + b; }; foo(5, 5);"};
+  std::string text{"fn sign(a: int): int { if a > 0 { return 1; } else if a < 0 { return -1; } else { return 0; }; }; sign(100);"};
+  // std::string text{"a < b"};
 
   Lexer lexer {text};
   auto ltime1 = std::chrono::system_clock::now();
