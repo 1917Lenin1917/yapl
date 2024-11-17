@@ -1,0 +1,225 @@
+//
+// Created by lenin on 17.11.2024.
+//
+
+#pragma once
+
+#include <string>
+#include <iostream>
+#include <format>
+#include <memory>
+
+#include "Token.hpp"
+#include "Value.hpp"
+#include "Visitor.hpp"
+
+namespace yapl {
+class Visitor;
+
+class BaseASTNode
+{
+public:
+  virtual ~BaseASTNode() = default;
+
+  BaseASTNode() = default;
+
+  virtual std::string print() = 0;
+  virtual std::unique_ptr<Value> visit(Visitor& visitor) = 0;
+};
+
+class LiteralASTNode final : public BaseASTNode
+{
+public:
+  Token token;
+  explicit LiteralASTNode(const Token& t)
+    :BaseASTNode(), token(t) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+
+class IdentifierASTNode final : public BaseASTNode
+{
+public:
+  Token token;
+
+  explicit IdentifierASTNode(const Token& t)
+    :BaseASTNode(), token(t) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+
+class VariableASTNode final : public BaseASTNode
+{
+public:
+  Token type;
+  Token name;
+  std::unique_ptr<BaseASTNode> value;
+public:
+  explicit VariableASTNode(const Token& t, const Token& n, std::unique_ptr<BaseASTNode> v = nullptr)
+    : BaseASTNode(), type(t), name(n), value(std::move(v)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor& visitor) override;
+};
+
+
+class UnaryOpASTNode final : public BaseASTNode
+{
+public:
+  Token op;
+  std::unique_ptr<BaseASTNode> RHS;
+  UnaryOpASTNode(const Token& t, std::unique_ptr<BaseASTNode> RHS)
+    :BaseASTNode(), op(t), RHS(std::move(RHS)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor& visitor) override;
+};
+
+
+class BinaryOpASTNode final : public BaseASTNode
+{
+  Token op;
+  std::unique_ptr<BaseASTNode> LHS, RHS;
+public:
+  BinaryOpASTNode(const Token& token, std::unique_ptr<BaseASTNode> LHS, std::unique_ptr<BaseASTNode> RHS)
+    :BaseASTNode(), op(token), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+
+  std::string print() override;
+
+  std::unique_ptr<Value> visit(Visitor& visitor) override;
+};
+
+
+class StatementASTNode final : public BaseASTNode
+{
+  Token identifier;
+  std::unique_ptr<BaseASTNode> RHS;
+public:
+  StatementASTNode(const Token& t, std::unique_ptr<BaseASTNode> r)
+    :BaseASTNode(), identifier(t), RHS(std::move(r)) {}
+
+  std::string print() override;
+
+  std::unique_ptr<Value> visit(Visitor& visitor) override;
+};
+
+
+class FunctionArgumentASTNode final : public BaseASTNode
+{
+public:
+  Token name;
+  Token type;
+
+  FunctionArgumentASTNode(const Token& n, const Token& t)
+    :BaseASTNode(), name(n), type(t) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+
+class FunctionArgumentListASTNode final : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args)
+    :BaseASTNode(), args(std::move(args)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+
+class FunctionDeclASTNode final : public BaseASTNode
+{
+public:
+  Token name;
+  std::unique_ptr<BaseASTNode> args;
+  Token return_type;
+
+  FunctionDeclASTNode(const Token& n, std::unique_ptr<BaseASTNode> args, const Token& rt)
+    :BaseASTNode(), name(n), args(std::move(args)), return_type(rt) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+
+class FunctionCallASTNode final : public BaseASTNode
+{
+public:
+	Token name;
+	std::vector<std::unique_ptr<BaseASTNode>> args;
+	FunctionCallASTNode(const Token& id, std::vector<std::unique_ptr<BaseASTNode>>& args)
+		:BaseASTNode(), name(id), args(std::move(args)) {}
+
+	std::string print() override;
+	std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+
+class ReturnStatementASTNode final : public BaseASTNode
+{
+public:
+	std::unique_ptr<BaseASTNode> expr;
+	explicit ReturnStatementASTNode(std::unique_ptr<BaseASTNode> e)
+		:expr(std::move(e)) {}
+
+	std::string print() override;
+	std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class ScopeASTNode final : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<BaseASTNode>> nodes;
+  ScopeASTNode()
+    :BaseASTNode() {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class FunctionASTNode final : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> decl;
+  std::unique_ptr<BaseASTNode> body;
+
+  FunctionASTNode(std::unique_ptr<BaseASTNode> decl, std::unique_ptr<BaseASTNode> body)
+    :BaseASTNode(), decl(std::move(decl)), body(std::move(body)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class IfElseExpressionASTNode final : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> condition;
+  std::unique_ptr<BaseASTNode> true_scope;
+  std::unique_ptr<BaseASTNode> false_scope;
+
+  IfElseExpressionASTNode(std::unique_ptr<BaseASTNode> cond, std::unique_ptr<BaseASTNode> ts, std::unique_ptr<BaseASTNode> fs = nullptr)
+    :BaseASTNode(), condition(std::move(cond)), true_scope(std::move(ts)), false_scope(std::move(fs)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class RootASTNode final : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<BaseASTNode>> nodes;
+  RootASTNode()
+    :BaseASTNode() {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor& visitor) override;
+};
+}
+

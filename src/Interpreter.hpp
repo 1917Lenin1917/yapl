@@ -3,52 +3,57 @@
 //
 
 #pragma once
-#include <memory>
-#include <unordered_map>
-#include <string>
+#include <utility>
 #include <vector>
+#include <unordered_map>
+
+#include "Function.hpp"
+#include "ASTNode.hpp"
 
 namespace yapl {
-class BaseASTNode;
-
-struct Variable
-{
-  bool is_constant;
-  int value;
-};
-
-struct Function 
-{
-  std::unordered_map<std::string, std::unique_ptr<Variable>> args;
-	std::vector<std::string> arg_names; // needed for correct order
-  std::unordered_map<std::string, std::unique_ptr<Variable>> vars;
-
-	std::unique_ptr<BaseASTNode> ast;
-	int return_value = -1;
-	bool should_return = false;
-};
+class FunctionASTNode;
 
 class Interpreter {
-private:
 public:
-  std::unordered_map<std::string, std::unique_ptr<Variable>> vars;
-	std::unordered_map<std::string, std::unique_ptr<Function>> functions;
-	std::string active_func;
+    std::unordered_map<std::string, FunctionASTNode*> function_definitions;
+    std::vector<std::shared_ptr<Function>> function_stack;
+    std::vector<std::shared_ptr<Scope>> scope_stack;
+
+    bool function_exists(const std::string& name) const
+    {
+      return function_definitions.contains(name);
+    }
+
+    void add_function_definition(const std::string& name, FunctionASTNode* fn)
+    {
+        function_definitions[name] = fn;
+    }
+
+    std::shared_ptr<Function> push_function(const std::string& name)
+    {
+        auto func = std::make_shared<Function>();
+        func->name = name;
+        function_stack.push_back(func);
+        scope_stack.push_back(func->function_scope);
+
+        return func;
+    }
+    void pop_function()
+    {
+        function_stack.pop_back();
+    }
+
+    void pop_scope()
+    {
+        scope_stack.pop_back();
+    }
+
+    FunctionASTNode* get_function_def(const std::string& name)
+    {
+        return function_definitions[name];
+    }
 };
 
-class Visitor
-{
-private:
-public:
-  Interpreter& interpreter;
-  Visitor(Interpreter& i)
-    :interpreter(i) 
-	{
-		// set built-in functions 
-		// TODO:
-	}
-
-};
 
 }
 

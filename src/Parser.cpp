@@ -154,7 +154,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_var_decl()
 	auto name_identifier = m_tokens[m_pos];
 	advance();
 
-	if (m_tokens[m_pos].type != TOKEN_TYPE::EQ)
+	if (m_tokens[m_pos].type != TOKEN_TYPE::ASSIGN)
 		return std::make_unique<VariableASTNode>(decl_token, name_identifier);
 
 	advance();
@@ -187,7 +187,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 		// for (const auto& a : args) std::cout << a->print() <<" ";
 		return std::make_unique<FunctionCallASTNode>(identifier, args);
 	}
-	if (m_tokens[m_pos].type != TOKEN_TYPE::EQ)
+	if (m_tokens[m_pos].type != TOKEN_TYPE::ASSIGN)
 	{
 		m_pos--;
 		return parse_expr();

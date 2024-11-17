@@ -26,6 +26,7 @@ enum class TOKEN_TYPE
     SLASH,
     PERIOD,
     NOT,
+    ASSIGN,
     EQ,
     LT,
     GT,

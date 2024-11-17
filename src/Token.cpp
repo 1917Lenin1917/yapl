@@ -24,6 +24,7 @@ std::string ttype_to_string(TOKEN_TYPE tt)
         case TOKEN_TYPE::SLASH:      { return "SLASH"; }
         case TOKEN_TYPE::PERIOD:      { return "PERIOD"; }
         case TOKEN_TYPE::NOT: { return "NOT"; }
+        case TOKEN_TYPE::ASSIGN: { return "ASSIGN"; }
         case TOKEN_TYPE::EQ: { return "EQ"; }
         case TOKEN_TYPE::LT: { return "LT"; }
         case TOKEN_TYPE::GT: { return "GT"; }

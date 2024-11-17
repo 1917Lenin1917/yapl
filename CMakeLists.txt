@@ -11,7 +11,13 @@ add_executable(yapl src/main.cpp
         src/Token.cpp
         src/Parser.cpp
         src/Interpreter.cpp
-        )
+        src/ASTNode.cpp
+        src/Value.cpp
+        src/Scope.cpp
+        src/Variable.cpp
+        src/Function.cpp
+        src/Visitor.cpp
+)
 
 add_subdirectory(externals/Catch2)
 add_executable(tests

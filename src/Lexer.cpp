@@ -28,7 +28,6 @@ std::vector<Token> Lexer::make_tokens()
             case '/': { tokens.emplace_back(TOKEN_TYPE::SLASH); break; }
             case '.': { tokens.emplace_back(TOKEN_TYPE::PERIOD); break; }
             case '!': { tokens.emplace_back(TOKEN_TYPE::NOT); break; }
-            case '=': { tokens.emplace_back(TOKEN_TYPE::EQ); break; } // TODO: add =>
             case '<': { tokens.emplace_back(TOKEN_TYPE::LT); break; } // TODO: add <=
             case '>': { tokens.emplace_back(TOKEN_TYPE::GT); break; } // TODO: add >=
             case '(': { tokens.emplace_back(TOKEN_TYPE::LPAREN); break; }
@@ -43,6 +42,17 @@ std::vector<Token> Lexer::make_tokens()
             case '\'':
             case '\"': { tokens.push_back(make_string()); break; }
             case '`': { tokens.push_back(make_format_string()); break; }
+            case '=':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::EQ);
+                    m_pos++;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::ASSIGN);
+                break;
+            } // TODO: add =>
             default:
             {
                 if (is_numeric(c))
