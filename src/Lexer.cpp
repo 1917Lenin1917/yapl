@@ -15,7 +15,7 @@ std::vector<Token> Lexer::make_tokens()
     {
         m_pos += 1;
         if (m_pos == text_len) { return tokens; }
-        switch (char c = m_text[m_pos])
+        switch (const char c = m_text[m_pos])
         {
             case '\0': { tokens.emplace_back(TOKEN_TYPE::TT_EOF); break; }
             case '\t':
@@ -25,7 +25,20 @@ std::vector<Token> Lexer::make_tokens()
             case '+': { tokens.emplace_back(TOKEN_TYPE::PLUS); break; }
             case '-': { tokens.emplace_back(TOKEN_TYPE::MINUS); break; }
             case '*': { tokens.emplace_back(TOKEN_TYPE::TIMES); break; }
-            case '/': { tokens.emplace_back(TOKEN_TYPE::SLASH); break; }
+            case '/':
+            {
+                if (m_pos + 1 != text_len && m_text[m_pos+1] == '/')
+                {
+                    m_pos += 2; // eat //
+                    while (m_pos != text_len && m_text[m_pos] != '\n')
+                    {
+                      m_pos++; // eat everything until \n or EOF
+                    }
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::SLASH);
+                break;
+            }
             case '.': { tokens.emplace_back(TOKEN_TYPE::PERIOD); break; }
             case '!': { tokens.emplace_back(TOKEN_TYPE::NOT); break; }
             case '<': { tokens.emplace_back(TOKEN_TYPE::LT); break; } // TODO: add <=
@@ -115,9 +128,9 @@ Token Lexer::make_string()
         }
     }
 
-    char* value = new char[m_pos - start + 1];
-    memcpy(value, m_text.data()+start, m_pos-start+1);
-    value[m_pos - start + 1] = '\0';
+    char* value = new char[m_pos - start + 1 - 2];
+    memcpy(value, m_text.data()+start+1, m_pos-start+1-2);
+    value[m_pos - start + 1-2] = '\0';
     return { m_text[m_pos] == '`' ? TOKEN_TYPE::FSTRING : TOKEN_TYPE::STRING, value };
 }
 

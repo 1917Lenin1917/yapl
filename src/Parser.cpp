@@ -162,6 +162,8 @@ std::unique_ptr<BaseASTNode> Parser::parse_var_decl()
 	return std::make_unique<VariableASTNode>(decl_token, name_identifier, std::move(expr));
 }
 
+
+
 std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 {
 	const auto& identifier = m_tokens[m_pos];
@@ -300,6 +302,13 @@ std::unique_ptr<BaseASTNode> Parser::parse_ifelse_statement()
 	return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope));
 }
 
+std::unique_ptr<BaseASTNode> Parser::parse_while_loop()
+{
+	advance(); // eat while token
+	auto condition = parse_expr();
+	auto scope = parse_scope();
+	return std::make_unique<WhileLoopASTNode>(std::move(condition), std::move(scope));
+}
 
 std::unique_ptr<BaseASTNode> Parser::parse_scope()
 {
@@ -319,6 +328,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 			case TOKEN_TYPE::IDENTIFIER: { scope->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
 			// case TOKEN_TYPE::FN: { scope->nodes.push_back(std::move(parse_function())); break; }
 			case TOKEN_TYPE::IF: { scope->nodes.push_back(std::move(parse_ifelse_statement())); break; }
+			case TOKEN_TYPE::WHILE: { scope->nodes.push_back(std::move(parse_while_loop())); break; }
 			default: { scope->nodes.push_back(std::move(parse_expr())); break; }
 		}
 		if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
@@ -355,6 +365,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 			case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
 			case TOKEN_TYPE::FN: { root->nodes.push_back(std::move(parse_function())); break; }
 			case TOKEN_TYPE::IF: { root->nodes.push_back(std::move(parse_ifelse_statement())); break; }
+			case TOKEN_TYPE::WHILE: { root->nodes.push_back(std::move(parse_while_loop())); break; }
 			default: { root->nodes.push_back(std::move(parse_expr())); break; }
 		}
 		if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)

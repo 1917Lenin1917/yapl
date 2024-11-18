@@ -1,0 +1,31 @@
+fn fac(a: int, it: int): int {
+  const a = 10;
+  print("print from fac function", it, a);
+  if a == 1 {
+    return 1;
+  }
+  else {
+    return a * fac(a-1, it+1);
+  };
+};
+
+fn test_while_loop(): void {
+  let a = 10;
+  while a > 0 {
+    print(a);
+    a = a - 1;
+  };
+  return a;
+};
+
+fn test_read_int(): void {
+  const v = read_int();
+  print(v);
+};
+
+fn test_read_str(): void {
+  const v = read_str();
+  print(v);
+};
+
+// test_read_str();

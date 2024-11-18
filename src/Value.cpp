@@ -8,6 +8,18 @@ namespace yapl {
 //
 // IntegerValue
 //
+
+std::string IntegerValue::print() const
+{
+	return std::to_string(value);
+}
+
+std::unique_ptr<Value> IntegerValue::Copy() const
+{
+	return std::make_unique<IntegerValue>(value);
+}
+
+
 std::unique_ptr<Value> IntegerValue::UnaryMinus()
 {
 	return std::make_unique<IntegerValue>(-value);
@@ -128,6 +140,15 @@ std::unique_ptr<Value> IntegerValue::BinaryLT(const std::unique_ptr<Value> &othe
 
 std::unique_ptr<Value> IntegerValue::BinaryGT(const std::unique_ptr<Value> &other)
 {
+	switch (other->type)
+	{
+		case VALUE_TYPE::INTEGER:
+		{
+			auto v = std::make_unique<BooleanValue>(value > dynamic_cast<IntegerValue*>(other.get())->value);
+			return v;
+		}
+		default: { return nullptr; }
+	}
 	return nullptr;
 }
 
@@ -167,6 +188,16 @@ std::unique_ptr<Value> IntegerValue::BinaryEQ(const std::unique_ptr<Value> &othe
 			return nullptr;
 		}
 	}
+}
+
+std::string BooleanValue::print() const
+{
+	return value ? "true" : "false";
+}
+
+std::unique_ptr<Value> BooleanValue::Copy() const
+{
+	return std::make_unique<BooleanValue>(value);
 }
 
 std::unique_ptr<Value> BooleanValue::UnaryMinus()
@@ -252,6 +283,16 @@ std::unique_ptr<Value> BooleanValue::BinaryEQ(const std::unique_ptr<Value> &othe
 	}
 }
 
+std::string FloatValue::print() const
+{
+	return std::to_string(value);
+}
+
+std::unique_ptr<Value> FloatValue::Copy() const
+{
+	return std::make_unique<FloatValue>(value);
+}
+
 std::unique_ptr<Value> FloatValue::UnaryMinus()
 {
 	return nullptr;
@@ -310,6 +351,16 @@ std::unique_ptr<Value> FloatValue::BinaryGQ(const std::unique_ptr<Value> &other)
 std::unique_ptr<Value> FloatValue::BinaryEQ(const std::unique_ptr<Value> &other)
 {
 	return nullptr;
+}
+
+std::string StringValue::print() const
+{
+	return value;
+}
+
+std::unique_ptr<Value> StringValue::Copy() const
+{
+	return std::make_unique<StringValue>(value);
 }
 
 std::unique_ptr<Value> StringValue::UnaryMinus()

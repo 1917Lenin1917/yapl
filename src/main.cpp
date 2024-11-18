@@ -31,7 +31,7 @@ int main()
 {
   // run();
   // return 0;
-  std::ifstream t(R"(C:\_projects\yapl\test.txt)");
+  std::ifstream t(R"(C:\_projects\yapl\test.yapl)");
   std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
   // std::string text {"fn penis(): int { let a = 5; }; fn bebra(a: int, b: int): int { a + b; };"};
   // std::string text{"fn sign(a: int): int { if a > 0 { return 1; } else if a < 0 { return -1; } else { return 0; }; }; sign(100);"};

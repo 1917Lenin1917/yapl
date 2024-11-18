@@ -29,6 +29,9 @@ public:
 
 	virtual ~Value() = default;
 
+	[[nodiscard]] virtual std::string print() const = 0;
+	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
+
 	virtual std::unique_ptr<Value> UnaryMinus() = 0;
 	virtual std::unique_ptr<Value> UnaryPlus() = 0;
 	virtual std::unique_ptr<Value> UnaryNot() = 0;
@@ -53,6 +56,9 @@ public:
 	explicit IntegerValue(const int value)
 		:Value(VALUE_TYPE::INTEGER), value(value) {}
 
+	[[nodiscard]] std::string print() const override;
+	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
+
 	std::unique_ptr<Value> UnaryMinus() override;
 	std::unique_ptr<Value> UnaryPlus() override;
 	std::unique_ptr<Value> UnaryNot() override;
@@ -75,6 +81,9 @@ public:
 
 	explicit BooleanValue(const bool value)
 		:Value(VALUE_TYPE::BOOL), value(value) {}
+
+	[[nodiscard]] std::string print() const override;
+	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 	std::unique_ptr<Value> UnaryMinus() override;
 	std::unique_ptr<Value> UnaryPlus() override;
@@ -100,6 +109,9 @@ public:
 	explicit FloatValue(const float value)
 		:Value(VALUE_TYPE::FLOAT), value(value) {}
 
+	[[nodiscard]] std::string print() const override;
+	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
+
 	std::unique_ptr<Value> UnaryMinus() override;
 	std::unique_ptr<Value> UnaryPlus() override;
 	std::unique_ptr<Value> UnaryNot() override;
@@ -123,6 +135,8 @@ public:
 	explicit StringValue(std::string value)
 		:Value(VALUE_TYPE::STRING), value(std::move(value)) {}
 
+	[[nodiscard]] std::string print() const override;
+	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 	std::unique_ptr<Value> UnaryMinus() override;
 	std::unique_ptr<Value> UnaryPlus() override;

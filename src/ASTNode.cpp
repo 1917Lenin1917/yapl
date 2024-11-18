@@ -17,7 +17,18 @@ std::string LiteralASTNode::print()
 }
 std::unique_ptr<Value> LiteralASTNode::visit(Visitor& visitor)
 {
-  return std::make_unique<IntegerValue>(std::stoi(token.value));
+  switch (token.type)
+  {
+    case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerValue>(std::stoi(token.value));
+    case TOKEN_TYPE::BOOL: return std::make_unique<BooleanValue>(token.value == std::string("true"));
+    case TOKEN_TYPE::FLOAT: return std::make_unique<FloatValue>(std::stof(token.value));
+    case TOKEN_TYPE::STRING: return std::make_unique<StringValue>(std::string(token.value));
+    default:
+    {
+      std::cerr << "Unknown literal type!\n";
+      return nullptr;
+    }
+  }
 }
 
 
@@ -37,7 +48,7 @@ std::unique_ptr<Value> IdentifierASTNode::visit(Visitor& visitor)
     if (scope->vars.contains(token.value))
     {
       const auto& original_value = scope->vars[token.value]->value;
-      auto ret_value = std::make_unique<IntegerValue>(dynamic_cast<IntegerValue*>(original_value.get())->value);
+      auto ret_value = original_value->Copy();
       return ret_value;
     }
   }
@@ -58,7 +69,7 @@ std::string VariableASTNode::print()
 
 std::unique_ptr<Value> VariableASTNode::visit(Visitor& visitor)
 {
-  for (size_t i = visitor.interpreter.scope_stack.size() - 1; i > -1; i--)
+  for (size_t i = visitor.interpreter.scope_stack.size(); i --> 0;)
   {
     const auto& scope = visitor.interpreter.scope_stack[i];
     if (scope->vars.contains(name.value))
@@ -68,7 +79,7 @@ std::unique_ptr<Value> VariableASTNode::visit(Visitor& visitor)
     }
   }
 
-  const auto& scope = visitor.interpreter.scope_stack[visitor.interpreter.scope_stack.size() - 1];
+  auto scope = visitor.interpreter.scope_stack[visitor.interpreter.scope_stack.size() - 1];
   if (value)
   {
     auto expr_value = value->visit(visitor);
@@ -144,7 +155,7 @@ std::string StatementASTNode::print()
 
 std::unique_ptr<Value> StatementASTNode::visit(Visitor &visitor)
 {
-  for (size_t i = visitor.interpreter.scope_stack.size() - 1; i > -1; i--)
+  for (size_t i = visitor.interpreter.scope_stack.size(); i --> 0 ;)
   {
     const auto& scope = visitor.interpreter.scope_stack[i];
     if (scope->vars.contains(identifier.value))
@@ -242,20 +253,20 @@ std::unique_ptr<Value> FunctionCallASTNode::visit(Visitor &visitor)
   }
 
   auto func_def = visitor.interpreter.get_function_def(name.value);
-
   auto func = visitor.interpreter.push_function(name.value);
   auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
-  size_t arg_list_size = arg_list->args.size();
-  if (args.size() != arg_list_size)
+  size_t arg_amount = arg_list->get_argument_amount();
+  if (arg_amount != -1 && args.size() != arg_amount)
   {
-    std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", name.value, arg_list_size, args.size());
+    std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", name.value, arg_amount, args.size());
     return nullptr;
   }
   // set args with passed expressions
   for (size_t i = 0; i < args.size(); i++)
   {
     auto value = args[i]->visit(visitor);
-    func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
+    func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
+    // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
   }
   func_def->body->visit(visitor);
   std::unique_ptr<Value> ret_value = std::move(func->return_value);
@@ -286,6 +297,7 @@ std::unique_ptr<Value> ReturnStatementASTNode::visit(Visitor &visitor)
 //
 // ScopeASTNode
 //
+// TODO: maybe handle scope creation here?
 std::string ScopeASTNode::print()
 {
   std::string res{"scope:(\n"};
@@ -335,6 +347,65 @@ std::unique_ptr<Value> FunctionASTNode::visit(Visitor &visitor)
 
 
 //
+// BuiltinPrintFunctionBodyASTNode
+//
+std::string BuiltinPrintFunctionBodyASTNode::print()
+{
+  return "";
+}
+
+std::unique_ptr<Value> BuiltinPrintFunctionBodyASTNode::visit(Visitor &visitor)
+{
+  const auto& func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
+  for (const auto& name : func->argument_names)
+  {
+    const auto& arg = func->function_scope->vars.at(name);
+    std::cout << arg->value->print() << " ";
+  }
+  std::cout << "\n";
+  return nullptr;
+}
+
+
+//
+// BuiltinReadIntFunctionBodyASTNode
+//
+std::string BuiltinReadIntFunctionBodyASTNode::print()
+{
+  return "";
+}
+
+std::unique_ptr<Value> BuiltinReadIntFunctionBodyASTNode::visit(Visitor &visitor)
+{
+  const auto& func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
+  int value;
+  std::cin >> value;
+  func->return_value = std::make_unique<IntegerValue>(value);
+
+  return nullptr;
+}
+
+
+//
+// BuiltinReadIntFunctionBodyASTNode
+//
+std::string BuiltinReadStringFunctionBodyASTNode::print()
+{
+  return "";
+}
+
+std::unique_ptr<Value> BuiltinReadStringFunctionBodyASTNode::visit(Visitor &visitor)
+{
+  const auto& func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
+  std::string value;
+  std::cin >> value;
+  func->return_value = std::make_unique<StringValue>(value);
+
+  return nullptr;
+}
+
+
+//
 // IfElseExpressionASTNode
 //
 std::string IfElseExpressionASTNode::print()
@@ -349,6 +420,25 @@ std::unique_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
   return false_scope->visit(visitor);
 }
 
+
+
+//
+// WhileLoopASTNode
+//
+
+std::string WhileLoopASTNode::print()
+{
+  return "";
+}
+
+std::unique_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
+{
+  while (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value == true)
+  {
+    scope->visit(visitor);
+  }
+  return nullptr;
+}
 
 //
 // RootASTNode

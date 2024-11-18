@@ -38,7 +38,6 @@ public:
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
 
-
 class IdentifierASTNode final : public BaseASTNode
 {
 public:
@@ -50,7 +49,6 @@ public:
   std::string print() override;
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
-
 
 class VariableASTNode final : public BaseASTNode
 {
@@ -66,7 +64,6 @@ public:
   std::unique_ptr<Value> visit(Visitor& visitor) override;
 };
 
-
 class UnaryOpASTNode final : public BaseASTNode
 {
 public:
@@ -78,7 +75,6 @@ public:
   std::string print() override;
   std::unique_ptr<Value> visit(Visitor& visitor) override;
 };
-
 
 class BinaryOpASTNode final : public BaseASTNode
 {
@@ -93,7 +89,6 @@ public:
   std::unique_ptr<Value> visit(Visitor& visitor) override;
 };
 
-
 class StatementASTNode final : public BaseASTNode
 {
   Token identifier;
@@ -106,7 +101,6 @@ public:
 
   std::unique_ptr<Value> visit(Visitor& visitor) override;
 };
-
 
 class FunctionArgumentASTNode final : public BaseASTNode
 {
@@ -121,18 +115,25 @@ public:
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
 
-
 class FunctionArgumentListASTNode final : public BaseASTNode
 {
+  int m_arg_amount = -1;
 public:
   std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args)
-    :BaseASTNode(), args(std::move(args)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, int custom_arg_amount = 999)
+    :BaseASTNode(), m_arg_amount(custom_arg_amount == 999 ? args.size() : custom_arg_amount), args(std::move(args)) {}
 
   std::string print() override;
   std::unique_ptr<Value> visit(Visitor &visitor) override;
-};
 
+  [[nodiscard]] int get_argument_amount() const { return m_arg_amount; }
+  [[nodiscard]] std::string get_argument_name(size_t idx) const
+  {
+    if (m_arg_amount == -1)
+      return "argument_" + std::to_string(idx);
+    return args[idx]->name.value;
+  }
+};
 
 class FunctionDeclASTNode final : public BaseASTNode
 {
@@ -148,7 +149,6 @@ public:
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
 
-
 class FunctionCallASTNode final : public BaseASTNode
 {
 public:
@@ -160,7 +160,6 @@ public:
 	std::string print() override;
 	std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
-
 
 class ReturnStatementASTNode final : public BaseASTNode
 {
@@ -197,6 +196,27 @@ public:
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class BuiltinPrintFunctionBodyASTNode final : public BaseASTNode
+{
+public:
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class BuiltinReadIntFunctionBodyASTNode final : public BaseASTNode
+{
+public:
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class BuiltinReadStringFunctionBodyASTNode final : public BaseASTNode
+{
+public:
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class IfElseExpressionASTNode final : public BaseASTNode
 {
 public:
@@ -206,6 +226,19 @@ public:
 
   IfElseExpressionASTNode(std::unique_ptr<BaseASTNode> cond, std::unique_ptr<BaseASTNode> ts, std::unique_ptr<BaseASTNode> fs = nullptr)
     :BaseASTNode(), condition(std::move(cond)), true_scope(std::move(ts)), false_scope(std::move(fs)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class WhileLoopASTNode final : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> condition;
+  std::unique_ptr<BaseASTNode> scope;
+
+  WhileLoopASTNode(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<BaseASTNode> scope)
+    :BaseASTNode(), condition(std::move(condition)), scope(std::move(scope)) {}
 
   std::string print() override;
   std::unique_ptr<Value> visit(Visitor &visitor) override;
