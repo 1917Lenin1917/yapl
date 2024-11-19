@@ -303,7 +303,14 @@ std::string ScopeASTNode::print()
   std::string res{"scope:(\n"};
   for (const auto& i : nodes)
   {
-    res += " " + i->print() + ";\n";
+    if (i != nullptr)
+    {
+      res += " " + i->print() + ";\n";
+    }
+    else
+    {
+      res += "node is a nullptr\n";
+    }
   }
   return res + ")";
 }

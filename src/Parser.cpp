@@ -55,6 +55,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_primary_expr()
 		default:
 		{
 			std::cout << "Unknown token when expecting an expression!\n";
+			advance(); // eat unknown token
 			return nullptr;
 		}
 		case TOKEN_TYPE::INTEGER:
@@ -109,7 +110,20 @@ std::unique_ptr<BaseASTNode> Parser::parse_expr()
 		return nullptr;
 
 	return std::move(parse_binop_rhs(0, std::move(LHS)));
-};
+}
+
+std::unique_ptr<BaseASTNode> Parser::parse_semic_expr()
+{
+	auto expr = parse_expr();
+	if (m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+	{
+		std::cerr << "Expected a semicolon after an expression!\n";
+		return nullptr;
+	}
+	advance(); //eat ;
+	return expr;
+}
+
 
 std::unique_ptr<BaseASTNode> Parser::parse_binop_rhs(int expr_prec, std::unique_ptr<BaseASTNode> LHS)
 {
@@ -150,15 +164,23 @@ std::unique_ptr<BaseASTNode> Parser::parse_binop_rhs(int expr_prec, std::unique_
 std::unique_ptr<BaseASTNode> Parser::parse_var_decl()
 {
 	auto decl_token = m_tokens[m_pos];
-	advance();
+	advance(); // eat var/let/const
 	auto name_identifier = m_tokens[m_pos];
-	advance();
+	advance(); // eat name
 
 	if (m_tokens[m_pos].type != TOKEN_TYPE::ASSIGN)
+	{
+		if (m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+		{
+			std::cerr << "Expected a semicolon when parsing var declaration\n";
+			return nullptr;
+		}
+		advance(); // eat ;
 		return std::make_unique<VariableASTNode>(decl_token, name_identifier);
+	}
 
-	advance();
-	auto expr = parse_expr();
+	advance(); // eat =
+	auto expr = parse_semic_expr();
 	return std::make_unique<VariableASTNode>(decl_token, name_identifier, std::move(expr));
 }
 
@@ -168,10 +190,6 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 {
 	const auto& identifier = m_tokens[m_pos];
 	advance(); // eat id
-	if (m_pos >= m_tokens.size() || m_tokens[m_pos].type == TOKEN_TYPE::TT_EOF)
-	{
-		return std::make_unique<IdentifierASTNode>(identifier);
-	}
 	if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
 	{
 		std::vector<std::unique_ptr<BaseASTNode>> args;
@@ -186,19 +204,32 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 			}
 		}	
 		advance(); // eat )
+		if (m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+		{
+			std::cerr << "Expected a semicolon after statement\n";
+			return nullptr;
+		}
+		advance(); // eat ;
 		// for (const auto& a : args) std::cout << a->print() <<" ";
 		return std::make_unique<FunctionCallASTNode>(identifier, args);
 	}
-	if (m_tokens[m_pos].type != TOKEN_TYPE::ASSIGN)
+	if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
 	{
-		m_pos--;
-		return parse_expr();
-	}
-	advance(); // eat eq
-	auto expr = parse_expr();
+		advance(); // eat eq
+		auto expr = parse_semic_expr();
 
-	std::unique_ptr<StatementASTNode> stmnt = std::make_unique<StatementASTNode>(identifier, std::move(expr));
-	return std::move(stmnt);
+		std::unique_ptr<StatementASTNode> stmnt = std::make_unique<StatementASTNode>(identifier, std::move(expr));
+		return std::move(stmnt);
+	}
+	if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
+	{
+		advance(); // eat ;
+		return std::make_unique<IdentifierASTNode>(identifier);
+	}
+
+	m_pos--;
+	return parse_semic_expr();
+
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
@@ -276,7 +307,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_declaration()
 std::unique_ptr<BaseASTNode> Parser::parse_return() 
 {
 	advance(); // eat return;
-	auto expr = parse_expr();
+	auto expr = parse_semic_expr();
 	auto ret = std::make_unique<ReturnStatementASTNode>(std::move(expr));
 	return std::move(ret);
 }
@@ -329,14 +360,14 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 			// case TOKEN_TYPE::FN: { scope->nodes.push_back(std::move(parse_function())); break; }
 			case TOKEN_TYPE::IF: { scope->nodes.push_back(std::move(parse_ifelse_statement())); break; }
 			case TOKEN_TYPE::WHILE: { scope->nodes.push_back(std::move(parse_while_loop())); break; }
-			default: { scope->nodes.push_back(std::move(parse_expr())); break; }
+			default: { scope->nodes.push_back(std::move(parse_semic_expr())); break; }
 		}
-		if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
-		{
-			std::cout << "Excpected a semicolon;\n";
-			return nullptr;
-		}
-		advance(); // eat ;
+		// if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+		// {
+		// 	std::cout << "Excpected a semicolon;\n";
+		// 	return nullptr;
+		// }
+		// advance(); // eat ;
 	}
 	return scope;
 }
@@ -366,14 +397,14 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 			case TOKEN_TYPE::FN: { root->nodes.push_back(std::move(parse_function())); break; }
 			case TOKEN_TYPE::IF: { root->nodes.push_back(std::move(parse_ifelse_statement())); break; }
 			case TOKEN_TYPE::WHILE: { root->nodes.push_back(std::move(parse_while_loop())); break; }
-			default: { root->nodes.push_back(std::move(parse_expr())); break; }
+			default: { root->nodes.push_back(std::move(parse_semic_expr())); break; }
 		}
-		if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
-		{
-			std::cout << "Excpected a semicolon;\n";
-			return nullptr;
-		}
-		advance(); // eat ;
+		// if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+		// {
+		// 	std::cout << "Excpected a semicolon;\n";
+		// 	return nullptr;
+		// }
+		// advance(); // eat ;
 	}
 	return root;
 }
