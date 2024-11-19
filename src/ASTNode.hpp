@@ -50,6 +50,18 @@ public:
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class ArrayASTNode final : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<BaseASTNode>> values;
+
+  explicit ArrayASTNode(std::vector<std::unique_ptr<BaseASTNode>>& values)
+    :BaseASTNode(), values(std::move(values)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class VariableASTNode final : public BaseASTNode
 {
 public:

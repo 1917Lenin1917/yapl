@@ -7,6 +7,7 @@
 #include <utility>
 #include <iostream>
 #include <format>
+#include <vector>
 
 namespace yapl {
 
@@ -17,6 +18,7 @@ enum class VALUE_TYPE
 	FLOAT,
 	BOOL,
 	STRING,
+	ARRAY,
 };
 
 class Value
@@ -153,4 +155,33 @@ public:
 	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
 
 };
+
+
+class ArrayValue final : public Value
+{
+public:
+	std::vector<std::unique_ptr<Value>> value;
+
+	explicit ArrayValue(std::vector<std::unique_ptr<Value>>& value)
+		:Value(VALUE_TYPE::ARRAY), value(std::move(value)) {}
+
+	[[nodiscard]] std::string print() const override;
+	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
+
+	std::unique_ptr<Value> UnaryMinus() override;
+	std::unique_ptr<Value> UnaryPlus() override;
+	std::unique_ptr<Value> UnaryNot() override;
+
+	std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinaryTimes(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinaryLT(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinaryGT(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
+	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
+
+};
+
 }

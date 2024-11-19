@@ -57,6 +57,29 @@ std::unique_ptr<Value> IdentifierASTNode::visit(Visitor& visitor)
 }
 
 
+
+//
+// ArrayASTNode
+//
+std::string ArrayASTNode::print()
+{
+  std::string ret_value = "array: (";
+  for (const auto& v : values)
+    ret_value += v->print() + ", ";
+  return ret_value + ")";
+}
+
+std::unique_ptr<Value> ArrayASTNode::visit(Visitor &visitor)
+{
+  std::vector<std::unique_ptr<Value>> ev_values;
+  for (const auto& value : values)
+  {
+    ev_values.push_back(value->visit(visitor));
+  }
+  return std::make_unique<ArrayValue>(ev_values);
+}
+
+
 //
 // VariableASTNode
 //
@@ -317,12 +340,12 @@ std::string ScopeASTNode::print()
 
 std::unique_ptr<Value> ScopeASTNode::visit(Visitor &visitor)
 {
-  const auto current_func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
+  const auto current_func = visitor.interpreter.function_stack.empty() ? nullptr : visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
   for (const auto& i : nodes)
   {
     i->visit(visitor);
 
-    if (current_func->return_value != nullptr)
+    if (current_func != nullptr && current_func->return_value != nullptr)
       return nullptr;
     //   return std::move(current_func->return_value);
   }
@@ -424,7 +447,9 @@ std::unique_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
 {
   if (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value)
     return true_scope->visit(visitor);
-  return false_scope->visit(visitor);
+  if (false_scope)
+    return false_scope->visit(visitor);
+  return nullptr;
 }
 
 

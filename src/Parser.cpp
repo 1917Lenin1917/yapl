@@ -48,6 +48,26 @@ std::unique_ptr<BaseASTNode> Parser::parse_identifier()
 	return res;
 }
 
+std::unique_ptr<BaseASTNode> Parser::parse_array()
+{
+	advance(); // eat [
+	std::vector<std::unique_ptr<BaseASTNode>> values;
+	while (m_tokens[m_pos].type != TOKEN_TYPE::RSQBRACK)
+	{
+		auto expr = parse_expr();
+		values.push_back(std::move(expr));
+		if (m_tokens[m_pos].type == TOKEN_TYPE::RSQBRACK)
+			break;
+
+		advance(); // eat ,
+	}
+
+	advance(); // eat ]
+
+	return std::make_unique<ArrayASTNode>(values);
+}
+
+
 std::unique_ptr<BaseASTNode> Parser::parse_primary_expr()
 {
 	switch (m_tokens[m_pos].type)
@@ -65,6 +85,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_primary_expr()
 		case TOKEN_TYPE::BOOL: { return parse_literal(); }
 		case TOKEN_TYPE::IDENTIFIER: { return parse_identifier(); }
 		case TOKEN_TYPE::LPAREN: { return parse_paren_expr(); }
+		case TOKEN_TYPE::LSQBRACK: { return parse_array(); }
 		case TOKEN_TYPE::PLUS:
 		case TOKEN_TYPE::MINUS:
 		case TOKEN_TYPE::NOT: { return parse_unary(); }

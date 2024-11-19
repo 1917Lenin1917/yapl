@@ -422,4 +422,88 @@ std::unique_ptr<Value> StringValue::BinaryEQ(const std::unique_ptr<Value> &other
 {
 	return nullptr;
 }
+
+
+std::string ArrayValue::print() const
+{
+	std::string ret_value = "[";
+	auto size = value.size();
+	for (size_t i = 0; i < size; i++)
+	{
+		ret_value += value[i]->print();
+		if (i != size-1)
+			ret_value += ", ";
+	}
+	return ret_value + "]";
+}
+
+std::unique_ptr<Value> ArrayValue::Copy() const
+{
+	std::vector<std::unique_ptr<Value>> ret_value;
+	for (const auto& v : value)
+	{
+		ret_value.push_back(v->Copy());
+	}
+	return std::make_unique<ArrayValue>(ret_value);
+}
+
+std::unique_ptr<Value> ArrayValue::UnaryMinus()
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::UnaryPlus()
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::UnaryNot()
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryPlus(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryMinus(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinarySlash(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryTimes(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryLT(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryGT(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryLQ(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryGQ(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
+
+std::unique_ptr<Value> ArrayValue::BinaryEQ(const std::unique_ptr<Value> &other)
+{
+	return nullptr;
+}
 }
