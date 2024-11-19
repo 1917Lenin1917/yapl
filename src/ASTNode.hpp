@@ -50,6 +50,19 @@ public:
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class IndexASTNode final : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> base_expr;
+  std::unique_ptr<BaseASTNode> index_expr;
+
+  IndexASTNode(std::unique_ptr<BaseASTNode> base_expr, std::unique_ptr<BaseASTNode> index_expr)
+    :BaseASTNode(), base_expr(std::move(base_expr)), index_expr(std::move(index_expr)) {}
+
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class ArrayASTNode final : public BaseASTNode
 {
 public:
@@ -111,6 +124,18 @@ public:
 
   std::string print() override;
 
+  std::unique_ptr<Value> visit(Visitor& visitor) override;
+};
+
+class StatementIndexASTNode final : public BaseASTNode
+{
+  std::unique_ptr<BaseASTNode> identifier;
+  std::unique_ptr<BaseASTNode> RHS;
+public:
+  StatementIndexASTNode(std::unique_ptr<BaseASTNode> i, std::unique_ptr<BaseASTNode> r)
+    :BaseASTNode(), identifier(std::move(i)), RHS(std::move(r)) {}
+
+  std::string print() override;
   std::unique_ptr<Value> visit(Visitor& visitor) override;
 };
 

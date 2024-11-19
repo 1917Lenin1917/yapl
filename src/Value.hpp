@@ -33,6 +33,7 @@ public:
 
 	[[nodiscard]] virtual std::string print() const = 0;
 	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
+	virtual void Set(const std::unique_ptr<Value>& v) { throw std::runtime_error("Not implemented"); };
 
 	virtual std::unique_ptr<Value> UnaryMinus() = 0;
 	virtual std::unique_ptr<Value> UnaryPlus() = 0;
@@ -48,6 +49,15 @@ public:
 	virtual std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value>& other) = 0;
 	virtual std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value>& other) = 0;
 	virtual std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value>& other) = 0;
+
+	[[nodiscard]] virtual std::unique_ptr<Value> OperatorIndex(const std::unique_ptr<Value>& idx)
+	{
+		throw std::runtime_error("Unsupported operator!\n");
+	}
+	virtual void OperatorIndexSet(const std::unique_ptr<Value> &idx, std::unique_ptr<Value> new_val)
+	{
+		throw std::runtime_error("Unsupported operator!\n");
+	}
 };
 
 class IntegerValue final : public Value
@@ -65,6 +75,11 @@ public:
 	std::unique_ptr<Value> UnaryPlus() override;
 	std::unique_ptr<Value> UnaryNot() override;
 
+	void Set(const std::unique_ptr<Value> &v) override
+	{
+		value = dynamic_cast<IntegerValue*>(v.get())->value;
+	}
+
 	std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value> &other) override;
 	std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value> &other) override;
 	std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value> &other) override;
@@ -74,6 +89,7 @@ public:
 	std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value> &other) override;
 	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
 	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
+
 };
 
 class BooleanValue final : public Value
@@ -182,6 +198,8 @@ public:
 	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
 	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
 
+	[[nodiscard]] std::unique_ptr<Value> OperatorIndex(const std::unique_ptr<Value> &idx) override;
+	void OperatorIndexSet(const std::unique_ptr<Value> &idx, std::unique_ptr<Value> new_val) override;
 };
 
 }

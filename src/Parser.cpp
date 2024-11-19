@@ -44,6 +44,14 @@ std::unique_ptr<BaseASTNode> Parser::parse_identifier()
 		advance(); // eat )
 		return std::make_unique<FunctionCallASTNode>(identifier, args);
 	}
+	// if there is a [, then this is an indexing
+	if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK)
+	{
+		advance(); // eat [
+		auto expr = parse_expr(); // TODO: maybe move this to paren expr as well?
+		advance(); // eat ]
+		return std::make_unique<IndexASTNode>(std::make_unique<IdentifierASTNode>(identifier), std::move(expr));
+	}
 	auto res = std::make_unique<IdentifierASTNode>(identifier);
 	return res;
 }
@@ -241,6 +249,14 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 
 		std::unique_ptr<StatementASTNode> stmnt = std::make_unique<StatementASTNode>(identifier, std::move(expr));
 		return std::move(stmnt);
+	}
+	if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK) // then this is a[1] = 5;
+	{
+		m_pos--;
+		auto idx = parse_identifier();
+		advance(); // eat =
+		auto expr = parse_semic_expr();
+		return std::make_unique<StatementIndexASTNode>(std::move(idx), std::move(expr));
 	}
 	if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
 	{

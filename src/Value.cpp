@@ -447,6 +447,23 @@ std::unique_ptr<Value> ArrayValue::Copy() const
 	return std::make_unique<ArrayValue>(ret_value);
 }
 
+std::unique_ptr<Value> ArrayValue::OperatorIndex(const std::unique_ptr<Value> &idx)
+{
+	if (idx->type != VALUE_TYPE::INTEGER)
+		throw std::runtime_error("Invalid indexing type");
+	const auto& v = value.at(dynamic_cast<IntegerValue*>(idx.get())->value);
+	return std::move(v->Copy());
+}
+
+void ArrayValue::OperatorIndexSet(const std::unique_ptr<Value> &idx, std::unique_ptr<Value> new_val)
+{
+	if (idx->type != VALUE_TYPE::INTEGER)
+		throw std::runtime_error("Invalid indexing type");
+	auto& v = value[dynamic_cast<IntegerValue*>(idx.get())->value];
+	v->Set(new_val);
+}
+
+
 std::unique_ptr<Value> ArrayValue::UnaryMinus()
 {
 	return nullptr;

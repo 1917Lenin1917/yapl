@@ -59,6 +59,19 @@ std::unique_ptr<Value> IdentifierASTNode::visit(Visitor& visitor)
 
 
 //
+// IndexASTNode
+//
+std::string IndexASTNode::print()
+{
+  return "index: (" + base_expr->print() + " [" + index_expr->print() +"])";
+}
+std::unique_ptr<Value> IndexASTNode::visit(Visitor &visitor)
+{
+  auto v = base_expr->visit(visitor)->OperatorIndex(index_expr->visit(visitor));
+  return std::move(v);
+}
+
+//
 // ArrayASTNode
 //
 std::string ArrayASTNode::print()
@@ -197,8 +210,35 @@ std::unique_ptr<Value> StatementASTNode::visit(Visitor &visitor)
 
   std::cerr << std::format("Variable {} doesn't exist.\n", identifier.value);
   return nullptr;
-} // What about types??
+}
 
+//
+// StatementIndexASTNode
+//
+std::string StatementIndexASTNode::print()
+{
+  return "stmnt:(" + identifier->print() + " " + RHS->print() + ")";
+}
+
+std::unique_ptr<Value> StatementIndexASTNode::visit(Visitor &visitor)
+{
+  auto id = dynamic_cast<IndexASTNode*>(identifier.get());
+  auto tk = dynamic_cast<IdentifierASTNode*>(id->base_expr.get());
+
+  for (int i = visitor.interpreter.scope_stack.size() - 1; i >= 0; i--)
+  {
+    const auto& scope = visitor.interpreter.scope_stack[i];
+    if (scope->vars.contains(tk->token.value))
+    {
+      auto& original_var = scope->vars[tk->token.value];
+      original_var->value->OperatorIndexSet(id->index_expr->visit(visitor), RHS->visit(visitor));
+      // original_var->value->Set(RHS->visit(visitor));
+      return nullptr;
+    }
+  }
+  std::cerr << "No such variable\n";
+  return nullptr;
+}
 
 //
 // FunctionArgumentASTNode
