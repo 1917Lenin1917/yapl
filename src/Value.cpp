@@ -145,7 +145,11 @@ std::unique_ptr<Value> IntegerValue::BinaryTimes(const std::unique_ptr<Value> &o
 
 std::unique_ptr<Value> IntegerValue::BinaryLT(const std::unique_ptr<Value> &other)
 {
-	return nullptr;
+	switch (other->type)
+	{
+		case VALUE_TYPE::INTEGER: return std::make_unique<BooleanValue>(value < dynamic_cast<IntegerValue*>(other.get())->value);
+		default: return nullptr;
+	}
 }
 
 std::unique_ptr<Value> IntegerValue::BinaryGT(const std::unique_ptr<Value> &other)
