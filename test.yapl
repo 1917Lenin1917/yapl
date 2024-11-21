@@ -1,5 +1,4 @@
 const array = [5, 4, 3, 2, 1];
-
 fn bubble_sort(arr: Array): Array {
   let i = 0, j = 0, temp = 0;
   while i < arr.size() {
@@ -16,5 +15,4 @@ fn bubble_sort(arr: Array): Array {
   }
   return arr;
 }
-
 print(bubble_sort(array));

@@ -37,32 +37,35 @@ public:
 
 	explicit Value(VALUE_TYPE type);
 
-	virtual ~Value() = default;
+	virtual ~Value()
+	{
+		// std::cerr << "Value is deleted\n";
+	};
 
 	[[nodiscard]] virtual std::string print() const = 0;
 	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
-	virtual void Set(const std::unique_ptr<Value>& v) { throw std::runtime_error("Not implemented"); };
+	virtual void Set(const std::shared_ptr<Value>& v) { throw std::runtime_error("Not implemented"); };
 
-	virtual std::unique_ptr<Value> UnaryMinus() = 0;
-	virtual std::unique_ptr<Value> UnaryPlus() = 0;
-	virtual std::unique_ptr<Value> UnaryNot() = 0;
+	virtual std::shared_ptr<Value> UnaryMinus() = 0;
+	virtual std::shared_ptr<Value> UnaryPlus() = 0;
+	virtual std::shared_ptr<Value> UnaryNot() = 0;
 
 
-	virtual std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinaryTimes(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinaryLT(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinaryGT(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value>& other) = 0;
-	virtual std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value>& other) = 0;
+	virtual std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value>& other) = 0;
 
-	[[nodiscard]] virtual std::unique_ptr<Value> OperatorIndex(const std::unique_ptr<Value>& idx)
+	[[nodiscard]] virtual std::shared_ptr<Value> OperatorIndex(const std::shared_ptr<Value>& idx)
 	{
 		throw std::runtime_error("Unsupported operator!\n");
 	}
-	virtual void OperatorIndexSet(const std::unique_ptr<Value> &idx, std::unique_ptr<Value> new_val)
+	virtual void OperatorIndexSet(const std::shared_ptr<Value> &idx, std::shared_ptr<Value> new_val)
 	{
 		throw std::runtime_error("Unsupported operator!\n");
 	}
@@ -97,24 +100,24 @@ public:
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-	std::unique_ptr<Value> UnaryMinus() override;
-	std::unique_ptr<Value> UnaryPlus() override;
-	std::unique_ptr<Value> UnaryNot() override;
+	std::shared_ptr<Value> UnaryMinus() override;
+	std::shared_ptr<Value> UnaryPlus() override;
+	std::shared_ptr<Value> UnaryNot() override;
 
-	void Set(const std::unique_ptr<Value> &v) override
+	void Set(const std::shared_ptr<Value> &v) override
 	{
 		value = dynamic_cast<IntegerValue*>(v.get())->value;
 	}
 
-	std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryTimes(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value> &other) override;
 
 };
 
@@ -128,21 +131,20 @@ public:
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-	std::unique_ptr<Value> UnaryMinus() override;
-	std::unique_ptr<Value> UnaryPlus() override;
-	std::unique_ptr<Value> UnaryNot() override;
+	std::shared_ptr<Value> UnaryMinus() override;
+	std::shared_ptr<Value> UnaryPlus() override;
+	std::shared_ptr<Value> UnaryNot() override;
 
-	std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryTimes(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value> &other) override;
 };
-
 
 class FloatValue final : public Value
 {
@@ -154,19 +156,19 @@ public:
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-	std::unique_ptr<Value> UnaryMinus() override;
-	std::unique_ptr<Value> UnaryPlus() override;
-	std::unique_ptr<Value> UnaryNot() override;
+	std::shared_ptr<Value> UnaryMinus() override;
+	std::shared_ptr<Value> UnaryPlus() override;
+	std::shared_ptr<Value> UnaryNot() override;
 
-	std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryTimes(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value> &other) override;
 };
 
 class StringValue final : public Value
@@ -179,49 +181,52 @@ public:
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-	std::unique_ptr<Value> UnaryMinus() override;
-	std::unique_ptr<Value> UnaryPlus() override;
-	std::unique_ptr<Value> UnaryNot() override;
+	std::shared_ptr<Value> UnaryMinus() override;
+	std::shared_ptr<Value> UnaryPlus() override;
+	std::shared_ptr<Value> UnaryNot() override;
 
-	std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryTimes(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value> &other) override;
 
 };
 
-
 class ArrayValue final : public Value
 {
+private:
+	void make_size();
+	void make_append();
+	void make_pop();
 public:
-	std::vector<std::unique_ptr<Value>> value;
+	std::vector<std::shared_ptr<Value>> value;
 
-	explicit ArrayValue(std::vector<std::unique_ptr<Value>>& value);
+	explicit ArrayValue(std::vector<std::shared_ptr<Value>>& value);
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-	std::unique_ptr<Value> UnaryMinus() override;
-	std::unique_ptr<Value> UnaryPlus() override;
-	std::unique_ptr<Value> UnaryNot() override;
+	std::shared_ptr<Value> UnaryMinus() override;
+	std::shared_ptr<Value> UnaryPlus() override;
+	std::shared_ptr<Value> UnaryNot() override;
 
-	std::unique_ptr<Value> BinaryPlus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryMinus(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinarySlash(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryTimes(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGT(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryLQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryGQ(const std::unique_ptr<Value> &other) override;
-	std::unique_ptr<Value> BinaryEQ(const std::unique_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value> &other) override;
+	std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value> &other) override;
 
-	[[nodiscard]] std::unique_ptr<Value> OperatorIndex(const std::unique_ptr<Value> &idx) override;
-	void OperatorIndexSet(const std::unique_ptr<Value> &idx, std::unique_ptr<Value> new_val) override;
+	[[nodiscard]] std::shared_ptr<Value> OperatorIndex(const std::shared_ptr<Value> &idx) override;
+	void OperatorIndexSet(const std::shared_ptr<Value> &idx, std::shared_ptr<Value> new_val) override;
 };
 
 }

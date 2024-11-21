@@ -19,7 +19,7 @@ public:
   std::string name;
   std::shared_ptr<Scope> function_scope;
   std::vector<std::string> argument_names;
-  std::unique_ptr<Value> return_value = nullptr;
+  std::shared_ptr<Value> return_value = nullptr;
 
   Function()
     :function_scope(std::make_shared<Scope>())

@@ -30,22 +30,22 @@ std::unique_ptr<Value> IntegerValue::Copy() const
 }
 
 
-std::unique_ptr<Value> IntegerValue::UnaryMinus()
+std::shared_ptr<Value> IntegerValue::UnaryMinus()
 {
 	return std::make_unique<IntegerValue>(-value);
 }
 
-std::unique_ptr<Value> IntegerValue::UnaryPlus()
+std::shared_ptr<Value> IntegerValue::UnaryPlus()
 {
 	return std::make_unique<IntegerValue>(+value);
 }
 
-std::unique_ptr<Value> IntegerValue::UnaryNot()
+std::shared_ptr<Value> IntegerValue::UnaryNot()
 {
 	return std::make_unique<IntegerValue>(!value);
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryPlus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryPlus(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -73,7 +73,7 @@ std::unique_ptr<Value> IntegerValue::BinaryPlus(const std::unique_ptr<Value> &ot
 	}
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryMinus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryMinus(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -101,7 +101,7 @@ std::unique_ptr<Value> IntegerValue::BinaryMinus(const std::unique_ptr<Value> &o
 		}
 	}
 }
-std::unique_ptr<Value> IntegerValue::BinarySlash(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinarySlash(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -130,7 +130,7 @@ std::unique_ptr<Value> IntegerValue::BinarySlash(const std::unique_ptr<Value> &o
 	}
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryTimes(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryTimes(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -143,7 +143,7 @@ std::unique_ptr<Value> IntegerValue::BinaryTimes(const std::unique_ptr<Value> &o
 	return nullptr;
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryLT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryLT(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -152,7 +152,7 @@ std::unique_ptr<Value> IntegerValue::BinaryLT(const std::unique_ptr<Value> &othe
 	}
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryGT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryGT(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -166,17 +166,17 @@ std::unique_ptr<Value> IntegerValue::BinaryGT(const std::unique_ptr<Value> &othe
 	return nullptr;
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryLQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryLQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryGQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryGQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> IntegerValue::BinaryEQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> IntegerValue::BinaryEQ(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -221,62 +221,62 @@ std::unique_ptr<Value> BooleanValue::Copy() const
 	return std::make_unique<BooleanValue>(value);
 }
 
-std::unique_ptr<Value> BooleanValue::UnaryMinus()
+std::shared_ptr<Value> BooleanValue::UnaryMinus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::UnaryPlus()
+std::shared_ptr<Value> BooleanValue::UnaryPlus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::UnaryNot()
+std::shared_ptr<Value> BooleanValue::UnaryNot()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryPlus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryPlus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryMinus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryMinus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinarySlash(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinarySlash(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryTimes(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryTimes(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryLT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryLT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryGT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryGT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryLQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryLQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryGQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryGQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> BooleanValue::BinaryEQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> BooleanValue::BinaryEQ(const std::shared_ptr<Value> &other)
 {
 	switch (other->type)
 	{
@@ -317,62 +317,62 @@ std::unique_ptr<Value> FloatValue::Copy() const
 	return std::make_unique<FloatValue>(value);
 }
 
-std::unique_ptr<Value> FloatValue::UnaryMinus()
+std::shared_ptr<Value> FloatValue::UnaryMinus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::UnaryPlus()
+std::shared_ptr<Value> FloatValue::UnaryPlus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::UnaryNot()
+std::shared_ptr<Value> FloatValue::UnaryNot()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryPlus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryPlus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryMinus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryMinus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinarySlash(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinarySlash(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryTimes(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryTimes(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryLT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryLT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryGT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryGT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryLQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryLQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryGQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryGQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> FloatValue::BinaryEQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> FloatValue::BinaryEQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
@@ -391,73 +391,72 @@ std::unique_ptr<Value> StringValue::Copy() const
 	return std::make_unique<StringValue>(value);
 }
 
-std::unique_ptr<Value> StringValue::UnaryMinus()
+std::shared_ptr<Value> StringValue::UnaryMinus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::UnaryPlus()
+std::shared_ptr<Value> StringValue::UnaryPlus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::UnaryNot()
+std::shared_ptr<Value> StringValue::UnaryNot()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryPlus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryPlus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryMinus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryMinus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinarySlash(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinarySlash(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryTimes(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryTimes(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryLT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryLT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryGT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryGT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryLQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryLQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryGQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryGQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> StringValue::BinaryEQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> StringValue::BinaryEQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-ArrayValue::ArrayValue(std::vector<std::unique_ptr<Value> > &value)
-		:Value(VALUE_TYPE::ARRAY), value(std::move(value))
+void ArrayValue::make_size()
 {
 	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("size")  };
 	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
 	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("int") };
-	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&]()
+	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
 	{
 		return std::make_unique<IntegerValue>(this->value.size());
 	});
@@ -467,6 +466,51 @@ ArrayValue::ArrayValue(std::vector<std::unique_ptr<Value> > &value)
 																									 std::move(body));
 	m_methods.push_back(std::move(f));
 	m_method_definitions["size"] = m_methods[m_methods.size() - 1].get();
+}
+
+void ArrayValue::make_append()
+{
+	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("append")  };
+	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
+	arg_list.push_back(std::make_unique<FunctionArgumentASTNode>(Token{TOKEN_TYPE::IDENTIFIER, new char[]("value")}, Token{TOKEN_TYPE::IDENTIFIER, new char[]("any")}));
+	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("void") };
+	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
+	{
+		auto arg = f_obj->function_scope->vars[f_obj->argument_names[0]];
+		this->value.push_back(arg->value->Copy());
+		return nullptr;
+		// return std::make_unique<IntegerValue>(this->value.size());
+	});
+
+	auto f = std::make_unique<FunctionASTNode>(
+			std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, 1), return_type)),
+																									 std::move(body));
+	m_methods.push_back(std::move(f));
+	m_method_definitions["append"] = m_methods[m_methods.size() - 1].get();
+}
+
+void ArrayValue::make_pop()
+{
+	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("size")  };
+	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
+	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("int") };
+	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
+	{
+		return std::make_unique<IntegerValue>(this->value.size());
+	});
+
+	auto f = std::make_unique<FunctionASTNode>(
+			std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+																									 std::move(body));
+	m_methods.push_back(std::move(f));
+	m_method_definitions["size"] = m_methods[m_methods.size() - 1].get();
+}
+ArrayValue::ArrayValue(std::vector<std::shared_ptr<Value>>& value)
+		:Value(VALUE_TYPE::ARRAY), value(std::move(value))
+{
+	make_size();
+	make_append();
+	make_pop();
 }
 
 
@@ -485,7 +529,7 @@ std::string ArrayValue::print() const
 
 std::unique_ptr<Value> ArrayValue::Copy() const
 {
-	std::vector<std::unique_ptr<Value>> ret_value;
+	std::vector<std::shared_ptr<Value>> ret_value;
 	for (const auto& v : value)
 	{
 		ret_value.push_back(v->Copy());
@@ -493,7 +537,7 @@ std::unique_ptr<Value> ArrayValue::Copy() const
 	return std::make_unique<ArrayValue>(ret_value);
 }
 
-std::unique_ptr<Value> ArrayValue::OperatorIndex(const std::unique_ptr<Value> &idx)
+std::shared_ptr<Value> ArrayValue::OperatorIndex(const std::shared_ptr<Value> &idx)
 {
 	if (idx->type != VALUE_TYPE::INTEGER)
 		throw std::runtime_error("Invalid indexing type");
@@ -501,7 +545,7 @@ std::unique_ptr<Value> ArrayValue::OperatorIndex(const std::unique_ptr<Value> &i
 	return std::move(v->Copy());
 }
 
-void ArrayValue::OperatorIndexSet(const std::unique_ptr<Value> &idx, std::unique_ptr<Value> new_val)
+void ArrayValue::OperatorIndexSet(const std::shared_ptr<Value> &idx, std::shared_ptr<Value> new_val)
 {
 	if (idx->type != VALUE_TYPE::INTEGER)
 		throw std::runtime_error("Invalid indexing type");
@@ -510,62 +554,62 @@ void ArrayValue::OperatorIndexSet(const std::unique_ptr<Value> &idx, std::unique
 }
 
 
-std::unique_ptr<Value> ArrayValue::UnaryMinus()
+std::shared_ptr<Value> ArrayValue::UnaryMinus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::UnaryPlus()
+std::shared_ptr<Value> ArrayValue::UnaryPlus()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::UnaryNot()
+std::shared_ptr<Value> ArrayValue::UnaryNot()
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryPlus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryPlus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryMinus(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryMinus(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinarySlash(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinarySlash(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryTimes(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryTimes(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryLT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryLT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryGT(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryGT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryLQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryLQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryGQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryGQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }
 
-std::unique_ptr<Value> ArrayValue::BinaryEQ(const std::unique_ptr<Value> &other)
+std::shared_ptr<Value> ArrayValue::BinaryEQ(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
 }

@@ -15,7 +15,8 @@ std::string LiteralASTNode::print()
 {
   return "literal:(" + std::string(token.value) + ")";
 }
-std::unique_ptr<Value> LiteralASTNode::visit(Visitor& visitor)
+
+std::shared_ptr<Value> LiteralASTNode::visit(Visitor &visitor)
 {
   switch (token.type)
   {
@@ -40,16 +41,17 @@ std::string IdentifierASTNode::print()
   return "identifier:(" + std::string(token.value) + ")";
 }
 
-std::unique_ptr<Value> IdentifierASTNode::visit(Visitor& visitor)
+std::shared_ptr<Value> IdentifierASTNode::visit(Visitor &visitor)
 {
   for (int i = visitor.interpreter.scope_stack.size() - 1; i >= 0; i--)
   {
     const auto& scope = visitor.interpreter.scope_stack[i];
     if (scope->vars.contains(token.value))
     {
-      const auto& original_value = scope->vars[token.value]->value;
-      auto ret_value = original_value->Copy();
-      return ret_value;
+      auto original_value = scope->vars[token.value]->value;
+      // auto ret_value = original_value->Copy();
+      // return ret_value;
+      return original_value;
     }
   }
   std::cerr << std::format("Variable {} doesn't exist.\n", token.value);
@@ -65,7 +67,8 @@ std::string IndexASTNode::print()
 {
   return "index: (" + base_expr->print() + " [" + index_expr->print() +"])";
 }
-std::unique_ptr<Value> IndexASTNode::visit(Visitor &visitor)
+
+std::shared_ptr<Value> IndexASTNode::visit(Visitor &visitor)
 {
   auto v = base_expr->visit(visitor)->OperatorIndex(index_expr->visit(visitor));
   return std::move(v);
@@ -82,14 +85,14 @@ std::string ArrayASTNode::print()
   return ret_value + ")";
 }
 
-std::unique_ptr<Value> ArrayASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> ArrayASTNode::visit(Visitor &visitor)
 {
-  std::vector<std::unique_ptr<Value>> ev_values;
+  std::vector<std::shared_ptr<Value>> ev_values;
   for (const auto& value : values)
   {
     ev_values.push_back(value->visit(visitor));
   }
-  return std::make_unique<ArrayValue>(ev_values);
+  return std::make_shared<ArrayValue>(ev_values);
 }
 
 
@@ -103,7 +106,7 @@ std::string VariableASTNode::print()
   return "variable:(" + print_token(type) + " " + name.value + " = " + value->print() + ")";
 }
 
-std::unique_ptr<Value> VariableASTNode::visit(Visitor& visitor)
+std::shared_ptr<Value> VariableASTNode::visit(Visitor &visitor)
 {
   for (size_t i = visitor.interpreter.scope_stack.size(); i --> 0;)
   {
@@ -119,10 +122,10 @@ std::unique_ptr<Value> VariableASTNode::visit(Visitor& visitor)
   if (value)
   {
     auto expr_value = value->visit(visitor);
-    scope->vars[name.value] = std::make_unique<Variable>(type.type == TOKEN_TYPE::CONST, VALUE_TYPE::INTEGER, std::move(expr_value));
+    scope->vars[name.value] = std::make_shared<Variable>(type.type == TOKEN_TYPE::CONST, VALUE_TYPE::INTEGER, expr_value);
     return nullptr;
   }
-  scope->vars[name.value] = std::make_unique<Variable>(type.type == TOKEN_TYPE::CONST, VALUE_TYPE::INTEGER, std::make_unique<IntegerValue>(0));
+  scope->vars[name.value] = std::make_shared<Variable>(type.type == TOKEN_TYPE::CONST, VALUE_TYPE::INTEGER, std::make_unique<IntegerValue>(0));
   return nullptr;
 }
 
@@ -135,7 +138,7 @@ std::string UnaryOpASTNode::print()
   return "unary:(" + print_token(op) + " " + RHS->print() + ")";
 }
 
-std::unique_ptr<Value> UnaryOpASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> UnaryOpASTNode::visit(Visitor &visitor)
 {
   switch (op.type)
   {
@@ -155,7 +158,7 @@ std::string BinaryOpASTNode::print()
   return "binary:(" + LHS->print() + " " + print_token(op) + " " + RHS->print() + ")";
 }
 
-std::unique_ptr<Value> BinaryOpASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> BinaryOpASTNode::visit(Visitor &visitor)
 {
   const auto lhs = LHS->visit(visitor);
   const auto rhs = RHS->visit(visitor);
@@ -189,7 +192,7 @@ std::string StatementASTNode::print()
   return "stmnt:(" + print_token(identifier) + " " + RHS->print() + ")";
 }
 
-std::unique_ptr<Value> StatementASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> StatementASTNode::visit(Visitor &visitor)
 {
   for (size_t i = visitor.interpreter.scope_stack.size(); i --> 0 ;)
   {
@@ -220,24 +223,30 @@ std::string StatementIndexASTNode::print()
   return "stmnt:(" + identifier->print() + " " + RHS->print() + ")";
 }
 
-std::unique_ptr<Value> StatementIndexASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> StatementIndexASTNode::visit(Visitor &visitor)
 {
   auto id = dynamic_cast<IndexASTNode*>(identifier.get());
   auto tk = dynamic_cast<IdentifierASTNode*>(id->base_expr.get());
 
-  for (int i = visitor.interpreter.scope_stack.size() - 1; i >= 0; i--)
-  {
-    const auto& scope = visitor.interpreter.scope_stack[i];
-    if (scope->vars.contains(tk->token.value))
-    {
-      auto& original_var = scope->vars[tk->token.value];
-      original_var->value->OperatorIndexSet(id->index_expr->visit(visitor), RHS->visit(visitor));
-      // original_var->value->Set(RHS->visit(visitor));
-      return nullptr;
-    }
-  }
-  std::cerr << "No such variable\n";
+  auto lhs = id->base_expr->visit(visitor);
+  auto idx = id->index_expr->visit(visitor);
+  auto rhs = RHS->visit(visitor);
+  lhs->OperatorIndexSet(idx, rhs);
   return nullptr;
+  //
+  // for (int i = visitor.interpreter.scope_stack.size() - 1; i >= 0; i--)
+  // {
+  //   const auto& scope = visitor.interpreter.scope_stack[i];
+  //   if (scope->vars.contains(tk->token.value))
+  //   {
+  //     auto& original_var = scope->vars[tk->token.value];
+  //     original_var->value->OperatorIndexSet(id->index_expr->visit(visitor), RHS->visit(visitor));
+  //     // original_var->value->Set(RHS->visit(visitor));
+  //     return nullptr;
+  //   }
+  // }
+  // std::cerr << "No such variable\n";
+  // return nullptr;
 }
 
 //
@@ -248,7 +257,7 @@ std::string FunctionArgumentASTNode::print()
   return "arg:(" + print_token(name) + " " + print_token(type) + ")";
 }
 
-std::unique_ptr<Value> FunctionArgumentASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> FunctionArgumentASTNode::visit(Visitor &visitor)
 {
   return nullptr;
   // auto& func = visitor.interpreter.functions[visitor.interpreter.active_func];
@@ -269,7 +278,7 @@ std::string FunctionArgumentListASTNode::print()
   return ret + ")";
 }
 
-std::unique_ptr<Value> FunctionArgumentListASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> FunctionArgumentListASTNode::visit(Visitor &visitor)
 {
   return nullptr;
   // for (const auto& arg : args)
@@ -289,7 +298,7 @@ std::string FunctionDeclASTNode::print()
   return ret;
 }
 
-std::unique_ptr<Value> FunctionDeclASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> FunctionDeclASTNode::visit(Visitor &visitor)
 {
   return nullptr;
 }
@@ -307,7 +316,7 @@ std::string MethodCallASTNode::print()
   return ret;
 }
 
-std::unique_ptr<Value> MethodCallASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> MethodCallASTNode::visit(Visitor &visitor)
 {
   auto object = visitor.interpreter.get_variable(identifier.value);
   if (!object)
@@ -333,7 +342,7 @@ std::unique_ptr<Value> MethodCallASTNode::visit(Visitor &visitor)
     // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
   }
   func_def->body->visit(visitor);
-  std::unique_ptr<Value> ret_value = std::move(func->return_value);
+  auto ret_value = func->return_value;
   visitor.interpreter.pop_scope();
   visitor.interpreter.pop_function();
 
@@ -354,7 +363,7 @@ std::string FunctionCallASTNode::print()
   return ret;
 }
 
-std::unique_ptr<Value> FunctionCallASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> FunctionCallASTNode::visit(Visitor &visitor)
 {
   if (!visitor.interpreter.function_exists(name.value))
   {
@@ -379,7 +388,7 @@ std::unique_ptr<Value> FunctionCallASTNode::visit(Visitor &visitor)
     // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
   }
   func_def->body->visit(visitor);
-  std::unique_ptr<Value> ret_value = std::move(func->return_value);
+  auto ret_value = func->return_value;
   visitor.interpreter.pop_scope();
   visitor.interpreter.pop_function();
 
@@ -395,11 +404,11 @@ std::string ReturnStatementASTNode::print()
   return "return:(" + expr->print() + ")";
 }
 
-std::unique_ptr<Value> ReturnStatementASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> ReturnStatementASTNode::visit(Visitor &visitor)
 {
   auto func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
   auto rhs = expr->visit(visitor);
-  func->return_value = std::move(rhs);
+  func->return_value = rhs;
   return nullptr;
 }
 
@@ -425,7 +434,7 @@ std::string ScopeASTNode::print()
   return res + ")";
 }
 
-std::unique_ptr<Value> ScopeASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> ScopeASTNode::visit(Visitor &visitor)
 {
   const auto current_func = visitor.interpreter.function_stack.empty() ? nullptr : visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
   for (const auto& i : nodes)
@@ -448,7 +457,7 @@ std::string FunctionASTNode::print()
   return "function:(" + decl->print() + " " + body->print() + ")";
 }
 
-std::unique_ptr<Value> FunctionASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> FunctionASTNode::visit(Visitor &visitor)
 {
   const auto& f_decl = dynamic_cast<FunctionDeclASTNode*>(decl.get());
   if (visitor.interpreter.function_exists(f_decl->name.value))
@@ -472,10 +481,10 @@ std::string BuiltinCustomVisitFunctionASTNode::print()
   return "";
 }
 
-std::unique_ptr<Value> BuiltinCustomVisitFunctionASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> BuiltinCustomVisitFunctionASTNode::visit(Visitor &visitor)
 {
   auto func_obj = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
-  func_obj->return_value = func();
+  func_obj->return_value = func(func_obj);
   return nullptr;
 }
 
@@ -489,7 +498,7 @@ std::string BuiltinPrintFunctionBodyASTNode::print()
   return "";
 }
 
-std::unique_ptr<Value> BuiltinPrintFunctionBodyASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> BuiltinPrintFunctionBodyASTNode::visit(Visitor &visitor)
 {
   const auto& func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
   for (const auto& name : func->argument_names)
@@ -510,7 +519,7 @@ std::string BuiltinReadIntFunctionBodyASTNode::print()
   return "";
 }
 
-std::unique_ptr<Value> BuiltinReadIntFunctionBodyASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> BuiltinReadIntFunctionBodyASTNode::visit(Visitor &visitor)
 {
   const auto& func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
   int value;
@@ -529,7 +538,7 @@ std::string BuiltinReadStringFunctionBodyASTNode::print()
   return "";
 }
 
-std::unique_ptr<Value> BuiltinReadStringFunctionBodyASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> BuiltinReadStringFunctionBodyASTNode::visit(Visitor &visitor)
 {
   const auto& func = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
   std::string value;
@@ -548,7 +557,7 @@ std::string IfElseExpressionASTNode::print()
   return "if:(" + condition->print() + " " + true_scope->print() + ")";
 }
 
-std::unique_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
 {
   if (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value)
     return true_scope->visit(visitor);
@@ -568,7 +577,7 @@ std::string WhileLoopASTNode::print()
   return "";
 }
 
-std::unique_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
+std::shared_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
 {
   while (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value == true)
   {
@@ -590,7 +599,7 @@ std::string RootASTNode::print()
   return res + ")";
 }
 
-std::unique_ptr<Value> RootASTNode::visit(Visitor& visitor)
+std::shared_ptr<Value> RootASTNode::visit(Visitor &visitor)
 {
   for (const auto& node : nodes)
   {

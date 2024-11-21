@@ -16,6 +16,6 @@ class Variable
 public:
   bool is_const = false;
   VALUE_TYPE type;
-  std::unique_ptr<Value> value;
+  std::shared_ptr<Value> value;
 };
 }
