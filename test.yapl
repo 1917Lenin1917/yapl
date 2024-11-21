@@ -1,18 +1,17 @@
-const array = [5, 4, 3, 2, 1];
-fn bubble_sort(arr: Array): Array {
-  let i = 0, j = 0, temp = 0;
-  while i < arr.size() {
-    while j < arr.size() {
-      if arr[i] < arr[j] {
-        temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-      }
-      j = j + 1;
-    }
-    i = i + 1;
-    j = 0;
+fn test(arg1: int, arg2: int): Array {
+  let arr = [0];
+  while (arg1 < arg2) {
+    arr.append(arg1);
+    arg1 = arg1 + 1;
   }
-  return arr;
+
+  if arg1 == arg2 {
+    return arr;
+  } else if arg1 < arg2 {
+    return [];
+  } else {
+    return [1, 2, 3];
+  }
 }
-print(bubble_sort(array));
+
+print(test(1, 2));

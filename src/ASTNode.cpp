@@ -11,9 +11,9 @@ namespace yapl {
 //
 // LiteralASTNode
 //
-std::string LiteralASTNode::print()
+std::string LiteralASTNode::print(size_t indent_size)
 {
-  return "literal:(" + std::string(token.value) + ")";
+  return REPEAT(indent_size*2, ' ') + std::format("{{ NodeType: LiteralASTNode, Type: {}, Value: {} }}", ttype_to_string(token.type), token.value);
 }
 
 std::shared_ptr<Value> LiteralASTNode::visit(Visitor &visitor)
@@ -36,9 +36,9 @@ std::shared_ptr<Value> LiteralASTNode::visit(Visitor &visitor)
 //
 // IdentifierASTNode
 //
-std::string IdentifierASTNode::print()
+std::string IdentifierASTNode::print(size_t indent_size)
 {
-  return "identifier:(" + std::string(token.value) + ")";
+  return REPEAT(indent_size*2, ' ') + std::format("{{ NodeType: IdentifierASTNode, Value: {} }}", token.value);
 }
 
 std::shared_ptr<Value> IdentifierASTNode::visit(Visitor &visitor)
@@ -63,9 +63,9 @@ std::shared_ptr<Value> IdentifierASTNode::visit(Visitor &visitor)
 //
 // IndexASTNode
 //
-std::string IndexASTNode::print()
+std::string IndexASTNode::print(size_t indent_size)
 {
-  return "index: (" + base_expr->print() + " [" + index_expr->print() +"])";
+  return "index: (" + base_expr->print(indent_size) + " [" + index_expr->print(indent_size) +"])";
 }
 
 std::shared_ptr<Value> IndexASTNode::visit(Visitor &visitor)
@@ -77,12 +77,20 @@ std::shared_ptr<Value> IndexASTNode::visit(Visitor &visitor)
 //
 // ArrayASTNode
 //
-std::string ArrayASTNode::print()
+std::string ArrayASTNode::print(size_t indent_size)
 {
-  std::string ret_value = "array: (";
-  for (const auto& v : values)
-    ret_value += v->print() + ", ";
-  return ret_value + ")";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: ArrayASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Values: \n";
+  res += REPEAT((indent_size+1)*2, ' ') + "{\n";
+  for (const auto& value : values)
+  {
+    res += value->print(indent_size+2) + ",\n";
+  }
+  res += REPEAT((indent_size+1)*2, ' ') + "}\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> ArrayASTNode::visit(Visitor &visitor)
@@ -99,11 +107,20 @@ std::shared_ptr<Value> ArrayASTNode::visit(Visitor &visitor)
 //
 // VariableASTNode
 //
-std::string VariableASTNode::print()
+std::string VariableASTNode::print(size_t indent_size)
 {
-  if (value == nullptr)
-    return "variable:(" + print_token(type) + " " + name.value + ")";
-  return "variable:(" + print_token(type) + " " + name.value + " = " + value->print() + ")";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: VariableASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Type: " + print_token(type) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Name: " + name.value + ",\n";
+  if (value)
+  {
+    res += REPEAT((indent_size+1)*2, ' ') + "Value: \n";
+    res += value->print(indent_size+1) + "\n";
+  }
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> VariableASTNode::visit(Visitor &visitor)
@@ -133,9 +150,9 @@ std::shared_ptr<Value> VariableASTNode::visit(Visitor &visitor)
 //
 // UnaryOpASTNode
 //
-std::string UnaryOpASTNode::print()
+std::string UnaryOpASTNode::print(size_t indent_size)
 {
-  return "unary:(" + print_token(op) + " " + RHS->print() + ")";
+  return "unary:(" + print_token(op) + " " + RHS->print(indent_size) + ")";
 }
 
 std::shared_ptr<Value> UnaryOpASTNode::visit(Visitor &visitor)
@@ -153,9 +170,18 @@ std::shared_ptr<Value> UnaryOpASTNode::visit(Visitor &visitor)
 //
 // BinaryOpASTNode
 //
-std::string BinaryOpASTNode::print()
+std::string BinaryOpASTNode::print(size_t indent_size)
 {
-  return "binary:(" + LHS->print() + " " + print_token(op) + " " + RHS->print() + ")";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: BinaryOPASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Operator: " + print_token(op) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "LHS: \n";
+  res += LHS->print(indent_size+1) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "RHS: \n";
+  res += RHS->print(indent_size+1) + ",\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> BinaryOpASTNode::visit(Visitor &visitor)
@@ -187,9 +213,16 @@ std::shared_ptr<Value> BinaryOpASTNode::visit(Visitor &visitor)
 //
 // StatementASTNode
 //
-std::string StatementASTNode::print()
+std::string StatementASTNode::print(size_t indent_size)
 {
-  return "stmnt:(" + print_token(identifier) + " " + RHS->print() + ")";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: StatementASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Identifier: " + identifier.value + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "RHS: \n";
+  res += RHS->print(indent_size+1) + "\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> StatementASTNode::visit(Visitor &visitor)
@@ -218,9 +251,9 @@ std::shared_ptr<Value> StatementASTNode::visit(Visitor &visitor)
 //
 // StatementIndexASTNode
 //
-std::string StatementIndexASTNode::print()
+std::string StatementIndexASTNode::print(size_t indent_size)
 {
-  return "stmnt:(" + identifier->print() + " " + RHS->print() + ")";
+  return "stmnt:(" + identifier->print(indent_size) + " " + RHS->print(indent_size) + ")";
 }
 
 std::shared_ptr<Value> StatementIndexASTNode::visit(Visitor &visitor)
@@ -252,9 +285,9 @@ std::shared_ptr<Value> StatementIndexASTNode::visit(Visitor &visitor)
 //
 // FunctionArgumentASTNode
 //
-std::string FunctionArgumentASTNode::print()
+std::string FunctionArgumentASTNode::print(size_t indent_size)
 {
-  return "arg:(" + print_token(name) + " " + print_token(type) + ")";
+  return REPEAT(indent_size*2, ' ') + std::format("{{ NodeType: FunctionArgumentASTNode, Name: {}, Type: {} }}", name.value, type.value);
 }
 
 std::shared_ptr<Value> FunctionArgumentASTNode::visit(Visitor &visitor)
@@ -270,12 +303,20 @@ std::shared_ptr<Value> FunctionArgumentASTNode::visit(Visitor &visitor)
 //
 // FunctionArgumentListASTNode
 //
-std::string FunctionArgumentListASTNode::print()
+std::string FunctionArgumentListASTNode::print(size_t indent_size)
 {
-  std::string ret = "args:(";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: FunctionArgumentListASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Arguments: \n";
+  res += REPEAT((indent_size+1)*2, ' ') + "{\n";
   for (const auto& arg : args)
-     ret += arg->print() + ", ";
-  return ret + ")";
+  {
+    res += arg->print(indent_size+2) + ",\n";
+  }
+  res += REPEAT((indent_size+1)*2, ' ') + "}\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> FunctionArgumentListASTNode::visit(Visitor &visitor)
@@ -292,10 +333,16 @@ std::shared_ptr<Value> FunctionArgumentListASTNode::visit(Visitor &visitor)
 //
 // FunctionDeclASTNode
 //
-std::string FunctionDeclASTNode::print()
+std::string FunctionDeclASTNode::print(size_t indent_size)
 {
-  std::string ret = "decl:(name: (" + print_token(name) + "), " + args->print() + ", ret:("+print_token(return_type)+"))";
-  return ret;
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: FunctionDeclASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Function Name: " + name.value + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Function Arguments: \n";
+  res += args->print(indent_size+1) + "\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> FunctionDeclASTNode::visit(Visitor &visitor)
@@ -307,13 +354,20 @@ std::shared_ptr<Value> FunctionDeclASTNode::visit(Visitor &visitor)
 //
 // MethodCallASTNode
 //
-std::string MethodCallASTNode::print()
+std::string MethodCallASTNode::print(size_t indent_size)
 {
-  std::string ret = "method:(" + print_token(name) + "(args:(";
-  for (const auto& i : args)
-    ret += i->print() + ", ";
-  ret += "))";
-  return ret;
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: MethodCallASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Identifier: " + identifier.value + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Name: " + name.value + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Arguments: \n";
+  res += REPEAT((indent_size+1)*2, ' ') + "{\n";
+  for (const auto& arg : args)
+    res += arg->print(indent_size+2) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "}\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> MethodCallASTNode::visit(Visitor &visitor)
@@ -354,13 +408,19 @@ std::shared_ptr<Value> MethodCallASTNode::visit(Visitor &visitor)
 //
 // FunctionCallASTNode
 //
-std::string FunctionCallASTNode::print()
+std::string FunctionCallASTNode::print(size_t indent_size)
 {
-  std::string ret = "call:(" + print_token(name) + "(args:(";
-  for (const auto& i : args)
-    ret += i->print() + ", ";
-  ret += "))";
-  return ret;
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: FunctionCallASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Name: " + name.value + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Arguments: \n";
+  res += REPEAT((indent_size+1)*2, ' ') + "{\n";
+  for (const auto& arg : args)
+    res += arg->print(indent_size+2) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "}\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> FunctionCallASTNode::visit(Visitor &visitor)
@@ -399,9 +459,15 @@ std::shared_ptr<Value> FunctionCallASTNode::visit(Visitor &visitor)
 //
 // ReturnStatementASTNode
 //
-std::string ReturnStatementASTNode::print()
+std::string ReturnStatementASTNode::print(size_t indent_size)
 {
-  return "return:(" + expr->print() + ")";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: ReturnStatementASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "ReturnValue: \n";
+  res += expr->print(indent_size+1) + "\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> ReturnStatementASTNode::visit(Visitor &visitor)
@@ -417,21 +483,18 @@ std::shared_ptr<Value> ReturnStatementASTNode::visit(Visitor &visitor)
 // ScopeASTNode
 //
 // TODO: maybe handle scope creation here?
-std::string ScopeASTNode::print()
+std::string ScopeASTNode::print(size_t indent_size)
 {
-  std::string res{"scope:(\n"};
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: ScopeASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Nodes:\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "{\n";
   for (const auto& i : nodes)
-  {
-    if (i != nullptr)
-    {
-      res += " " + i->print() + ";\n";
-    }
-    else
-    {
-      res += "node is a nullptr\n";
-    }
-  }
-  return res + ")";
+    res += i->print(indent_size+2) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "}\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> ScopeASTNode::visit(Visitor &visitor)
@@ -452,9 +515,17 @@ std::shared_ptr<Value> ScopeASTNode::visit(Visitor &visitor)
 //
 // FunctionASTNode
 //
-std::string FunctionASTNode::print()
+std::string FunctionASTNode::print(size_t indent_size)
 {
-  return "function:(" + decl->print() + " " + body->print() + ")";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: FunctionASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "FunctionDeclaration: \n";
+  res += decl->print(indent_size+1) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "FunctionBody: \n";
+  res += body->print(indent_size+1) + "\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> FunctionASTNode::visit(Visitor &visitor)
@@ -476,7 +547,7 @@ std::shared_ptr<Value> FunctionASTNode::visit(Visitor &visitor)
 //
 // BuiltinCustomVisitFunctionASTNode
 //
-std::string BuiltinCustomVisitFunctionASTNode::print()
+std::string BuiltinCustomVisitFunctionASTNode::print(size_t indent_size)
 {
   return "";
 }
@@ -493,7 +564,7 @@ std::shared_ptr<Value> BuiltinCustomVisitFunctionASTNode::visit(Visitor &visitor
 //
 // BuiltinPrintFunctionBodyASTNode
 //
-std::string BuiltinPrintFunctionBodyASTNode::print()
+std::string BuiltinPrintFunctionBodyASTNode::print(size_t indent_size)
 {
   return "";
 }
@@ -514,7 +585,7 @@ std::shared_ptr<Value> BuiltinPrintFunctionBodyASTNode::visit(Visitor &visitor)
 //
 // BuiltinReadIntFunctionBodyASTNode
 //
-std::string BuiltinReadIntFunctionBodyASTNode::print()
+std::string BuiltinReadIntFunctionBodyASTNode::print(size_t indent_size)
 {
   return "";
 }
@@ -533,7 +604,7 @@ std::shared_ptr<Value> BuiltinReadIntFunctionBodyASTNode::visit(Visitor &visitor
 //
 // BuiltinReadIntFunctionBodyASTNode
 //
-std::string BuiltinReadStringFunctionBodyASTNode::print()
+std::string BuiltinReadStringFunctionBodyASTNode::print(size_t indent_size)
 {
   return "";
 }
@@ -552,9 +623,23 @@ std::shared_ptr<Value> BuiltinReadStringFunctionBodyASTNode::visit(Visitor &visi
 //
 // IfElseExpressionASTNode
 //
-std::string IfElseExpressionASTNode::print()
+std::string IfElseExpressionASTNode::print(size_t indent_size)
 {
-  return "if:(" + condition->print() + " " + true_scope->print() + ")";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: IfElseExpressionASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Condition: \n";
+  res += condition->print(indent_size+1) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "TrueScope:\n";
+  res += true_scope->print(indent_size+1) + ",\n";
+  if (false_scope)
+  {
+    res += REPEAT((indent_size+1)*2, ' ') + "FalseScope:\n";
+    res += false_scope->print(indent_size+1);
+    res += REPEAT((indent_size+1)*2, ' ') + "\n";
+  }
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
@@ -572,9 +657,17 @@ std::shared_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
 // WhileLoopASTNode
 //
 
-std::string WhileLoopASTNode::print()
+std::string WhileLoopASTNode::print(size_t indent_size)
 {
-  return "";
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: WhileLoopASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Condition: \n";
+  res += condition->print(indent_size+1) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Scope: \n";
+  res += scope->print(indent_size+1) + "\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
 }
 
 std::shared_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
@@ -589,14 +682,18 @@ std::shared_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
 //
 // RootASTNode
 //
-std::string RootASTNode::print()
+std::string RootASTNode::print(size_t indent_size)
 {
-  std::string res{"root:(\n"};
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: RootASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Nodes:\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "{\n";
   for (const auto& i : nodes)
-  {
-    res += " " + i->print() + ";\n";
-  }
-  return res + ")";
+    res += i->print(indent_size+2) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "}\n";
+  res += REPEAT(indent_size*2, ' ') + "}\n";
+  return res;
 }
 
 std::shared_ptr<Value> RootASTNode::visit(Visitor &visitor)

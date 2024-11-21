@@ -16,6 +16,8 @@
 #include "Visitor.hpp"
 #include "Function.hpp"
 
+#define REPEAT(n, c) std::string(n, c)
+
 namespace yapl {
 class Visitor;
 class Value;
@@ -28,7 +30,7 @@ public:
 
   BaseASTNode() = default;
 
-  virtual std::string print() = 0;
+  virtual std::string print(size_t indent_size) = 0;
   virtual std::shared_ptr<Value> visit(Visitor &visitor) = 0;
 };
 
@@ -39,7 +41,7 @@ public:
   explicit LiteralASTNode(const Token& t)
     :BaseASTNode(), token(t) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -52,7 +54,7 @@ public:
   explicit IdentifierASTNode(const Token& t)
     :BaseASTNode(), token(t) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -66,7 +68,7 @@ public:
   IndexASTNode(std::unique_ptr<BaseASTNode> base_expr, std::unique_ptr<BaseASTNode> index_expr)
     :BaseASTNode(), base_expr(std::move(base_expr)), index_expr(std::move(index_expr)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -79,7 +81,7 @@ public:
   explicit ArrayASTNode(std::vector<std::unique_ptr<BaseASTNode>>& values)
     :BaseASTNode(), values(std::move(values)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -94,7 +96,7 @@ public:
   explicit VariableASTNode(const Token& t, const Token& n, std::unique_ptr<BaseASTNode> v = nullptr)
     : BaseASTNode(), type(t), name(n), value(std::move(v)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -107,7 +109,7 @@ public:
   UnaryOpASTNode(const Token& t, std::unique_ptr<BaseASTNode> RHS)
     :BaseASTNode(), op(t), RHS(std::move(RHS)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -120,7 +122,7 @@ public:
   BinaryOpASTNode(const Token& token, std::unique_ptr<BaseASTNode> LHS, std::unique_ptr<BaseASTNode> RHS)
     :BaseASTNode(), op(token), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -133,7 +135,7 @@ public:
   StatementASTNode(const Token& t, std::unique_ptr<BaseASTNode> r)
     :BaseASTNode(), identifier(t), RHS(std::move(r)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -146,7 +148,7 @@ public:
   StatementIndexASTNode(std::unique_ptr<BaseASTNode> i, std::unique_ptr<BaseASTNode> r)
     :BaseASTNode(), identifier(std::move(i)), RHS(std::move(r)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -160,7 +162,7 @@ public:
   FunctionArgumentASTNode(const Token& n, const Token& t)
     :BaseASTNode(), name(n), type(t) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -173,7 +175,7 @@ public:
   explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, int custom_arg_amount = 999)
     :BaseASTNode(), m_arg_amount(custom_arg_amount == 999 ? args.size() : custom_arg_amount), args(std::move(args)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 
@@ -196,7 +198,7 @@ public:
   FunctionDeclASTNode(const Token& n, std::unique_ptr<BaseASTNode> args, const Token& rt)
     :BaseASTNode(), name(n), args(std::move(args)), return_type(rt) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -210,7 +212,7 @@ public:
 	MethodCallASTNode(const Token& id, const Token& nm, std::vector<std::unique_ptr<BaseASTNode>>& args)
 		:BaseASTNode(), identifier(id), name(nm), args(std::move(args)) {}
 
-	std::string print() override;
+	std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -222,7 +224,7 @@ public:
 	FunctionCallASTNode(const Token& id, std::vector<std::unique_ptr<BaseASTNode>>& args)
 		:BaseASTNode(), name(id), args(std::move(args)) {}
 
-	std::string print() override;
+	std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -234,7 +236,7 @@ public:
 	explicit ReturnStatementASTNode(std::unique_ptr<BaseASTNode> e)
 		:expr(std::move(e)) {}
 
-	std::string print() override;
+	std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -246,7 +248,7 @@ public:
   ScopeASTNode()
     :BaseASTNode() {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -260,7 +262,7 @@ public:
   FunctionASTNode(std::unique_ptr<BaseASTNode> decl, std::unique_ptr<BaseASTNode> body)
     :BaseASTNode(), decl(std::move(decl)), body(std::move(body)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -268,7 +270,7 @@ public:
 class BuiltinCustomVisitFunctionASTNode final : public BaseASTNode
 {
 public:
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 
@@ -281,7 +283,7 @@ public:
 class BuiltinPrintFunctionBodyASTNode final : public BaseASTNode
 {
 public:
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -289,7 +291,7 @@ public:
 class BuiltinReadIntFunctionBodyASTNode final : public BaseASTNode
 {
 public:
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -297,7 +299,7 @@ public:
 class BuiltinReadStringFunctionBodyASTNode final : public BaseASTNode
 {
 public:
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -312,7 +314,7 @@ public:
   IfElseExpressionASTNode(std::unique_ptr<BaseASTNode> cond, std::unique_ptr<BaseASTNode> ts, std::unique_ptr<BaseASTNode> fs = nullptr)
     :BaseASTNode(), condition(std::move(cond)), true_scope(std::move(ts)), false_scope(std::move(fs)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -326,7 +328,7 @@ public:
   WhileLoopASTNode(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<BaseASTNode> scope)
     :BaseASTNode(), condition(std::move(condition)), scope(std::move(scope)) {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
@@ -338,7 +340,7 @@ public:
   RootASTNode()
     :BaseASTNode() {}
 
-  std::string print() override;
+  std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
