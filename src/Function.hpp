@@ -9,6 +9,9 @@
 #include "Scope.hpp"
 
 namespace yapl {
+class Scope;
+class Value;
+class Variable;
 
 class Function
 {
@@ -24,10 +27,6 @@ public:
     // TODO: add reference to global scope
   }
 
-  void set_argument(std::unique_ptr<Variable> v, const std::string& name)
-  {
-    argument_names.push_back(name);
-    function_scope->vars[name] = std::move(v);
-  }
+  void set_argument(std::unique_ptr<Variable> v, const std::string& name);
 };
 }

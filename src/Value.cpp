@@ -5,9 +5,19 @@
 #include "Value.hpp"
 
 namespace yapl {
+
+//
+// Value
+//
+Value::Value(const VALUE_TYPE type = VALUE_TYPE::NONE)
+	:type(type) {}
+
+
 //
 // IntegerValue
 //
+IntegerValue::IntegerValue(const int value)
+		:Value(VALUE_TYPE::INTEGER), value(value) {}
 
 std::string IntegerValue::print() const
 {
@@ -190,6 +200,13 @@ std::unique_ptr<Value> IntegerValue::BinaryEQ(const std::unique_ptr<Value> &othe
 	}
 }
 
+
+//
+// BooleanValue
+//
+BooleanValue::BooleanValue(const bool value)
+		:Value(VALUE_TYPE::BOOL), value(value) {}
+
 std::string BooleanValue::print() const
 {
 	return value ? "true" : "false";
@@ -283,6 +300,9 @@ std::unique_ptr<Value> BooleanValue::BinaryEQ(const std::unique_ptr<Value> &othe
 	}
 }
 
+FloatValue::FloatValue(const float value)
+		:Value(VALUE_TYPE::FLOAT), value(value) {}
+
 std::string FloatValue::print() const
 {
 	return std::to_string(value);
@@ -353,6 +373,10 @@ std::unique_ptr<Value> FloatValue::BinaryEQ(const std::unique_ptr<Value> &other)
 	return nullptr;
 }
 
+
+StringValue::StringValue(std::string value)
+		:Value(VALUE_TYPE::STRING), value(std::move(value)) {}
+
 std::string StringValue::print() const
 {
 	return value;
@@ -421,6 +445,24 @@ std::unique_ptr<Value> StringValue::BinaryGQ(const std::unique_ptr<Value> &other
 std::unique_ptr<Value> StringValue::BinaryEQ(const std::unique_ptr<Value> &other)
 {
 	return nullptr;
+}
+
+ArrayValue::ArrayValue(std::vector<std::unique_ptr<Value> > &value)
+		:Value(VALUE_TYPE::ARRAY), value(std::move(value))
+{
+	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("size")  };
+	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
+	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("int") };
+	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&]()
+	{
+		return std::make_unique<IntegerValue>(this->value.size());
+	});
+
+	auto f = std::make_unique<FunctionASTNode>(
+			std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+																									 std::move(body));
+	m_methods.push_back(std::move(f));
+	m_method_definitions["size"] = m_methods[m_methods.size() - 1].get();
 }
 
 

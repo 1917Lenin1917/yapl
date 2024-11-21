@@ -52,6 +52,27 @@ std::unique_ptr<BaseASTNode> Parser::parse_identifier()
 		advance(); // eat ]
 		return std::make_unique<IndexASTNode>(std::make_unique<IdentifierASTNode>(identifier), std::move(expr));
 	}
+	// if there is a ., then this is a method call
+	if (m_tokens[m_pos].type == TOKEN_TYPE::PERIOD)
+	{
+		advance(); // eat .
+		auto name = m_tokens[m_pos];
+		advance(); // eat name
+
+		std::vector<std::unique_ptr<BaseASTNode>> args;
+		// function call;
+		advance(); // eat (
+		while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
+		{
+			args.push_back(std::move(parse_expr()));
+			if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+			{
+				advance();
+			}
+		}
+		advance(); // eat )
+		return std::make_unique<MethodCallASTNode>(identifier, name, args);
+	}
 	auto res = std::make_unique<IdentifierASTNode>(identifier);
 	return res;
 }

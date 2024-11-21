@@ -296,6 +296,53 @@ std::unique_ptr<Value> FunctionDeclASTNode::visit(Visitor &visitor)
 
 
 //
+// MethodCallASTNode
+//
+std::string MethodCallASTNode::print()
+{
+  std::string ret = "method:(" + print_token(name) + "(args:(";
+  for (const auto& i : args)
+    ret += i->print() + ", ";
+  ret += "))";
+  return ret;
+}
+
+std::unique_ptr<Value> MethodCallASTNode::visit(Visitor &visitor)
+{
+  auto object = visitor.interpreter.get_variable(identifier.value);
+  if (!object)
+  {
+    std::cerr << "Object " << identifier.value << " doesn't exist\n";
+    return nullptr;
+  }
+
+  auto func_def = object->value->get_method_definition(name.value);
+  auto func = visitor.interpreter.push_function(std::string(identifier.value) + "." + name.value); // maybe get this from value ?
+  auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
+  size_t arg_amount = arg_list->get_argument_amount();
+  if (arg_amount != -1 && args.size() != arg_amount)
+  {
+    std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", name.value, arg_amount, args.size());
+    return nullptr;
+  }
+  // set args with passed expressions
+  for (size_t i = 0; i < args.size(); i++)
+  {
+    auto value = args[i]->visit(visitor);
+    func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
+    // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
+  }
+  func_def->body->visit(visitor);
+  std::unique_ptr<Value> ret_value = std::move(func->return_value);
+  visitor.interpreter.pop_scope();
+  visitor.interpreter.pop_function();
+
+  return ret_value;
+}
+
+
+
+//
 // FunctionCallASTNode
 //
 std::string FunctionCallASTNode::print()
@@ -414,6 +461,24 @@ std::unique_ptr<Value> FunctionASTNode::visit(Visitor &visitor)
 
   return nullptr; // should there be a function type??
 }
+
+
+
+//
+// BuiltinCustomVisitFunctionASTNode
+//
+std::string BuiltinCustomVisitFunctionASTNode::print()
+{
+  return "";
+}
+
+std::unique_ptr<Value> BuiltinCustomVisitFunctionASTNode::visit(Visitor &visitor)
+{
+  auto func_obj = visitor.interpreter.function_stack[visitor.interpreter.function_stack.size() - 1];
+  func_obj->return_value = func();
+  return nullptr;
+}
+
 
 
 //

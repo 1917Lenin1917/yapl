@@ -7,7 +7,9 @@
 #include <string>
 #include <iostream>
 #include <format>
+#include <functional>
 #include <memory>
+#include <utility>
 
 #include "Token.hpp"
 #include "Value.hpp"
@@ -15,6 +17,7 @@
 
 namespace yapl {
 class Visitor;
+class Value;
 
 class BaseASTNode
 {
@@ -186,6 +189,18 @@ public:
   std::unique_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class MethodCallASTNode final : public BaseASTNode
+{
+public:
+  Token identifier;
+	Token name;
+	std::vector<std::unique_ptr<BaseASTNode>> args;
+	MethodCallASTNode(const Token& id, const Token& nm, std::vector<std::unique_ptr<BaseASTNode>>& args)
+		:BaseASTNode(), identifier(id), name(nm), args(std::move(args)) {}
+
+	std::string print() override;
+	std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
 class FunctionCallASTNode final : public BaseASTNode
 {
 public:
@@ -231,6 +246,18 @@ public:
 
   std::string print() override;
   std::unique_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class BuiltinCustomVisitFunctionASTNode final : public BaseASTNode
+{
+public:
+  std::string print() override;
+  std::unique_ptr<Value> visit(Visitor &visitor) override;
+
+  std::function<std::unique_ptr<Value>()> func;
+
+  explicit BuiltinCustomVisitFunctionASTNode(std::function<std::unique_ptr<Value>()> func)
+    :BaseASTNode(), func(std::move(func)) {}
 };
 
 class BuiltinPrintFunctionBodyASTNode final : public BaseASTNode

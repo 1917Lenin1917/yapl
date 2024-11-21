@@ -1,16 +1,22 @@
 //
 // Created by lenin on 15.11.2024.
 //
-
 #pragma once
+
 #include <utility>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 #include "Function.hpp"
 #include "ASTNode.hpp"
+#include "Scope.hpp"
+#pragma once
 
 namespace yapl {
+class Scope;
+class Function;
+class Variable;
 class FunctionASTNode;
 class FunctionDeclASTNode;
 class BuiltinPrintFunctionBodyASTNode;
@@ -42,7 +48,6 @@ class Interpreter {
         builtin_functions.push_back(std::move(f));
         function_definitions["read_int"] = builtin_functions[builtin_functions.size() - 1].get();
     }
-
     void make_builtin_read_string()
     {
         const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("read_str")  };
@@ -69,43 +74,14 @@ public:
         make_builtin_read_int();
         make_builtin_read_string();
     }
-
-    bool function_exists(const std::string& name) const
-    {
-      return function_definitions.contains(name);
-    }
-
-    void add_function_definition(const std::string& name, FunctionASTNode* fn)
-    {
-        function_definitions[name] = fn;
-    }
-
-    std::shared_ptr<Function> push_function(const std::string& name)
-    {
-        auto func = std::make_shared<Function>();
-        func->name = name;
-        function_stack.push_back(func);
-        scope_stack.push_back(func->function_scope);
-
-        return func;
-    }
-    void pop_function()
-    {
-        function_stack.pop_back();
-    }
-
-    void pop_scope()
-    {
-        scope_stack.pop_back();
-    }
-
-    FunctionASTNode* get_function_def(const std::string& name)
-    {
-        return function_definitions[name];
-    }
+    bool function_exists(const std::string& name) const;
+    std::shared_ptr<Variable> get_variable(const std::string& name) const;
+    void add_function_definition(const std::string& name, FunctionASTNode* fn);
+    std::shared_ptr<Function> push_function(const std::string& name);
+    void pop_function();
+    void pop_scope();
+    FunctionASTNode* get_function_def(const std::string& name);
 };
-
-
 }
 
 

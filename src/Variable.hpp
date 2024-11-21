@@ -8,12 +8,14 @@
 #include "Value.hpp"
 
 namespace yapl {
+enum class VALUE_TYPE;
+class Value;
 
 class Variable
 {
 public:
   bool is_const = false;
-  VALUE_TYPE type = VALUE_TYPE::NONE;
+  VALUE_TYPE type;
   std::unique_ptr<Value> value;
 };
 }

@@ -1,6 +1,5 @@
-const a = [1, 2];
-let temp = a[0];
-a[0] = a[1];
-a[1] = temp;
-
-print(a[0], a[1]);
+fn penis(a: int): void {
+  print("Penis", a);
+}
+const pn = [1, 2, 3];
+print(pn.size());

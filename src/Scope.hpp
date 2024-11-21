@@ -10,6 +10,7 @@
 #include "Variable.hpp"
 
 namespace yapl {
+class Variable;
 
 class Scope
 {

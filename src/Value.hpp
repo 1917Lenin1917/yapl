@@ -7,9 +7,15 @@
 #include <utility>
 #include <iostream>
 #include <format>
+#include <unordered_map>
 #include <vector>
 
+#include "ASTNode.hpp"
+
 namespace yapl {
+
+class FunctionASTNode;
+
 
 enum class VALUE_TYPE
 {
@@ -23,11 +29,13 @@ enum class VALUE_TYPE
 
 class Value
 {
+protected:
+	std::vector<std::unique_ptr<FunctionASTNode>> m_methods;
+	std::unordered_map<std::string, FunctionASTNode*> m_method_definitions;
 public:
 	VALUE_TYPE type;
 
-	explicit Value(const VALUE_TYPE type = VALUE_TYPE::NONE)
-		:type(type) {}
+	explicit Value(VALUE_TYPE type);
 
 	virtual ~Value() = default;
 
@@ -58,6 +66,25 @@ public:
 	{
 		throw std::runtime_error("Unsupported operator!\n");
 	}
+
+	[[nodiscard]] FunctionASTNode* get_method_definition(const std::string& name)
+	{
+		if (m_method_definitions.contains(name))
+			return m_method_definitions[name];
+
+		std::cerr << "Unknown method " << name << "\n";
+		return nullptr;
+	}
+
+	// [[nodiscard]] virtual std::unique_ptr<Value> OperatorMethod(const std::string& method_name, const std::vector<std::unique_ptr<Value>>& arguments)
+	// {
+	// 	if (!m_method_definitions.contains(method_name))
+	// 		throw std::runtime_error("Unknown method!\n");
+	// }
+	// virtual void OperatorMethodSet(const std::string& method_name, const std::vector<std::unique_ptr<Value>>& arguments)
+	// {
+	// 	throw std::runtime_error("Unsupported operator!\n");
+	// }
 };
 
 class IntegerValue final : public Value
@@ -65,8 +92,7 @@ class IntegerValue final : public Value
 public:
 	int value;
 
-	explicit IntegerValue(const int value)
-		:Value(VALUE_TYPE::INTEGER), value(value) {}
+	explicit IntegerValue(int value);
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
@@ -97,8 +123,7 @@ class BooleanValue final : public Value
 public:
 	bool value;
 
-	explicit BooleanValue(const bool value)
-		:Value(VALUE_TYPE::BOOL), value(value) {}
+	explicit BooleanValue(bool value);
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
@@ -124,8 +149,7 @@ class FloatValue final : public Value
 public:
 	float value;
 
-	explicit FloatValue(const float value)
-		:Value(VALUE_TYPE::FLOAT), value(value) {}
+	explicit FloatValue(const float value);
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
@@ -150,8 +174,7 @@ class StringValue final : public Value
 public:
 	std::string value; // probably should be a const char* ??
 
-	explicit StringValue(std::string value)
-		:Value(VALUE_TYPE::STRING), value(std::move(value)) {}
+	explicit StringValue(std::string value);
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
@@ -178,8 +201,7 @@ class ArrayValue final : public Value
 public:
 	std::vector<std::unique_ptr<Value>> value;
 
-	explicit ArrayValue(std::vector<std::unique_ptr<Value>>& value)
-		:Value(VALUE_TYPE::ARRAY), value(std::move(value)) {}
+	explicit ArrayValue(std::vector<std::unique_ptr<Value>>& value);
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
