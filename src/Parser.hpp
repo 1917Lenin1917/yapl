@@ -38,7 +38,7 @@ public:
   std::unique_ptr<BaseASTNode> parse_semic_expr();
 	std::unique_ptr<BaseASTNode> parse_return();
   std::unique_ptr<BaseASTNode> parse_binop_rhs(int expr_prec, std::unique_ptr<BaseASTNode> LHS);
-  std::unique_ptr<BaseASTNode> parse_var_decl();
+  std::vector<std::unique_ptr<BaseASTNode>> parse_var_decl();
   std::unique_ptr<BaseASTNode> parse_while_loop();
   // statement :: identifier = expr
   // statement :: identifier

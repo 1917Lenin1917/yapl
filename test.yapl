@@ -1,9 +1,7 @@
 const array = [5, 4, 3, 2, 1];
 
 fn bubble_sort(arr: Array): Array {
-  let i = 0;
-  let j = 0;
-  let temp = 0;
+  let i = 0, j = 0, temp = 0;
   while i < arr.size() {
     while j < arr.size() {
       if arr[i] < arr[j] {

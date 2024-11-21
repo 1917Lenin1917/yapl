@@ -211,27 +211,47 @@ std::unique_ptr<BaseASTNode> Parser::parse_binop_rhs(int expr_prec, std::unique_
 	}
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_var_decl()
+std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_var_decl()
 {
+	std::vector<std::unique_ptr<BaseASTNode>> ret_val;
 	auto decl_token = m_tokens[m_pos];
 	advance(); // eat var/let/const
-	auto name_identifier = m_tokens[m_pos];
-	advance(); // eat name
-
-	if (m_tokens[m_pos].type != TOKEN_TYPE::ASSIGN)
+	while (true)
 	{
-		if (m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
+		auto name_identifier = m_tokens[m_pos];
+		advance(); // eat name
+		if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
 		{
-			std::cerr << "Expected a semicolon when parsing var declaration\n";
-			return nullptr;
-		}
-		advance(); // eat ;
-		return std::make_unique<VariableASTNode>(decl_token, name_identifier);
-	}
+			advance(); // eat =
+			auto expr = parse_expr();
+			ret_val.push_back(std::move(std::make_unique<VariableASTNode>(decl_token, name_identifier, std::move(expr))));
 
-	advance(); // eat =
-	auto expr = parse_semic_expr();
-	return std::make_unique<VariableASTNode>(decl_token, name_identifier, std::move(expr));
+			if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+			{
+				advance(); // eat comma
+				continue;
+			}
+			if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
+			{
+				advance(); // eat ;
+				return ret_val;
+			}
+			std::cerr << "expected a semicolon in var decl\n";
+			return ret_val;
+		}
+		ret_val.push_back(std::move(std::make_unique<VariableASTNode>(decl_token, name_identifier)));
+		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+		{
+			advance(); // eat comma
+			continue;
+		}
+		if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
+		{
+			advance(); // eat ;
+			return ret_val;
+		}
+	}
+	return ret_val;
 }
 
 
@@ -413,7 +433,13 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 			case TOKEN_TYPE::RETURN: { scope->nodes.push_back(std::move(parse_return())); break; }
 			case TOKEN_TYPE::VAR:
 			case TOKEN_TYPE::CONST:
-			case TOKEN_TYPE::LET: { scope->nodes.push_back(std::move(parse_var_decl())); break; }
+			case TOKEN_TYPE::LET:
+			{
+				auto vars = parse_var_decl();
+				for (auto& var : vars)
+					scope->nodes.push_back(std::move(var));
+				break;
+			}
 			case TOKEN_TYPE::IDENTIFIER: { scope->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
 			// case TOKEN_TYPE::FN: { scope->nodes.push_back(std::move(parse_function())); break; }
 			case TOKEN_TYPE::IF: { scope->nodes.push_back(std::move(parse_ifelse_statement())); break; }
@@ -450,7 +476,13 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 			case TOKEN_TYPE::TT_EOF: { return root; }
 			case TOKEN_TYPE::VAR:
 			case TOKEN_TYPE::CONST:
-			case TOKEN_TYPE::LET: { root->nodes.push_back(std::move(parse_var_decl())); break; }
+			case TOKEN_TYPE::LET:
+			{
+				auto vars = parse_var_decl();
+				for (auto& var : vars)
+					root->nodes.push_back(std::move(var));
+				break;
+			}
 			case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
 			case TOKEN_TYPE::FN: { root->nodes.push_back(std::move(parse_function())); break; }
 			case TOKEN_TYPE::IF: { root->nodes.push_back(std::move(parse_ifelse_statement())); break; }
