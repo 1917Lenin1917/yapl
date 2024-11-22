@@ -5,6 +5,7 @@
 #include "ASTNode.hpp"
 
 #include <algorithm>
+#include <memory>
 
 namespace yapl {
 
@@ -127,10 +128,10 @@ std::shared_ptr<Value> VariableASTNode::visit(Visitor &visitor)
 {
   for (size_t i = visitor.interpreter.scope_stack.size(); i --> 0;)
   {
-    const auto& scope = visitor.interpreter.scope_stack[i];
+    auto scope = visitor.interpreter.scope_stack[i];
     if (scope->vars.contains(name.value))
     {
-      std::cerr << std::format("Variable {} is already defined exist.\n", name.value);
+      std::cerr << std::format("Variable {} is already defined in stack idx {}/{}.\n", name.value, i, visitor.interpreter.scope_stack.size());
       return nullptr;
     }
   }
@@ -644,10 +645,20 @@ std::string IfElseExpressionASTNode::print(size_t indent_size)
 
 std::shared_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
 {
-  if (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value)
-    return true_scope->visit(visitor);
-  if (false_scope)
-    return false_scope->visit(visitor);
+  if (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value) 
+	{
+		visitor.interpreter.push_scope();
+    auto res = true_scope->visit(visitor);
+		visitor.interpreter.pop_scope();
+		return res;
+	}
+  if (false_scope) 
+	{
+		visitor.interpreter.push_scope();
+    auto res = false_scope->visit(visitor);
+		visitor.interpreter.pop_scope();
+		return res;
+	}
   return nullptr;
 }
 
@@ -674,7 +685,9 @@ std::shared_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
 {
   while (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value == true)
   {
+		visitor.interpreter.push_scope();
     scope->visit(visitor);
+		visitor.interpreter.pop_scope();
   }
   return nullptr;
 }

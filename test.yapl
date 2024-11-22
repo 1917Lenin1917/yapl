@@ -1,17 +1,18 @@
-fn test(arg1: int, arg2: int): Array {
-  let arr = [0];
-  while (arg1 < arg2) {
-    arr.append(arg1);
-    arg1 = arg1 + 1;
-  }
-
-  if arg1 == arg2 {
-    return arr;
-  } else if arg1 < arg2 {
-    return [];
-  } else {
-    return [1, 2, 3];
-  }
+fn bubble(arr: Array): Array {
+	let i=0;
+	while i < arr.size() {
+		let j=i+1;
+		while j < arr.size() {
+			if arr[i] > arr[j] {
+				const temp = arr[i];
+				arr[i] = arr[j];
+				arr[j] = temp;
+			}
+			j = j + 1;
+		}
+		i = i + 1;
+	}
+	return arr;
 }
 
-print(test(1, 2));
+print(bubble([5, 4, 3, 2, 1]));

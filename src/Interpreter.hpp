@@ -80,6 +80,7 @@ public:
     std::shared_ptr<Function> push_function(const std::string& name);
     void pop_function();
     void pop_scope();
+    void push_scope();
     FunctionASTNode* get_function_def(const std::string& name);
 };
 }

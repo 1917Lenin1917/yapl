@@ -3,6 +3,7 @@
 //
 
 #include "Interpreter.hpp"
+#include <memory>
 
 namespace yapl {
 
@@ -35,6 +36,10 @@ std::shared_ptr<Function> Interpreter::push_function(const std::string& name)
 void Interpreter::pop_function()
 {
     function_stack.pop_back();
+}
+void Interpreter::push_scope()
+{
+    scope_stack.push_back(std::make_shared<Scope>());
 }
 void Interpreter::pop_scope()
 {
