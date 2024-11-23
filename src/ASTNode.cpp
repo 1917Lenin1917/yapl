@@ -667,7 +667,6 @@ std::shared_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
 //
 // WhileLoopASTNode
 //
-
 std::string WhileLoopASTNode::print(size_t indent_size)
 {
   std::string res;
@@ -689,6 +688,43 @@ std::shared_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
     scope->visit(visitor);
 		visitor.interpreter.pop_scope();
   }
+  return nullptr;
+}
+
+
+
+//
+// ForLoopASTNode
+//
+std::string ForLoopASTNode::print(size_t indent_size)
+{
+  std::string res;
+  res += REPEAT(indent_size*2, ' ') + "{\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "NodeType: ForLoopASTNode,\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Declaration: \n";
+  res += declaration->print(indent_size+1) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Condition: \n";
+  res += condition->print(indent_size+1) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Increment: \n";
+  res += increment->print(indent_size+1) + ",\n";
+  res += REPEAT((indent_size+1)*2, ' ') + "Scope: \n";
+  res += scope->print(indent_size+1) + "\n";
+  res += REPEAT(indent_size*2, ' ') + "}";
+  return res;
+}
+
+std::shared_ptr<Value> ForLoopASTNode::visit(Visitor &visitor)
+{
+  visitor.interpreter.push_scope();
+  declaration->visit(visitor);
+  while (dynamic_cast<BooleanValue*>(condition->visit(visitor)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value == true)
+  {
+		visitor.interpreter.push_scope();
+    scope->visit(visitor);
+		visitor.interpreter.pop_scope();
+    increment->visit(visitor);
+  }
+  visitor.interpreter.pop_scope();
   return nullptr;
 }
 

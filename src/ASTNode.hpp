@@ -332,6 +332,22 @@ public:
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
+class ForLoopASTNode final : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> declaration;
+  std::unique_ptr<BaseASTNode> condition;
+  std::unique_ptr<BaseASTNode> increment;
+
+  std::unique_ptr<BaseASTNode> scope;
+
+  ForLoopASTNode(std::unique_ptr<BaseASTNode> decl, std::unique_ptr<BaseASTNode> cond, std::unique_ptr<BaseASTNode> inc, std::unique_ptr<BaseASTNode> scope)
+    :BaseASTNode(), declaration(std::move(decl)), condition(std::move(cond)), increment(std::move(inc)), scope(std::move(scope)){}
+
+  std::string print(size_t indent_size) override;
+
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
 
 class RootASTNode final : public BaseASTNode
 {
