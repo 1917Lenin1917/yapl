@@ -1,14 +1,30 @@
-fn bubble(arr: Array): Array {
-  for let i = 0; i < arr.size(); i = i + 1; {
-    for let j = i + 1; j < arr.size(); j = j + 1; {
-			if arr[i] > arr[j] {
-				const temp = arr[i];
-				arr[i] = arr[j];
-				arr[j] = temp;
-			}
-    }
-  }
-	return arr;
+interface Printable {
+  fn print(): str;
 }
 
-print(bubble([5, 4, 3, 2, 1]));
+type Penis {
+  a: str;
+  b: int;
+  c: float;
+  d: Array;
+}
+
+impl Printable for Penis {
+  fn print(): str {
+    return `Penis: a={a}, b={b}, c={c}, d={d}`;
+  }
+}
+
+const penis1 = Penis{ .a = "Hello, World!",
+                     .b = 20,
+                     .c = 40.0,
+                     .d = [1, 2, 3, 4, 5] };
+
+const penis2 = Penis{ "Test", 1, 2.3, [1,2,3] };
+
+fn my_print(printable: Printable): void {
+  print(printable.print());
+}
+
+my_print(penis1);
+my_print(penis2);
