@@ -2,10 +2,83 @@
 // Created by lenin on 15.11.2024.
 //
 
-#include "Interpreter.hpp"
+#include "yapl/Interpreter.hpp"
+#include "yapl/values/IntegerValue.hpp"
+#include "yapl/values/StringValue.hpp"
+#include "yapl/values/FloatValue.hpp"
+#include "yapl/values/BooleanValue.hpp"
+#include "yapl/values/ArrayValue.hpp"
 #include <memory>
 
 namespace yapl {
+
+#define MAKE_TOKEN(token_name) Token{ TOKEN_TYPE::IDENTIFIER, new char[](token_name)  }
+#define MAKE_BODY(body_fn) std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj) body_fn )
+
+void Interpreter::make_builtin_print()
+{
+    auto name = MAKE_TOKEN("print");
+    auto return_type = MAKE_TOKEN("void");
+    std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
+    auto body = MAKE_BODY(
+            {
+                for (const auto& name : f_obj->argument_names)
+                {
+                    const auto& arg = f_obj->function_scope->vars.at(name);
+                    // std::cout << arg->value->print() << " ";
+                    std::cout << arg->value->print();
+                }
+                return nullptr;
+            });
+    auto f = std::make_unique<FunctionASTNode>(
+            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+            std::move(body));
+    builtin_functions.push_back(std::move(f));
+    function_definitions["print"] = builtin_functions[builtin_functions.size() - 1].get();
+}
+void Interpreter::make_builtin_read_int()
+{
+    auto name = MAKE_TOKEN("read_int");
+    auto return_type = MAKE_TOKEN("int");
+    std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
+    auto body = MAKE_BODY(
+            {
+                int value; std::cin >> value;
+                f_obj->return_value = std::make_shared<IntegerValue>(value);
+                return nullptr;
+            });
+    auto f = std::make_unique<FunctionASTNode>(
+            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+            std::move(body));
+    builtin_functions.push_back(std::move(f));
+    function_definitions["read_int"] = builtin_functions[builtin_functions.size() - 1].get();
+}
+void Interpreter::make_builtin_read_string()
+{
+    auto name = MAKE_TOKEN("read_str");
+    auto return_type = MAKE_TOKEN("str");
+    std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
+    auto body = MAKE_BODY(
+            {
+                std::string value; std::cin >> value;
+                f_obj->return_value = std::make_shared<StringValue>(value);
+                return nullptr;
+            });
+    auto f = std::make_unique<FunctionASTNode>(
+            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+            std::move(body));
+    builtin_functions.push_back(std::move(f));
+    function_definitions["read_str"] = builtin_functions[builtin_functions.size() - 1].get();
+}
+
+Interpreter::Interpreter()
+{
+    scope_stack.push_back(std::make_unique<Scope>()); // make global scope
+
+    make_builtin_print();
+    make_builtin_read_int();
+    make_builtin_read_string();
+}
 
 bool Interpreter::function_exists(const std::string &name) const
 {

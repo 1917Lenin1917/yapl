@@ -2,7 +2,7 @@
 // Created by lenin on 13.11.2024.
 //
 
-#include "Lexer.hpp"
+#include "yapl/Lexer.hpp"
 
 namespace yapl {
 
@@ -131,6 +131,41 @@ Token Lexer::make_string()
     char* value = new char[m_pos - start + 1 - 2];
     memcpy(value, m_text.data()+start+1, m_pos-start+1-2);
     value[m_pos - start + 1-2] = '\0';
+    size_t len = m_pos - start + 1 - 2;
+    for (size_t i = 0; i < len; i++)
+    {
+        if (value[i] == '\\')
+        {
+            i++;
+            switch (value[i])
+            {
+                case 'n':
+                {
+                    value[i-1] = '\n';
+                    for (size_t j = i+1; j < len; j++)
+                    {
+                        value[j-1] = value[j];
+                    }
+                    len--;
+                    i--;
+                    break;
+                }
+                case '\\':
+                {
+                    value[i-1] = '\\';
+                    for (size_t j = i+1; j < len; j++)
+                    {
+                        value[j-1] = value[j];
+                    }
+                    len--;
+                    i--;
+                    break;
+                }
+                default: {}
+            }
+        }
+    }
+    value[len] = '\0';
     return { m_text[m_pos] == '`' ? TOKEN_TYPE::FSTRING : TOKEN_TYPE::STRING, value };
 }
 

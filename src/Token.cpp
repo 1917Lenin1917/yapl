@@ -2,7 +2,7 @@
 // Created by lenin on 13.11.2024.
 //
 
-#include "Token.hpp"
+#include "yapl/Token.hpp"
 
 namespace yapl {
 

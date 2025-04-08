@@ -2,8 +2,8 @@
 // Created by lenin on 14.11.2024.
 //
 
-#include "Parser.hpp"
-#include "Token.hpp"
+#include "yapl/Parser.hpp"
+#include "yapl/Token.hpp"
 #include <memory>
 
 namespace yapl {

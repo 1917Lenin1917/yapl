@@ -12,16 +12,16 @@
 #include <utility>
 
 #include "Token.hpp"
-#include "Value.hpp"
 #include "Visitor.hpp"
 #include "Function.hpp"
+#include "values/Value.hpp"
 
 #define REPEAT(n, c) std::string(n, c)
 
 namespace yapl {
 class Visitor;
-class Value;
 class Function;
+class Value;
 
 class BaseASTNode
 {
@@ -116,9 +116,9 @@ public:
 
 class BinaryOpASTNode final : public BaseASTNode
 {
-  Token op;
-  std::unique_ptr<BaseASTNode> LHS, RHS;
 public:
+    Token op;
+    std::unique_ptr<BaseASTNode> LHS, RHS;
   BinaryOpASTNode(const Token& token, std::unique_ptr<BaseASTNode> LHS, std::unique_ptr<BaseASTNode> RHS)
     :BaseASTNode(), op(token), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
@@ -129,9 +129,9 @@ public:
 
 class StatementASTNode final : public BaseASTNode
 {
-  Token identifier;
-  std::unique_ptr<BaseASTNode> RHS;
 public:
+    Token identifier;
+    std::unique_ptr<BaseASTNode> RHS;
   StatementASTNode(const Token& t, std::unique_ptr<BaseASTNode> r)
     :BaseASTNode(), identifier(t), RHS(std::move(r)) {}
 
@@ -142,9 +142,9 @@ public:
 
 class StatementIndexASTNode final : public BaseASTNode
 {
+public:
   std::unique_ptr<BaseASTNode> identifier;
   std::unique_ptr<BaseASTNode> RHS;
-public:
   StatementIndexASTNode(std::unique_ptr<BaseASTNode> i, std::unique_ptr<BaseASTNode> r)
     :BaseASTNode(), identifier(std::move(i)), RHS(std::move(r)) {}
 
@@ -279,31 +279,6 @@ public:
   explicit BuiltinCustomVisitFunctionASTNode(std::function<std::unique_ptr<Value>(std::shared_ptr<Function>)> func)
     :BaseASTNode(), func(std::move(func)) {}
 };
-
-class BuiltinPrintFunctionBodyASTNode final : public BaseASTNode
-{
-public:
-  std::string print(size_t indent_size) override;
-
-  std::shared_ptr<Value> visit(Visitor &visitor) override;
-};
-
-class BuiltinReadIntFunctionBodyASTNode final : public BaseASTNode
-{
-public:
-  std::string print(size_t indent_size) override;
-
-  std::shared_ptr<Value> visit(Visitor &visitor) override;
-};
-
-class BuiltinReadStringFunctionBodyASTNode final : public BaseASTNode
-{
-public:
-  std::string print(size_t indent_size) override;
-
-  std::shared_ptr<Value> visit(Visitor &visitor) override;
-};
-
 class IfElseExpressionASTNode final : public BaseASTNode
 {
 public:

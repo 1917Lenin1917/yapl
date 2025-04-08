@@ -2,10 +2,10 @@
 #include <fstream>
 #include <iostream>
 
-#include "Lexer.hpp"
-#include "Parser.hpp"
-#include "Interpreter.hpp"
-#include "Visitor.hpp"
+#include "yapl/Lexer.hpp"
+#include "yapl/Parser.hpp"
+#include "yapl/Interpreter.hpp"
+#include "yapl/Visitor.hpp"
 
 using namespace yapl;
 
@@ -32,23 +32,27 @@ int main(int argc, char** argv)
   std::ifstream t(argv[1]);
   std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
   Lexer lexer {text};
-  auto ltime1 = std::chrono::system_clock::now();
+//  auto ltime1 = std::chrono::system_clock::now();
   auto tokens = lexer.make_tokens();
-  auto ltime2 = std::chrono::system_clock::now();
-  std::cout << "Tokenizing " << tokens.size() << " tokens took: " << std::chrono::duration_cast<std::chrono::milliseconds>(ltime2-ltime1) << "\n";
+//  auto ltime2 = std::chrono::system_clock::now();
+//  std::cout << "Tokenizing " << tokens.size() << " tokens took: " << std::chrono::duration_cast<std::chrono::milliseconds>(ltime2-ltime1) << "\n";
 
 
   Parser parser {tokens};
-  auto rtime1 = std::chrono::system_clock::now();
+//  auto rtime1 = std::chrono::system_clock::now();
   auto ast = parser.parse_root();
-  auto rtime2 = std::chrono::system_clock::now();
-  std::cout << "Parsing took: " << std::chrono::duration_cast<std::chrono::milliseconds>(rtime2-rtime1) << "\n";
-  std::cout << std::endl;
-  std::cout << ast->print(0) << "\n";
+//  auto rtime2 = std::chrono::system_clock::now();
+//  std::cout << "Parsing took: " << std::chrono::duration_cast<std::chrono::milliseconds>(rtime2-rtime1) << "\n";
+//  std::cout << std::endl;
+//  std::cout << ast->print(0) << "\n";
 
   Interpreter intp;
   Visitor v{intp};
 
-  ast->visit(v);
+  auto rtime1 = std::chrono::system_clock::now();
+ast->visit(v);
+  auto rtime2 = std::chrono::system_clock::now();
+  std::cout << "Interpreting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(rtime2-rtime1) << "\n";
+  std::cout << std::endl;
   return 0;
 }

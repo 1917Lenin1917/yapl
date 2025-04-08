@@ -7,11 +7,12 @@
 #include <vector>
 
 #include "Scope.hpp"
+#include "values/Value.hpp"
 
 namespace yapl {
 class Scope;
-class Value;
 class Variable;
+class Value;
 
 class Function
 {

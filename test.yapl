@@ -1,30 +1,53 @@
-interface Printable {
-  fn print(): str;
+
+//interface Printable {
+// fn print(): str;
+//
+//type Penis {
+// a: str;
+// b: int;
+// c: float;
+// d: Array;
+//
+//impl Printable for Penis {
+// fn print(): str {
+//   return `Penis: a={a}, b={b}, c={c}, d={d}`;
+// }
+//
+//const penis1 = Penis{ .a = "Hello, World!",
+//                    .b = 20,
+//                    .c = 40.0,
+//                    .d = [1, 2, 3, 4, 5] };
+//const penis2 = Penis{ "Test", 1, 2.3, [1,2,3] };
+//fn my_print(printable: Printable): void {
+// print(printable.print());
+//
+//my_print(penis1);
+//y_print(penis2);
+// Single-line comment
+//var x = 42;
+//let message = "Hello, World!\n";
+//const factor = 2;
+//fn multiply(a: int, b: int): int {
+// return a * b;
+//}
+//fn main(): void {
+// var result = multiply(x, factor);
+// if (result > 50) {
+//   print("That's big!\n", message);
+// } else {
+//   print("Not so big...\n");
+// }
+//  // For loop
+//  for var i; i < 3; i = i + 1; {
+//    print("i is: ", i, "\n");
+//  }
+//}
+//
+//main();
+
+fn fib(a: int): int {
+  if (a < 2) { return a; }
+  else { return fib(a-1) + fib(a-2); }
 }
 
-type Penis {
-  a: str;
-  b: int;
-  c: float;
-  d: Array;
-}
-
-impl Printable for Penis {
-  fn print(): str {
-    return `Penis: a={a}, b={b}, c={c}, d={d}`;
-  }
-}
-
-const penis1 = Penis{ .a = "Hello, World!",
-                     .b = 20,
-                     .c = 40.0,
-                     .d = [1, 2, 3, 4, 5] };
-
-const penis2 = Penis{ "Test", 1, 2.3, [1,2,3] };
-
-fn my_print(printable: Printable): void {
-  print(printable.print());
-}
-
-my_print(penis1);
-my_print(penis2);
+print(fib(35));
