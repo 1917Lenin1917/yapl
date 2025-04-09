@@ -6,7 +6,7 @@ include_directories(${CMAKE_SOURCE_DIR}/includes)
 #set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 #set(CMAKE_CXX_FLAGS "-g -O0 -fno-omit-frame-pointer -gdwarf-2")
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
-set(CMAKE_CXX_FLAGS "-O3")
+#set(CMAKE_CXX_FLAGS "-O3")
 
 add_executable(yapl src/main.cpp
         src/Lexer.cpp

@@ -14,17 +14,18 @@ std::vector<Token> Lexer::make_tokens()
     while (m_pos != text_len)
     {
         m_pos += 1;
+        current_col_pos += 1;
         if (m_pos == text_len) { return tokens; }
         switch (const char c = m_text[m_pos])
         {
             case '\0': { tokens.emplace_back(TOKEN_TYPE::TT_EOF); break; }
+            case '\n': { current_line += 1; current_col_pos = 0; break; }
             case '\t':
-            case '\n':
             case '\r':
             case ' ': { continue; }
-            case '+': { tokens.emplace_back(TOKEN_TYPE::PLUS); break; }
-            case '-': { tokens.emplace_back(TOKEN_TYPE::MINUS); break; }
-            case '*': { tokens.emplace_back(TOKEN_TYPE::TIMES); break; }
+            case '+': { tokens.emplace_back(TOKEN_TYPE::PLUS, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '-': { tokens.emplace_back(TOKEN_TYPE::MINUS, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '*': { tokens.emplace_back(TOKEN_TYPE::TIMES, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '/':
             {
                 if (m_pos + 1 != text_len && m_text[m_pos+1] == '/')
@@ -34,24 +35,26 @@ std::vector<Token> Lexer::make_tokens()
                     {
                       m_pos++; // eat everything until \n or EOF
                     }
+                    current_line += 1;
+                    current_col_pos = 0;
                     break;
                 }
-                tokens.emplace_back(TOKEN_TYPE::SLASH);
+                tokens.emplace_back(TOKEN_TYPE::SLASH, nullptr, current_line, current_col_pos, current_col_pos);
                 break;
             }
-            case '.': { tokens.emplace_back(TOKEN_TYPE::PERIOD); break; }
-            case '!': { tokens.emplace_back(TOKEN_TYPE::NOT); break; }
-            case '<': { tokens.emplace_back(TOKEN_TYPE::LT); break; } // TODO: add <=
-            case '>': { tokens.emplace_back(TOKEN_TYPE::GT); break; } // TODO: add >=
-            case '(': { tokens.emplace_back(TOKEN_TYPE::LPAREN); break; }
-            case ')': { tokens.emplace_back(TOKEN_TYPE::RPAREN); break; }
-            case '{': { tokens.emplace_back(TOKEN_TYPE::LBRACK); break; }
-            case '}': { tokens.emplace_back(TOKEN_TYPE::RBRACK); break; }
-            case '[': { tokens.emplace_back(TOKEN_TYPE::LSQBRACK); break; }
-            case ']': { tokens.emplace_back(TOKEN_TYPE::RSQBRACK); break; }
-            case ';': { tokens.emplace_back(TOKEN_TYPE::SEMICOLON); break; }
-            case ':': { tokens.emplace_back(TOKEN_TYPE::COLON); break; }
-            case ',': { tokens.emplace_back(TOKEN_TYPE::COMMA); break; }
+            case '.': { tokens.emplace_back(TOKEN_TYPE::PERIOD, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '!': { tokens.emplace_back(TOKEN_TYPE::NOT, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '<': { tokens.emplace_back(TOKEN_TYPE::LT, nullptr, current_line, current_col_pos, current_col_pos); break; } // TODO: add <=
+            case '>': { tokens.emplace_back(TOKEN_TYPE::GT, nullptr, current_line, current_col_pos, current_col_pos); break; } // TODO: add >=
+            case '(': { tokens.emplace_back(TOKEN_TYPE::LPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case ')': { tokens.emplace_back(TOKEN_TYPE::RPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '{': { tokens.emplace_back(TOKEN_TYPE::LBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '}': { tokens.emplace_back(TOKEN_TYPE::RBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '[': { tokens.emplace_back(TOKEN_TYPE::LSQBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case ']': { tokens.emplace_back(TOKEN_TYPE::RSQBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case ';': { tokens.emplace_back(TOKEN_TYPE::SEMICOLON, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case ':': { tokens.emplace_back(TOKEN_TYPE::COLON, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case ',': { tokens.emplace_back(TOKEN_TYPE::COMMA, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '\'':
             case '\"': { tokens.push_back(make_string()); break; }
             case '`': { tokens.push_back(make_format_string()); break; }
@@ -59,11 +62,12 @@ std::vector<Token> Lexer::make_tokens()
             {
                 if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
                 {
-                    tokens.emplace_back(TOKEN_TYPE::EQ);
+                    tokens.emplace_back(TOKEN_TYPE::EQ, nullptr, current_line, current_col_pos, current_col_pos);
                     m_pos++;
+                    current_col_pos += 1;
                     break;
                 }
-                tokens.emplace_back(TOKEN_TYPE::ASSIGN);
+                tokens.emplace_back(TOKEN_TYPE::ASSIGN, nullptr, current_line, current_col_pos, current_col_pos+1);
                 break;
             } // TODO: add =>
             default:
@@ -87,15 +91,18 @@ std::vector<Token> Lexer::make_tokens()
 Token Lexer::make_number()
 {
     const size_t text_len = m_text.length();
+    const int start_col_pos = current_col_pos;
     size_t start = m_pos;
     bool is_float = false;
     while (m_pos != text_len)
     {
         m_pos += 1;
+        current_col_pos += 1;
         const char c = m_text[m_pos];
         if (!(c >= '0' && c <= '9' || c == '.'))
         {
             m_pos--;
+            current_col_pos -= 1;
             break;
         }
         if (c == '.')
@@ -103,6 +110,7 @@ Token Lexer::make_number()
             if (is_float)
             {
                 m_pos--;
+                current_col_pos -= 1;
                 break;
             }
             is_float = true;
@@ -111,16 +119,18 @@ Token Lexer::make_number()
     char* value = new char[m_pos - start + 1];
     memcpy(value, m_text.data()+start, m_pos-start+1);
     value[m_pos - start + 1] = '\0';
-    return { is_float ? TOKEN_TYPE::FLOAT : TOKEN_TYPE::INTEGER, value };
+    return { is_float ? TOKEN_TYPE::FLOAT : TOKEN_TYPE::INTEGER, value, current_line, (int)start_col_pos, (int)(current_col_pos) };
 }
 
 Token Lexer::make_string()
 {
     const size_t text_len = m_text.length();
+    const int start_col_pos = current_col_pos;
     size_t start = m_pos;
     while (m_pos != text_len)
     {
         m_pos += 1;
+        current_col_pos += 1;
         char c = m_text[m_pos];
         if (c == m_text[start])
         {
@@ -166,7 +176,7 @@ Token Lexer::make_string()
         }
     }
     value[len] = '\0';
-    return { m_text[m_pos] == '`' ? TOKEN_TYPE::FSTRING : TOKEN_TYPE::STRING, value };
+    return { m_text[m_pos] == '`' ? TOKEN_TYPE::FSTRING : TOKEN_TYPE::STRING, value, current_line, (int)start_col_pos, (int)(current_col_pos) };
 }
 
 Token Lexer::make_format_string() // TODO: rewrite to handle {}
@@ -178,46 +188,49 @@ Token Lexer::make_identifier_or_keyword()
 {
     const size_t text_len = m_text.length();
     size_t start = m_pos;
+    const int start_col_pos = current_col_pos;
     while (m_pos != text_len)
     {
         m_pos += 1;
+        current_col_pos += 1;
         char c = m_text[m_pos];
         if (!(is_letter(c) || is_numeric(c) || c == '_'))
         {
             m_pos--;
+            current_col_pos -= 1;
             break;
         }
     }
     const auto tk = std::string_view{ m_text.data() + start, m_pos - start + 1 };
     if (tk == "if")
-        return { TOKEN_TYPE::IF };
+        return { TOKEN_TYPE::IF, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "else")
-        return { TOKEN_TYPE::ELSE };
+        return { TOKEN_TYPE::ELSE, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "for")
-        return { TOKEN_TYPE::FOR };
+        return { TOKEN_TYPE::FOR, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "while")
-        return { TOKEN_TYPE::WHILE };
+        return { TOKEN_TYPE::WHILE, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "fn")
-        return { TOKEN_TYPE::FN };
+        return { TOKEN_TYPE::FN, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "var")
-        return { TOKEN_TYPE::VAR };
+        return { TOKEN_TYPE::VAR, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "let")
-        return { TOKEN_TYPE::LET };
+        return { TOKEN_TYPE::LET, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "const")
-        return { TOKEN_TYPE::CONST };
+        return { TOKEN_TYPE::CONST, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "return")
-        return { TOKEN_TYPE::RETURN };
+        return { TOKEN_TYPE::RETURN, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "true" || tk == "false")
     {
         char* value = new char[m_pos - start + 1];
         memcpy(value, m_text.data()+start, m_pos-start+1);
         value[m_pos - start + 1] = '\0';
-        return { TOKEN_TYPE::BOOL, value };
+        return { TOKEN_TYPE::BOOL, value, current_line, (int)start_col_pos, (int)current_col_pos };
     }
     char* value = new char[m_pos - start + 1];
     memcpy(value, m_text.data()+start, m_pos-start+1);
     value[m_pos - start + 1] = '\0';
-    return { TOKEN_TYPE::IDENTIFIER, value };
+    return { TOKEN_TYPE::IDENTIFIER, value, current_line, (int)start_col_pos, (int)current_col_pos };
 }
 
 

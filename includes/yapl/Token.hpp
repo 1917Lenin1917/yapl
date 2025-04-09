@@ -66,6 +66,9 @@ struct Token
     TOKEN_TYPE type = TOKEN_TYPE::DEFAULT;
     char* value = nullptr;
 
+    int line = -1;
+    int col_start = -1;
+    int col_end = -1;
 };
 
 std::string ttype_to_string(TOKEN_TYPE tt);
