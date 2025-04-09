@@ -45,9 +45,9 @@
 //
 //main();
 
-fn fib(a: int): int {
-  if (a < 2) { return a; }
-  else { return fib(a-1) + fib(a-2); }
-}
-
-print(fib(35));
+//fn fib(a: int): int {
+//  if (a < 2) { return a; }
+//  else { return fib(a-1) + fib(a-2); }
+//}
+//
+//print(fib(35));

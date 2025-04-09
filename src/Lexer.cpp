@@ -15,7 +15,12 @@ std::vector<Token> Lexer::make_tokens()
     {
         m_pos += 1;
         current_col_pos += 1;
-        if (m_pos == text_len) { return tokens; }
+        if (m_pos == text_len)
+        {
+            if (tokens[tokens.size()-1].type != TOKEN_TYPE::TT_EOF)
+                tokens.emplace_back(TOKEN_TYPE::TT_EOF);
+            return tokens;
+        }
         switch (const char c = m_text[m_pos])
         {
             case '\0': { tokens.emplace_back(TOKEN_TYPE::TT_EOF); break; }
@@ -85,6 +90,8 @@ std::vector<Token> Lexer::make_tokens()
         }
     }
 
+    if (tokens[tokens.size()-1].type != TOKEN_TYPE::TT_EOF)
+        tokens.emplace_back(TOKEN_TYPE::TT_EOF);
     return tokens;
 }
 

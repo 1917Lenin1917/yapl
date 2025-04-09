@@ -6,11 +6,35 @@
 #include "yapl/Token.hpp"
 #include <memory>
 
+#include "yapl/exceptions/SyntaxError.hpp"
+
 namespace yapl {
 
-void Parser::advance()
+void Parser::advance(TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT)
 {
   m_pos++;
+  check(expected_token);
+}
+
+void Parser::check(TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT)
+{
+    if (expected_token == TOKEN_TYPE::DEFAULT)
+        return;
+
+    const auto& current_token = m_tokens[m_pos];
+    if (current_token.type == expected_token)
+        return;
+
+    // If token is not what we expected, throw a SyntaxError exception
+
+    throw SyntaxError(
+            m_filename,
+            current_token.line,
+            current_token.col_start,
+            current_token.col_end,
+            m_source_lines[current_token.line-1],
+            std::format("Expected token {} but got token {}", ttype_to_string(expected_token), ttype_to_string(current_token.type))
+    );
 }
 
 
@@ -103,9 +127,15 @@ std::unique_ptr<BaseASTNode> Parser::parse_primary_expr()
 	{
 		default:
 		{
-			std::cout << "Unknown token when expecting an expression!\n";
-			advance(); // eat unknown token
-			return nullptr;
+            const auto& current_token = m_tokens[m_pos];
+            throw SyntaxError(
+                    m_filename,
+                    current_token.line,
+                    current_token.col_start,
+                    current_token.col_end,
+                    m_source_lines[current_token.line-1],
+                    std::format("Unexpected token {} while parsing an expression.", ttype_to_string(current_token.type))
+            );
 		}
 		case TOKEN_TYPE::INTEGER:
 		case TOKEN_TYPE::FLOAT:
@@ -211,15 +241,28 @@ std::unique_ptr<BaseASTNode> Parser::parse_binop_rhs(int expr_prec, std::unique_
 	}
 }
 
-std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_var_decl()
+std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
 {
 	std::vector<std::unique_ptr<BaseASTNode>> ret_val;
 	auto decl_token = m_tokens[m_pos];
 	advance(); // eat var/let/const
 	while (true)
 	{
+        if (m_tokens[m_pos].type != TOKEN_TYPE::IDENTIFIER)
+        {
+            // TODO: this probably works wrong with multiline stuff
+            throw SyntaxError(
+                    m_filename,
+                    decl_token.line,
+                    decl_token.col_start,
+                    m_tokens[m_pos].col_end,
+                    m_source_lines[decl_token.line-1],
+                    std::format("Expected identifier after variable declaration, but instead got {}", ttype_to_string(m_tokens[m_pos].type))
+            );
+        }
 		auto name_identifier = m_tokens[m_pos];
-		advance(); // eat name
+        advance(); // eat identifier
+
 		if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
 		{
 			advance(); // eat =
@@ -236,8 +279,14 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_var_decl()
 				advance(); // eat ;
 				return ret_val;
 			}
-			std::cerr << "expected a semicolon in var decl\n";
-			return ret_val;
+            throw SyntaxError(
+                    m_filename,
+                    decl_token.line,
+                    decl_token.col_start,
+                    decl_token.col_start, // TODO: add method to get span from all the nodes, something like expr.colspan();
+                    m_source_lines[decl_token.line-1],
+                    std::format("Expected semicolon after variable declaration")
+            );
 		}
 		ret_val.push_back(std::move(std::make_unique<VariableASTNode>(decl_token, name_identifier)));
 		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
@@ -250,8 +299,16 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_var_decl()
 			advance(); // eat ;
 			return ret_val;
 		}
+
+        throw SyntaxError(
+                m_filename,
+                decl_token.line,
+                decl_token.col_start,
+                name_identifier.col_end,
+                m_source_lines[decl_token.line-1],
+                std::format("Expected semicolon after variable declaration")
+        );
 	}
-	return ret_val;
 }
 
 
@@ -392,8 +449,22 @@ std::unique_ptr<BaseASTNode> Parser::parse_return()
 
 std::unique_ptr<BaseASTNode> Parser::parse_ifelse_statement()
 {
+    const auto& if_token = m_tokens[m_pos];
 	advance(); // eat if
 	auto condition = parse_expr();
+    // TODO: tidy up
+    if (m_tokens[m_pos].type != TOKEN_TYPE::LBRACK)
+    {
+        const auto& current_token = m_tokens[m_pos];
+        throw SyntaxError(
+                m_filename,
+                if_token.line,
+                if_token.col_start,
+                if_token.col_end, // FIXME: this really should be the end of the condition, but lets leave it like that for now
+                m_source_lines[if_token.line-1],
+                std::format("Expected token {} after if-statement condition", ttype_to_string(TOKEN_TYPE::LBRACK))
+        );
+    }
 	auto true_scope = parse_scope();
 	if (m_pos < m_tokens.size() && m_tokens[m_pos].type == TOKEN_TYPE::ELSE)
 	{
@@ -414,7 +485,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_ifelse_statement()
 std::unique_ptr<BaseASTNode> Parser::parse_for_loop()
 {
 	advance(); // eat for token
-	auto declaration = std::move(parse_var_decl()[0]);
+	auto declaration = std::move(parse_variable_declaration()[0]);
 	auto condition = parse_semic_expr();
 	auto increment = parse_statement_or_ident();
 	auto scope = parse_scope();
@@ -433,6 +504,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 {
 	// todo: add checks
 	// parsing a scope
+    check(TOKEN_TYPE::LBRACK);
 	advance(); // eat {
 	auto scope = std::make_unique<ScopeASTNode>();
 	while (m_pos < m_tokens.size())
@@ -445,7 +517,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 			case TOKEN_TYPE::CONST:
 			case TOKEN_TYPE::LET:
 			{
-				auto vars = parse_var_decl();
+				auto vars = parse_variable_declaration();
 				for (auto& var : vars)
 					scope->nodes.push_back(std::move(var));
 				break;
@@ -469,7 +541,6 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 
 std::unique_ptr<BaseASTNode> Parser::parse_function()
 {
-	std::cout << "parsing func\n";
 	auto decl = parse_function_declaration();
 	auto body = parse_scope();
 
@@ -479,36 +550,39 @@ std::unique_ptr<BaseASTNode> Parser::parse_function()
 // this is sorta wrong, change later
 std::unique_ptr<BaseASTNode> Parser::parse_root()
 {
-	auto root = std::make_unique<RootASTNode>();
-	while (m_pos < m_tokens.size())
-	{
-		switch (m_tokens[m_pos].type)
-		{
-			case TOKEN_TYPE::TT_EOF: { return root; }
-			case TOKEN_TYPE::VAR:
-			case TOKEN_TYPE::CONST:
-			case TOKEN_TYPE::LET:
-			{
-				auto vars = parse_var_decl();
-				for (auto& var : vars)
-					root->nodes.push_back(std::move(var));
-				break;
-			}
-			case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
-			case TOKEN_TYPE::FN: { root->nodes.push_back(std::move(parse_function())); break; }
-			case TOKEN_TYPE::IF: { root->nodes.push_back(std::move(parse_ifelse_statement())); break; }
-			case TOKEN_TYPE::WHILE: { root->nodes.push_back(std::move(parse_while_loop())); break; }
-			case TOKEN_TYPE::FOR: { root->nodes.push_back(std::move(parse_for_loop())); break; }
-			default: { root->nodes.push_back(std::move(parse_semic_expr())); break; }
-		}
-		// if (m_pos != m_tokens.size() && m_tokens[m_pos].type != TOKEN_TYPE::SEMICOLON)
-		// {
-		// 	std::cout << "Excpected a semicolon;\n";
-		// 	return nullptr;
-		// }
-		// advance(); // eat ;
-	}
-	return root;
+    try
+    {
+
+        auto root = std::make_unique<RootASTNode>();
+        while (m_pos < m_tokens.size())
+        {
+            switch (m_tokens[m_pos].type)
+            {
+                case TOKEN_TYPE::TT_EOF: { return root; }
+                case TOKEN_TYPE::VAR:
+                case TOKEN_TYPE::CONST:
+                case TOKEN_TYPE::LET:
+                {
+                    auto vars = parse_variable_declaration();
+                    for (auto& var : vars)
+                        root->nodes.push_back(std::move(var));
+                    break;
+                }
+                case TOKEN_TYPE::IDENTIFIER: { root->nodes.push_back(std::move(parse_statement_or_ident())); break; } // TODO: handle func calls
+                case TOKEN_TYPE::FN: { root->nodes.push_back(std::move(parse_function())); break; }
+                case TOKEN_TYPE::IF: { root->nodes.push_back(std::move(parse_ifelse_statement())); break; }
+                case TOKEN_TYPE::WHILE: { root->nodes.push_back(std::move(parse_while_loop())); break; }
+                case TOKEN_TYPE::FOR: { root->nodes.push_back(std::move(parse_for_loop())); break; }
+                default: { root->nodes.push_back(std::move(parse_semic_expr())); break; }
+            }
+        }
+        return root;
+    }
+    catch (const SyntaxError& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return nullptr;
+    }
 }
 
 }

@@ -18,12 +18,13 @@ add_executable(yapl src/main.cpp
         src/Variable.cpp
         src/Function.cpp
         src/Visitor.cpp
-        src/Values/Value.cpp
-        src/Values/IntegerValue.cpp
-        src/Values/BooleanValue.cpp
-        src/Values/FloatValue.cpp
-        src/Values/StringValue.cpp
-        src/Values/ArrayValue.cpp
+        src/values/Value.cpp
+        src/values/IntegerValue.cpp
+        src/values/BooleanValue.cpp
+        src/values/FloatValue.cpp
+        src/values/StringValue.cpp
+        src/values/ArrayValue.cpp
+        src/exceptions/SyntaxError.cpp
 )
 
 add_subdirectory(externals/Catch2)
