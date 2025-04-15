@@ -26,6 +26,8 @@ enum class VALUE_TYPE
 
 class Value
 {
+private:
+    void make_type();
 protected:
 	std::vector<std::unique_ptr<FunctionASTNode>> m_methods;
 	std::unordered_map<std::string, FunctionASTNode*> m_method_definitions;
@@ -48,6 +50,7 @@ public:
 	virtual std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value>& other) = 0;
 	virtual std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value>& other) = 0;
 	virtual std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value>& other) = 0;
+    virtual std::shared_ptr<Value> BinaryMOD(const std::shared_ptr<Value>& other) = 0;
 	virtual std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value>& other) = 0;
 	virtual std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value>& other) = 0;
 	virtual std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value>& other) = 0;

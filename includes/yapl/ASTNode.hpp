@@ -143,7 +143,7 @@ public:
 class StatementIndexASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> identifier;
+  std::unique_ptr<BaseASTNode> identifier; // IndexASTNode
   std::unique_ptr<BaseASTNode> RHS;
   StatementIndexASTNode(std::unique_ptr<BaseASTNode> i, std::unique_ptr<BaseASTNode> r)
     :BaseASTNode(), identifier(std::move(i)), RHS(std::move(r)) {}
@@ -206,11 +206,11 @@ public:
 class MethodCallASTNode final : public BaseASTNode
 {
 public:
-  Token identifier;
+    std::unique_ptr<BaseASTNode> base_expr;
 	Token name;
 	std::vector<std::unique_ptr<BaseASTNode>> args;
-	MethodCallASTNode(const Token& id, const Token& nm, std::vector<std::unique_ptr<BaseASTNode>>& args)
-		:BaseASTNode(), identifier(id), name(nm), args(std::move(args)) {}
+	MethodCallASTNode(std::unique_ptr<BaseASTNode> base_expr, const Token& nm, std::vector<std::unique_ptr<BaseASTNode>>& args)
+		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm), args(std::move(args)) {}
 
 	std::string print(size_t indent_size) override;
 

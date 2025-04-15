@@ -21,6 +21,7 @@ std::string ttype_to_string(TOKEN_TYPE tt)
         case TOKEN_TYPE::PLUS:       { return std::string("PLUS"); }
         case TOKEN_TYPE::MINUS:      { return "MINUS"; }
         case TOKEN_TYPE::TIMES:      { return "TIMES"; }
+        case TOKEN_TYPE::MOD:      { return "MOD"; }
         case TOKEN_TYPE::SLASH:      { return "SLASH"; }
         case TOKEN_TYPE::PERIOD:      { return "PERIOD"; }
         case TOKEN_TYPE::NOT: { return "NOT"; }

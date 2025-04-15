@@ -47,8 +47,15 @@ namespace yapl {
 //
     std::string IndexASTNode::print(size_t indent_size)
     {
-        return "index: (" + base_expr->print(indent_size) + " ["
-               + index_expr->print(indent_size) + "])";
+        std::string res;
+        res += REPEAT(indent_size*2, ' ') + "{\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "NodeType: IndexASTNode,\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "BaseExpression: \n";
+        res += base_expr->print(indent_size+1) + "\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "IndexExpr: \n";
+        res += index_expr->print(indent_size+1) + "\n";
+        res += REPEAT(indent_size*2, ' ') + "}";
+        return res;
     }
 
     std::shared_ptr<Value> IndexASTNode::visit(Visitor &visitor)
@@ -170,7 +177,15 @@ namespace yapl {
 //
     std::string StatementIndexASTNode::print(size_t indent_size)
     {
-        return "stmnt:(" + identifier->print(indent_size) + " " + RHS->print(indent_size) + ")";
+        std::string res;
+        res += REPEAT(indent_size*2, ' ') + "{\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "NodeType: StatementIndexASTNode,\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "Identifier: \n";
+        res += identifier->print(indent_size+1) + "\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "RHS: \n";
+        res += RHS->print(indent_size+1) + "\n";
+        res += REPEAT(indent_size*2, ' ') + "}";
+        return res;
     }
 
     std::shared_ptr<Value> StatementIndexASTNode::visit(Visitor &visitor)
@@ -249,7 +264,8 @@ namespace yapl {
         std::string res;
         res += REPEAT(indent_size*2, ' ') + "{\n";
         res += REPEAT((indent_size+1)*2, ' ') + "NodeType: MethodCallASTNode,\n";
-        res += REPEAT((indent_size+1)*2, ' ') + "Identifier: " + identifier.value + ",\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "Identifier: \n";
+        res += base_expr->print(indent_size+2) + ",\n";
         res += REPEAT((indent_size+1)*2, ' ') + "Name: " + name.value + ",\n";
         res += REPEAT((indent_size+1)*2, ' ') + "Arguments: \n";
         res += REPEAT((indent_size+1)*2, ' ') + "{\n";

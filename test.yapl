@@ -51,3 +51,12 @@
 //}
 //
 //print(fib(35));
+//let a = (1+2).to_string();
+//print("Type is: ", a.type(), "\n");
+
+//let a = [1, 2, 3];
+let a = 8;
+let b;
+b = a;
+b = 20;
+print(a, b);

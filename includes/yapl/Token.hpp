@@ -6,6 +6,8 @@
 #include <string>
 #include <cassert>
 #include <format>
+#include <iostream>
+#include <cstring>
 
 namespace yapl {
 
@@ -23,6 +25,7 @@ enum class TOKEN_TYPE
     PLUS,
     MINUS,
     TIMES,
+    MOD,
     SLASH,
     PERIOD,
     NOT,
@@ -63,12 +66,15 @@ enum class TOKEN_TYPE
 
 struct Token
 {
-    TOKEN_TYPE type = TOKEN_TYPE::DEFAULT;
     char* value = nullptr;
+    TOKEN_TYPE type = TOKEN_TYPE::DEFAULT;
 
     int line = -1;
     int col_start = -1;
     int col_end = -1;
+
+    Token(TOKEN_TYPE t, char* val = nullptr, int l = -1, int cstart = -1, int cend = -1)
+            : type(t), value(val), line(l), col_start(cstart), col_end(cend) {}
 };
 
 std::string ttype_to_string(TOKEN_TYPE tt);

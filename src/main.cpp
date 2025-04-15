@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
+#include <sstream>
 
 #include "yapl/Lexer.hpp"
 #include "yapl/Parser.hpp"
@@ -43,30 +44,34 @@ std::vector<std::string> get_lines_from_text(const std::string& text)
 
 int main(int argc, char** argv)
 {
-  std::ifstream t(argv[1]);
+  //std::ifstream t(argv[1]);
+    std::ifstream t(R"(C:\_projects\yapl\test.yapl)");
   std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
   Lexer lexer {text};
   auto ltime1 = std::chrono::system_clock::now();
   auto tokens = lexer.make_tokens();
   auto ltime2 = std::chrono::system_clock::now();
-  std::cout << "Tokenizing " << tokens.size() << " tokens took: " << std::chrono::duration_cast<std::chrono::milliseconds>(ltime2-ltime1) << "\n";
+  std::cout << "Tokenizing " << tokens.size() << " tokens took: " << std::chrono::duration_cast<std::chrono::microseconds>(ltime2-ltime1) << "\n";
 
 
-  auto filename = std::filesystem::path(argv[1]).filename().string();
+  auto filename = std::filesystem::path(R"(C:\_projects\yapl\test.yapl)").filename().string();
   auto lines = get_lines_from_text(text);
   Parser parser {tokens, filename, lines};
   auto rtime1 = std::chrono::system_clock::now();
   auto ast = parser.parse_root();
   auto rtime2 = std::chrono::system_clock::now();
-  std::cout << "Parsing took: " << std::chrono::duration_cast<std::chrono::milliseconds>(rtime2-rtime1) << "\n";
+  std::cout << "Parsing took: " << std::chrono::duration_cast<std::chrono::microseconds>(rtime2-rtime1) << "\n";
   std::cout << std::endl;
-  std::cout << ast->print(0) << "\n";
-//
-//  Interpreter intp;
-//  Visitor v{intp};
-//
-//  ast->visit(v);
-//  std::cout << "Interpreting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(rtime2-rtime1) << "\n";
-//  std::cout << std::endl;
+//  std::cout << ast->print(0) << "\n";
+
+  Interpreter intp;
+  Visitor v{intp};
+
+  auto vtime1 = std::chrono::system_clock::now();
+  ast->visit(v);
+  auto vtime2 = std::chrono::system_clock::now();
+  std::cout << "Interpreting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vtime2-vtime1) << "\n";
+  std::cout << std::endl;
   return 0;
 }
+// TODO: change variable lookup, so it doesn't go beyond current function scope + global. Additionally think about closure implementation.

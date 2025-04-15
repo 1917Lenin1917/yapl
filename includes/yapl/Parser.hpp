@@ -33,6 +33,9 @@ public:
   void check(TOKEN_TYPE expected_token);
 
   std::unique_ptr<BaseASTNode> parse_literal();
+  std::unique_ptr<BaseASTNode> parse_function_call(Token identifier);
+  std::unique_ptr<BaseASTNode> parse_method_call(Token identifier);
+  std::unique_ptr<BaseASTNode> parse_indexing(Token identifier);
   std::unique_ptr<BaseASTNode> parse_identifier();
   std::unique_ptr<BaseASTNode> parse_array();
   std::unique_ptr<BaseASTNode> parse_primary_expr();
@@ -73,6 +76,7 @@ public:
       case TOKEN_TYPE::MINUS: { return 20; }
       case TOKEN_TYPE::TIMES: { return 40; }
       case TOKEN_TYPE::SLASH: { return 40; }
+      case TOKEN_TYPE::MOD:   { return 40; }
       default: { return -1; }
     }
   }

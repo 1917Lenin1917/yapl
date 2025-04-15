@@ -54,6 +54,11 @@ std::shared_ptr<Value> StringValue::BinaryTimes(const std::shared_ptr<Value> &ot
 	return nullptr;
 }
 
+std::shared_ptr<Value> StringValue::BinaryMOD(const std::shared_ptr<Value> &other)
+{
+    return nullptr;
+}
+
 std::shared_ptr<Value> StringValue::BinaryLT(const std::shared_ptr<Value> &other)
 {
 	return nullptr;

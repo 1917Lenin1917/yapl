@@ -3,8 +3,8 @@
 //
 
 #include <catch2/catch_test_macros.hpp>
-#include "../include/yapl/Lexer.hpp"
-#include "../include/yapl/Token.hpp"
+#include "yapl/Lexer.hpp"
+#include "yapl/Token.hpp"
 
 TEST_CASE("Test basic lexer tokens", "[lexer]")
 {

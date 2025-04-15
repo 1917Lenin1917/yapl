@@ -53,6 +53,11 @@ std::shared_ptr<Value> BooleanValue::BinarySlash(const std::shared_ptr<Value> &o
 	return nullptr;
 }
 
+std::shared_ptr<Value> BooleanValue::BinaryMOD(const std::shared_ptr<Value> &other)
+{
+    return nullptr;
+}
+
 std::shared_ptr<Value> BooleanValue::BinaryTimes(const std::shared_ptr<Value> &other)
 {
 	return nullptr;

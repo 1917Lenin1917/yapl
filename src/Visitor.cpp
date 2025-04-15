@@ -142,6 +142,8 @@ namespace yapl {
             return lhs->BinaryGQ(rhs);
         if (node.op.type == TOKEN_TYPE::EQ)
             return lhs->BinaryEQ(rhs);
+        if (node.op.type == TOKEN_TYPE::MOD)
+            return lhs->BinaryMOD(rhs);
         return nullptr;
     }
 
@@ -305,15 +307,16 @@ namespace yapl {
     std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
     {
         // FIXME: copy LHS logic from indexing operator, so you can call method of stuff like (1+2).to_string()
-        auto object = interpreter.get_variable(node.identifier.value);
-        if (!object)
-        {
-            std::cerr << "Object " << node.identifier.value << " doesn't exist\n";
-            return nullptr;
-        }
+//        auto object = interpreter.get_variable(node.identifier.value);
+//        if (!object)
+//        {
+//            std::cerr << "Object " << node.identifier.value << " doesn't exist\n";
+//            return nullptr;
+//        }
 
-        auto func_def = object->value->get_method_definition(node.name.value);
-        auto func = interpreter.push_function(std::string(node.identifier.value) + "." + node.name.value); // maybe get this from value ?
+        auto object = node.base_expr->visit(*this);
+        auto func_def = object->get_method_definition(node.name.value);
+        auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
         auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
         size_t arg_amount = arg_list->get_argument_amount();
         if (arg_amount != -1 && node.args.size() != arg_amount)

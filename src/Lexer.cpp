@@ -15,9 +15,9 @@ std::vector<Token> Lexer::make_tokens()
     {
         m_pos += 1;
         current_col_pos += 1;
-        if (m_pos == text_len)
+        if (m_pos >= text_len)
         {
-            if (tokens[tokens.size()-1].type != TOKEN_TYPE::TT_EOF)
+            if (tokens.empty() || tokens[tokens.size()-1].type != TOKEN_TYPE::TT_EOF)
                 tokens.emplace_back(TOKEN_TYPE::TT_EOF);
             return tokens;
         }
@@ -31,6 +31,7 @@ std::vector<Token> Lexer::make_tokens()
             case '+': { tokens.emplace_back(TOKEN_TYPE::PLUS, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '-': { tokens.emplace_back(TOKEN_TYPE::MINUS, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '*': { tokens.emplace_back(TOKEN_TYPE::TIMES, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '%': { tokens.emplace_back(TOKEN_TYPE::MOD, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '/':
             {
                 if (m_pos + 1 != text_len && m_text[m_pos+1] == '/')
@@ -123,7 +124,7 @@ Token Lexer::make_number()
             is_float = true;
         }
     }
-    char* value = new char[m_pos - start + 1];
+    char* value = new char[m_pos - start + 2];
     memcpy(value, m_text.data()+start, m_pos-start+1);
     value[m_pos - start + 1] = '\0';
     return { is_float ? TOKEN_TYPE::FLOAT : TOKEN_TYPE::INTEGER, value, current_line, (int)start_col_pos, (int)(current_col_pos) };
@@ -145,7 +146,7 @@ Token Lexer::make_string()
         }
     }
 
-    char* value = new char[m_pos - start + 1 - 2];
+    char* value = new char[m_pos - start + 2 - 2];
     memcpy(value, m_text.data()+start+1, m_pos-start+1-2);
     value[m_pos - start + 1-2] = '\0';
     size_t len = m_pos - start + 1 - 2;
@@ -229,12 +230,12 @@ Token Lexer::make_identifier_or_keyword()
         return { TOKEN_TYPE::RETURN, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
     if (tk == "true" || tk == "false")
     {
-        char* value = new char[m_pos - start + 1];
+        char* value = new char[m_pos - start + 2];
         memcpy(value, m_text.data()+start, m_pos-start+1);
         value[m_pos - start + 1] = '\0';
         return { TOKEN_TYPE::BOOL, value, current_line, (int)start_col_pos, (int)current_col_pos };
     }
-    char* value = new char[m_pos - start + 1];
+    char* value = new char[m_pos - start + 2];
     memcpy(value, m_text.data()+start, m_pos-start+1);
     value[m_pos - start + 1] = '\0';
     return { TOKEN_TYPE::IDENTIFIER, value, current_line, (int)start_col_pos, (int)current_col_pos };

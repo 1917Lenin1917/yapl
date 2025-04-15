@@ -30,6 +30,7 @@ public:
 	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
 	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
 	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
+    std::shared_ptr<Value> BinaryMOD(const std::shared_ptr<Value> &other) override;
 	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
 	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
 	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;

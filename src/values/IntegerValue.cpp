@@ -8,10 +8,32 @@
 #include "yapl/values/FloatValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
 
+#include <memory>
+
 namespace yapl {
 
+void IntegerValue::make_to_string()
+{
+    const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("to_string")  };
+    std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
+    const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("str") };
+    auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
+    {
+        return std::make_unique<StringValue>(std::to_string(this->value));
+    });
+
+    auto f = std::make_unique<FunctionASTNode>(
+            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+            std::move(body));
+    m_methods.push_back(std::move(f));
+    m_method_definitions["to_string"] = m_methods[m_methods.size() - 1].get();
+}
+
 IntegerValue::IntegerValue(const int value)
-		:Value(VALUE_TYPE::INTEGER), value(value) {}
+		:Value(VALUE_TYPE::INTEGER), value(value)
+{
+    make_to_string();
+}
 
 std::string IntegerValue::print() const
 {
@@ -135,6 +157,17 @@ std::shared_ptr<Value> IntegerValue::BinaryTimes(const std::shared_ptr<Value> &o
 		}
 		default: { return nullptr; }
 	}
+}
+
+std::shared_ptr<Value> IntegerValue::BinaryMOD(const std::shared_ptr<Value> &other)
+{
+    switch (other->type) {
+        case VALUE_TYPE::INTEGER:
+        {
+            return std::make_unique<IntegerValue>(this->value % dynamic_cast<IntegerValue*>(other.get())->value);
+        }
+        default: { return nullptr; }
+    }
 }
 
 std::shared_ptr<Value> IntegerValue::BinaryLT(const std::shared_ptr<Value> &other)

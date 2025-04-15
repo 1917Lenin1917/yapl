@@ -5,7 +5,7 @@
 #include "yapl/values/ArrayValue.hpp"
 #include "yapl/values/IntegerValue.hpp"
 
-#include "memory"
+#include <memory>
 
 namespace yapl {
 
@@ -49,19 +49,20 @@ void ArrayValue::make_append()
 
 void ArrayValue::make_pop()
 {
-	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("size")  };
+	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("pop")  };
 	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
-	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("int") };
+	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("void") };
 	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
 	{
-		return std::make_unique<IntegerValue>(this->value.size());
+        this->value.pop_back();
+        return nullptr;
 	});
 
 	auto f = std::make_unique<FunctionASTNode>(
 			std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
 																									 std::move(body));
 	m_methods.push_back(std::move(f));
-	m_method_definitions["size"] = m_methods[m_methods.size() - 1].get();
+	m_method_definitions["pop"] = m_methods[m_methods.size() - 1].get();
 }
 ArrayValue::ArrayValue(std::vector<std::shared_ptr<Value>>& value)
 		:Value(VALUE_TYPE::ARRAY), value(std::move(value))
@@ -145,6 +146,11 @@ std::shared_ptr<Value> ArrayValue::BinarySlash(const std::shared_ptr<Value> &oth
 std::shared_ptr<Value> ArrayValue::BinaryTimes(const std::shared_ptr<Value> &other)
 {
 	return nullptr;
+}
+
+std::shared_ptr<Value> ArrayValue::BinaryMOD(const std::shared_ptr<Value> &other)
+{
+    return nullptr;
 }
 
 std::shared_ptr<Value> ArrayValue::BinaryLT(const std::shared_ptr<Value> &other)
