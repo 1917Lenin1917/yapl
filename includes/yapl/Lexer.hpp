@@ -19,7 +19,7 @@ private:
     std::string_view m_text;
     size_t m_pos;
     int current_line = 1;
-    int current_col_pos = 1;
+    int current_col_pos = 0;
 public:
     explicit Lexer(const std::string_view text)
         : m_text(text), m_pos(-1) {}
