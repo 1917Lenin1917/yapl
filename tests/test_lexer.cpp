@@ -39,7 +39,8 @@ TEST_CASE("Test literals", "[lexer]")
     REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::STRING);
     REQUIRE(tokens[6].value == std::string("string with special chars \n\\"));
 
-    REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::TT_EOF);
+    REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::SEMICOLON);
+    REQUIRE(tokens[8].type == yapl::TOKEN_TYPE::TT_EOF);
 }
 
 TEST_CASE("Test identifiers", "[lexer]")
@@ -60,7 +61,8 @@ TEST_CASE("Test identifiers", "[lexer]")
     REQUIRE(tokens[3].type == yapl::TOKEN_TYPE::IDENTIFIER);
     REQUIRE(tokens[3].value == std::string("CamelCase"));
 
-    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::TT_EOF);
+    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::SEMICOLON);
+    REQUIRE(tokens[5].type == yapl::TOKEN_TYPE::TT_EOF);
 }
 
 TEST_CASE("Test keywords", "[lexer]")
@@ -78,7 +80,8 @@ TEST_CASE("Test keywords", "[lexer]")
     REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::CONST);
     REQUIRE(tokens[8].type == yapl::TOKEN_TYPE::RETURN);
 
-    REQUIRE(tokens[9].type == yapl::TOKEN_TYPE::TT_EOF);
+    REQUIRE(tokens[9].type == yapl::TOKEN_TYPE::SEMICOLON);
+    REQUIRE(tokens[10].type == yapl::TOKEN_TYPE::TT_EOF);
 }
 
 TEST_CASE("Test single-line comment removal", "[lexer]")
@@ -106,31 +109,71 @@ TEST_CASE("Test single-line comment removal", "[lexer]")
 
 TEST_CASE("Test line and col numbers", "[lexer]")
 {
-    yapl::Lexer lexer{ "first_line_identifier\nsecond third //comment\n fourth" };
+    yapl::Lexer lexer{ "first_line_identifier;\nsecond; third; //comment\n fourth;" };
     auto tokens = lexer.make_tokens();
 
     REQUIRE(tokens[0].line == 1);
     REQUIRE(tokens[0].col_start == 1);
     REQUIRE(tokens[0].col_end == 21);
 
-    REQUIRE(tokens[1].line == 2);
-    REQUIRE(tokens[1].col_start == 1);
-    REQUIRE(tokens[1].col_end == 6);
-
     REQUIRE(tokens[2].line == 2);
-    REQUIRE(tokens[2].col_start == 8);
-    REQUIRE(tokens[2].col_end == 12);
+    REQUIRE(tokens[2].col_start == 1);
+    REQUIRE(tokens[2].col_end == 6);
 
-    REQUIRE(tokens[3].line == 3);
-    REQUIRE(tokens[3].col_start == 2);
-    REQUIRE(tokens[3].col_end == 7);
+    REQUIRE(tokens[4].line == 2);
+    REQUIRE(tokens[4].col_start == 9);
+    REQUIRE(tokens[4].col_end == 13);
+
+    REQUIRE(tokens[6].line == 3);
+    REQUIRE(tokens[6].col_start == 2);
+    REQUIRE(tokens[6].col_end == 7);
+}
+
+TEST_CASE("Test semicolon insertion", "[lexer]")
+{
+    SECTION("Simple expression")
+    {
+        yapl::Lexer lexer{"10"};
+        auto tokens = lexer.make_tokens();
+
+        REQUIRE(tokens[tokens.size()-2].type == yapl::TOKEN_TYPE::SEMICOLON);
+    }
+
+    SECTION("Unfinished expression")
+    {
+        yapl::Lexer lexer{"10 +"};
+        auto tokens = lexer.make_tokens();
+
+        REQUIRE(tokens[tokens.size()-2].type != yapl::TOKEN_TYPE::SEMICOLON);
+    }
+    SECTION("Multi-line expression")
+    {
+        yapl::Lexer lexer{"6 +\n9"};
+        auto tokens = lexer.make_tokens();
+
+        REQUIRE(tokens[tokens.size()-5].type == yapl::TOKEN_TYPE::INTEGER);
+        REQUIRE(tokens[tokens.size()-4].type == yapl::TOKEN_TYPE::PLUS);
+        REQUIRE(tokens[tokens.size()-3].type == yapl::TOKEN_TYPE::INTEGER);
+        REQUIRE(tokens[tokens.size()-2].type == yapl::TOKEN_TYPE::SEMICOLON);
+        REQUIRE(tokens[tokens.size()-1].type == yapl::TOKEN_TYPE::TT_EOF);
+    }
+    SECTION("Unclosed scope")
+    {
+        yapl::Lexer lexer{"if a < b {"};
+        auto tokens = lexer.make_tokens();
+    }
+    SECTION("If scope on another line")
+    {
+        yapl::Lexer lexer{"if a < b\n{}"};
+        auto tokens = lexer.make_tokens();
+    }
 }
 
 TEST_CASE("Test basic lexer tokens", "[lexer]")
 {
     yapl::Lexer lexer{ "69 * (400 + 20) / 48.2" };
     auto tokens = lexer.make_tokens();
-    REQUIRE(tokens.size() == 10);
+    REQUIRE(tokens.size() == 11);
     REQUIRE((tokens[0].type == yapl::TOKEN_TYPE::INTEGER && strcmp(tokens[0].value, "69") == 0));
     REQUIRE(tokens[1].type == yapl::TOKEN_TYPE::TIMES);
     REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::LPAREN);
@@ -140,7 +183,8 @@ TEST_CASE("Test basic lexer tokens", "[lexer]")
     REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::RPAREN);
     REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::SLASH);
     REQUIRE((tokens[8].type == yapl::TOKEN_TYPE::FLOAT && strcmp(tokens[8].value, "48.2") == 0));
-    REQUIRE(tokens[9].type == yapl::TOKEN_TYPE::TT_EOF);
+    REQUIRE(tokens[9].type == yapl::TOKEN_TYPE::SEMICOLON);
+    REQUIRE(tokens[10].type == yapl::TOKEN_TYPE::TT_EOF);
 }
 
 TEST_CASE("Test basic function declaration", "[lexer]")

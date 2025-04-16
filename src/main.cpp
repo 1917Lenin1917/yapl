@@ -11,23 +11,6 @@
 
 using namespace yapl;
 
-void run()
-{
-//  Interpreter intp;
-//  Visitor v{intp};
-//
-//  while (true)
-//  {
-//    std::string input;
-//    std::getline(std::cin, input);
-//
-//    auto tokens = Lexer{input}.make_tokens();
-//    auto ast = Parser{tokens}.parse_root();
-//
-//    ast->visit(v);
-//  }
-}
-
 std::vector<std::string> get_lines_from_text(const std::string& text)
 {
     std::vector<std::string> res;
@@ -41,9 +24,30 @@ std::vector<std::string> get_lines_from_text(const std::string& text)
     return res;
 }
 
+void run()
+{
+  Interpreter intp;
+  Visitor v{intp};
+  // FIXME: дефенишн функции должен дип-копироваться отдельно в интерпретатор, т.к. при создании нового парсера, он просто пропадает, что в корне неверно!!!!!!
+
+  while (true)
+  {
+    std::cout << ">> ";
+    std::string input;
+    std::getline(std::cin, input);
+
+    auto tokens = Lexer{input}.make_tokens();
+    auto ast = Parser{tokens, "<repl>", get_lines_from_text(input)}.parse_root();
+
+    auto value = ast->visit(v);
+    if (value)
+        std::cout << value->print() << "\n";
+  }
+}
 
 int main(int argc, char** argv)
 {
+    run();
   //std::ifstream t(argv[1]);
     std::ifstream t(R"(C:\_projects\yapl\test.yapl)");
   std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());

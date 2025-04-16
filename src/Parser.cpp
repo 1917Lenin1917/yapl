@@ -26,6 +26,7 @@ void Parser::check(TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT)
         return;
 
     // If token is not what we expected, throw a SyntaxError exception
+    // TODO: handle TT_EOF token better.
     throw SyntaxError(
             m_filename,
             current_token.line,

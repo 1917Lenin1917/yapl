@@ -15,17 +15,14 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_RootASTNode(const RootASTNode &root)
     {
+        std::shared_ptr<Value> return_value = nullptr;
         for (const auto& node : root.nodes)
         {
             auto res = node->visit(*this);
+            return_value = res;
             // TODO: think about proper REPL implementation
-//            if (res != nullptr)
-//            {
-//                if (res->type == VALUE_TYPE::INTEGER)
-//                    std::cout << dynamic_cast<IntegerValue*>(res.get())->value << std::endl;
-//            }
         }
-        return nullptr;
+        return return_value;
     }
 
     std::shared_ptr<Value> Visitor::visit_LiteralASTNode(const LiteralASTNode &node)
