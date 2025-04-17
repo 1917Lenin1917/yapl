@@ -18,24 +18,27 @@ enum class TOKEN_TYPE
     INTEGER,
     FLOAT,
     STRING,
-    FSTRING, // ????
+    FSTRING,
     BOOL,
 
     // OPERATORS
-    PLUS,
-    MINUS,
-    TIMES,
-    MOD,
-    SLASH,
-    PERIOD,
-    NOT,
-    ASSIGN,
-    EQ,
-    LT,
-    GT,
-    LQ,
-    GQ,
-    ARROW, // =>
+    PLUS,   // +
+    MINUS,  // -
+    TIMES,  // *
+    MOD,    // %
+    SLASH,  // /
+    PERIOD, // .
+    NOT,    // !
+    ASSIGN, // =
+    EQ,     // ==
+    NEQ,    // !=
+    LT,     // <
+    LQ,     // <=
+    GT,     // >
+    GQ,     // >=
+    ARROW,  // =>
+    OR,     // or
+    AND,    // and
 
     // SEPARATORS
     LPAREN,

@@ -4,6 +4,8 @@
 
 #include "yapl/Lexer.hpp"
 
+#include <unordered_map>
+
 namespace yapl {
 
 void Lexer::check_insert_semicolon(std::vector<Token>& tokens)
@@ -41,11 +43,13 @@ void Lexer::check_insert_semicolon(std::vector<Token>& tokens)
             last_token.type != TOKEN_TYPE::RBRACK &&
             last_token.type != TOKEN_TYPE::SEMICOLON &&
             next_non_white_space != '{' &&
-            (paren_depth == 0 &&
-            brace_depth == 0 &&
-            sq_br_depth == 0)
+            next_non_white_space != '.'
+//            (paren_depth == 0 &&
+//            brace_depth == 0 &&
+//            sq_br_depth == 0
             // TODO: add nextline checking
             // TODO: change this when return { something }; statements are implemented. For now we just dont insert semicolons for }
+            // paren checks should be tied to the line maybe?
                 )
         {
             // this may be wrong on lines with comments
@@ -110,9 +114,42 @@ std::vector<Token> Lexer::make_tokens()
                 break;
             }
             case '.': { tokens.emplace_back(TOKEN_TYPE::PERIOD, nullptr, current_line, current_col_pos, current_col_pos); break; }
-            case '!': { tokens.emplace_back(TOKEN_TYPE::NOT, nullptr, current_line, current_col_pos, current_col_pos); break; }
-            case '<': { tokens.emplace_back(TOKEN_TYPE::LT, nullptr, current_line, current_col_pos, current_col_pos); break; } // TODO: add <=
-            case '>': { tokens.emplace_back(TOKEN_TYPE::GT, nullptr, current_line, current_col_pos, current_col_pos); break; } // TODO: add >=
+            case '!':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::NEQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::NOT, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
+            case '<':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::LQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::LT, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
+            case '>':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::GQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::GT, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
             case '(': { paren_depth++; tokens.emplace_back(TOKEN_TYPE::LPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case ')': { paren_depth--; tokens.emplace_back(TOKEN_TYPE::RPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '{': { brace_depth++; tokens.emplace_back(TOKEN_TYPE::LBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
@@ -134,9 +171,16 @@ std::vector<Token> Lexer::make_tokens()
                     current_col_pos += 1;
                     break;
                 }
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '>')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::ARROW, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
                 tokens.emplace_back(TOKEN_TYPE::ASSIGN, nullptr, current_line, current_col_pos, current_col_pos+1);
                 break;
-            } // TODO: add =>
+            }
             default:
             {
                 if (is_numeric(c))
@@ -151,9 +195,6 @@ std::vector<Token> Lexer::make_tokens()
             };
         }
     }
-
-    if (tokens[tokens.size()-1].type != TOKEN_TYPE::TT_EOF)
-        tokens.emplace_back(TOKEN_TYPE::TT_EOF);
     return tokens;
 }
 
@@ -270,25 +311,24 @@ Token Lexer::make_identifier_or_keyword()
             break;
         }
     }
+    static const std::unordered_map<std::string_view, TOKEN_TYPE> kKeywordTable{
+        { "or",     TOKEN_TYPE::OR },
+        { "and",    TOKEN_TYPE::AND },
+        { "if",     TOKEN_TYPE::IF },
+        { "else",   TOKEN_TYPE::ELSE },
+        { "for",    TOKEN_TYPE::FOR },
+        { "while",  TOKEN_TYPE::WHILE },
+        { "fn",     TOKEN_TYPE::FN },
+        { "var",    TOKEN_TYPE::VAR },
+        { "let",    TOKEN_TYPE::LET },
+        { "const",  TOKEN_TYPE::CONST },
+        { "return", TOKEN_TYPE::RETURN }
+    };
+
     const auto tk = std::string_view{ m_text.data() + start, m_pos - start + 1 };
-    if (tk == "if")
-        return { TOKEN_TYPE::IF, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "else")
-        return { TOKEN_TYPE::ELSE, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "for")
-        return { TOKEN_TYPE::FOR, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "while")
-        return { TOKEN_TYPE::WHILE, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "fn")
-        return { TOKEN_TYPE::FN, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "var")
-        return { TOKEN_TYPE::VAR, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "let")
-        return { TOKEN_TYPE::LET, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "const")
-        return { TOKEN_TYPE::CONST, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
-    if (tk == "return")
-        return { TOKEN_TYPE::RETURN, nullptr, current_line, (int)start_col_pos, (int)current_col_pos };
+    if (const auto it = kKeywordTable.find(tk); it != kKeywordTable.end()) {
+        return { it->second, nullptr, current_line,start_col_pos,current_col_pos };
+    }
     if (tk == "true" || tk == "false")
     {
         char* value = new char[m_pos - start + 2];

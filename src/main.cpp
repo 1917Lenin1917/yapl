@@ -47,9 +47,9 @@ void run()
 
 int main(int argc, char** argv)
 {
-    run();
+//    run();
   //std::ifstream t(argv[1]);
-    std::ifstream t(R"(C:\_projects\yapl\test.yapl)");
+  std::ifstream t(R"(C:\_projects\yapl\test.yapl)");
   std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
   Lexer lexer {text};
   auto ltime1 = std::chrono::system_clock::now();

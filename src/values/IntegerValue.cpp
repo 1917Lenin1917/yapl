@@ -75,6 +75,7 @@ std::shared_ptr<Value> IntegerValue::BinaryPlus(const std::shared_ptr<Value> &ot
 			return std::make_unique<StringValue>(std::to_string(value) + dynamic_cast<StringValue*>(other.get())->value);
 		default:
 		{
+            // TODO: add TypeError like in Python
 			std::cerr << std::format("Unhandled type() in BinaryPlus of objects  and .\n");
 			return nullptr;
 		}

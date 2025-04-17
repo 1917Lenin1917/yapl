@@ -67,16 +67,39 @@ public:
   {
     switch (t.type)
     {
-      case TOKEN_TYPE::LT: { return 10; }
-      case TOKEN_TYPE::GT: { return 10; }
-      case TOKEN_TYPE::LQ: { return 10; }
-      case TOKEN_TYPE::GQ: { return 10; }
-      case TOKEN_TYPE::EQ: { return 10; }
-      case TOKEN_TYPE::PLUS: { return 20; }
-      case TOKEN_TYPE::MINUS: { return 20; }
-      case TOKEN_TYPE::TIMES: { return 40; }
-      case TOKEN_TYPE::SLASH: { return 40; }
-      case TOKEN_TYPE::MOD:   { return 40; }
+        case TOKEN_TYPE::NOT: { return 1000; }
+
+        case TOKEN_TYPE::TIMES:
+        case TOKEN_TYPE::SLASH:
+        case TOKEN_TYPE::MOD: { return 900; }
+
+        case TOKEN_TYPE::PLUS:
+        case TOKEN_TYPE::MINUS: { return 800; }
+
+        case TOKEN_TYPE::LT:
+        case TOKEN_TYPE::LQ:
+        case TOKEN_TYPE::GT:
+        case TOKEN_TYPE::GQ: { return 700; }
+
+        case TOKEN_TYPE::EQ:
+        case TOKEN_TYPE::NEQ: { return 600; }
+
+        case TOKEN_TYPE::AND: { return 500; }
+        case TOKEN_TYPE::OR: { return 400; }
+
+
+//      case TOKEN_TYPE::EQ: { return 5; }
+//      case TOKEN_TYPE::NEQ: { return 5; }
+//      case TOKEN_TYPE::LT: { return 10; }
+//      case TOKEN_TYPE::GT: { return 10; }
+//      case TOKEN_TYPE::LQ: { return 10; }
+//      case TOKEN_TYPE::GQ: { return 10; }
+//      case TOKEN_TYPE::PLUS: { return 20; }
+//      case TOKEN_TYPE::MINUS: { return 20; }
+//      case TOKEN_TYPE::TIMES: { return 40; }
+//      case TOKEN_TYPE::SLASH: { return 40; }
+//      case TOKEN_TYPE::MOD:   { return 40; }
+//      case TOKEN_TYPE::NOT: { return 50; }
       default: { return -1; }
     }
   }

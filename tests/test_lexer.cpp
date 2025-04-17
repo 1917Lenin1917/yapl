@@ -6,13 +6,48 @@
 #include "yapl/Lexer.hpp"
 #include "yapl/Token.hpp"
 
+#include <array>
+
+using enum yapl::TOKEN_TYPE;
+
+void check_token_types(std::string_view src,
+                       std::span<const yapl::TOKEN_TYPE> expected)
+{
+    yapl::Lexer lex{src};
+    auto toks = lex.make_tokens();
+
+    REQUIRE(toks.size() == expected.size());
+    for (std::size_t i = 0; i < expected.size(); ++i)
+        CHECK(toks[i].type == expected[i]);
+}
+
+void check_token_types_and_values(std::string_view src,
+                       std::span<yapl::Token> expected)
+{
+    yapl::Lexer lex{src};
+    auto toks = lex.make_tokens();
+
+    REQUIRE(toks.size() == expected.size());
+    for (std::size_t i = 0; i < expected.size(); ++i)
+    {
+        CHECK(toks[i].type == expected[i].type);
+        CHECK(std::string(toks[i].value) == std::string(expected[i].value));
+    }
+}
 TEST_CASE("Test empty text", "[lexer]")
 {
-    yapl::Lexer lexer{ "" };
-    auto tokens = lexer.make_tokens();
-
-    REQUIRE(tokens[0].type == yapl::TOKEN_TYPE::TT_EOF);
+    check_token_types("", std::array{ TT_EOF });
 }
+
+TEST_CASE("Test keywords and operators", "[lexer]")
+{
+    check_token_types("+ - * % / . , ! = == != < <= > >= => or and if else for fn var let const return while ;",
+                      std::array{ PLUS, MINUS, TIMES, MOD, SLASH, PERIOD, COMMA,
+                                          NOT, ASSIGN, EQ, NEQ, LT, LQ, GT, GQ, ARROW,
+                                          OR, AND, IF, ELSE, FOR, FN, VAR, LET, CONST,
+                                          RETURN, WHILE, SEMICOLON, TT_EOF });
+}
+
 TEST_CASE("Test literals", "[lexer]")
 {
     yapl::Lexer lexer{ R"(69 42.12 "string" 'another string' true false "string with special chars \n\\")" };
@@ -132,41 +167,28 @@ TEST_CASE("Test line and col numbers", "[lexer]")
 TEST_CASE("Test semicolon insertion", "[lexer]")
 {
     SECTION("Simple expression")
-    {
-        yapl::Lexer lexer{"10"};
-        auto tokens = lexer.make_tokens();
-
-        REQUIRE(tokens[tokens.size()-2].type == yapl::TOKEN_TYPE::SEMICOLON);
-    }
+        check_token_types("10",
+                          std::array{INTEGER, SEMICOLON, TT_EOF});
 
     SECTION("Unfinished expression")
-    {
-        yapl::Lexer lexer{"10 +"};
-        auto tokens = lexer.make_tokens();
+        check_token_types("10 +",
+                          std::array{INTEGER, PLUS, TT_EOF});
 
-        REQUIRE(tokens[tokens.size()-2].type != yapl::TOKEN_TYPE::SEMICOLON);
-    }
     SECTION("Multi-line expression")
-    {
-        yapl::Lexer lexer{"6 +\n9"};
-        auto tokens = lexer.make_tokens();
+        check_token_types("6 +\n9",
+                          std::array{INTEGER, PLUS, INTEGER, SEMICOLON, TT_EOF});
 
-        REQUIRE(tokens[tokens.size()-5].type == yapl::TOKEN_TYPE::INTEGER);
-        REQUIRE(tokens[tokens.size()-4].type == yapl::TOKEN_TYPE::PLUS);
-        REQUIRE(tokens[tokens.size()-3].type == yapl::TOKEN_TYPE::INTEGER);
-        REQUIRE(tokens[tokens.size()-2].type == yapl::TOKEN_TYPE::SEMICOLON);
-        REQUIRE(tokens[tokens.size()-1].type == yapl::TOKEN_TYPE::TT_EOF);
-    }
     SECTION("Unclosed scope")
-    {
-        yapl::Lexer lexer{"if a < b {"};
-        auto tokens = lexer.make_tokens();
-    }
+        check_token_types("if a < b {",
+                          std::array{IF, IDENTIFIER, LT, IDENTIFIER, LBRACK, TT_EOF});
+
     SECTION("If scope on another line")
-    {
-        yapl::Lexer lexer{"if a < b\n{}"};
-        auto tokens = lexer.make_tokens();
-    }
+        check_token_types("if a < b\n{}",
+                          std::array{IF, IDENTIFIER, LT, IDENTIFIER, LBRACK, RBRACK, TT_EOF});
+
+    SECTION("If scope on another line")
+        check_token_types("if a < b\n{\nprint(penis)\n}",
+                          std::array{IF, IDENTIFIER, LT, IDENTIFIER, LBRACK, IDENTIFIER, LPAREN, IDENTIFIER, RPAREN, SEMICOLON, RBRACK, TT_EOF});
 }
 
 TEST_CASE("Test basic lexer tokens", "[lexer]")

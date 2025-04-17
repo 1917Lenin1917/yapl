@@ -329,7 +329,6 @@ namespace yapl {
 //
 // ScopeASTNode
 //
-// TODO: maybe handle scope creation here?
     std::string ScopeASTNode::print(size_t indent_size)
     {
         std::string res;
