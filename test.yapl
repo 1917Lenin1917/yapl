@@ -1,20 +1,59 @@
-const array = [5, 4, 3, 2, 1];
 
-fn bubble_sort(arr: Array): Array {
-  let i = 0, j = 0, temp = 0;
-  while i < arr.size() {
-    while j < arr.size() {
-      if arr[i] < arr[j] {
-        temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-      }
-      j = j + 1;
-    }
-    i = i + 1;
-    j = 0;
-  }
-  return arr;
-}
+//interface Printable {
+// fn print(): str;
+//
+//type Penis {
+// a: str;
+// b: int;
+// c: float;
+// d: Array;
+//
+//impl Printable for Penis {
+// fn print(): str {
+//   return `Penis: a={a}, b={b}, c={c}, d={d}`;
+// }
+//
+//const penis1 = Penis{ .a = "Hello, World!",
+//                    .b = 20,
+//                    .c = 40.0,
+//                    .d = [1, 2, 3, 4, 5] };
+//const penis2 = Penis{ "Test", 1, 2.3, [1,2,3] };
+//fn my_print(printable: Printable): void {
+// print(printable.print());
+//
+//my_print(penis1);
+//y_print(penis2);
+// Single-line comment
+//var x = 42;
+//let message = "Hello, World!\n";
+//const factor = 2;
+//fn multiply(a: int, b: int): int {
+// return a * b;
+//}
+//fn main(): void {
+// var result = multiply(x, factor);
+// if (result > 50) {
+//   print("That's big!\n", message);
+// } else {
+//   print("Not so big...\n");
+// }
+//  // For loop
+//  for var i; i < 3; i = i + 1; {
+//    print("i is: ", i, "\n");
+//  }
+//}
+//
+//main();
 
-print(bubble_sort(array));
+//fn fib(a: int): int {
+//  if (a < 2) { return a; }
+//  else { return fib(a-1) + fib(a-2); }
+//}
+//
+//print(fib(35));
+//let a = (1+2).to_string();
+//print("Type is: ", a.type(), "\n");
+
+//let a = [1, 2, 3];
+
+

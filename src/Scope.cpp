@@ -2,7 +2,7 @@
 // Created by lenin on 17.11.2024.
 //
 
-#include "Scope.hpp"
+#include "yapl/Scope.hpp"
 
 
 namespace yapl {

@@ -1,1 +1,78 @@
-TODO
+
+function_declaration
+    : fn identifier argument_list Colon identifier
+
+argument_list
+    : LeftParen RightParen
+    | LeftParen argument (Comma argument)? RightParen
+
+argument
+    : identifier Colon identifier
+
+scope
+    :
+
+statement
+    : identifier Assign expression
+
+variable_declaration
+    : (var | let | const) identifier (Assign expression)? (Comma identifier (Assign expression)?)?
+
+expression
+    : primary_expression (binary_op primary_expression)*
+
+primary_expression
+    : literal
+    | function_call
+    | index_operator
+    | method_call
+    | array
+    | paren_expression
+    | unary_expression
+
+paren_expression
+    : LeftParen expression RightParen
+
+unary_expression
+    : unary_op primary_expression
+    | unary_op paren_expression
+
+method_call
+    : identifier Period identifier LeftParen RightParen
+    | identifier Period identifier LeftParen expression (Comma expression)? RightParen
+
+index_operator
+    : identifier LeftSqBracket expression RightSqBracket
+
+function_call
+    : identifier LeftParen RightParen
+    | identifier LeftParen expression (Comma expression)? RightParen
+
+array
+    : LeftSqBracket RightSqBracket
+    | LeftSqBracket expression (Comma expression)? RightSqBracket
+
+identifier
+    : [a-zA-Z_]+
+
+literal
+    : integer
+    | float
+    | "string"
+
+binary_op
+    : +
+    | -
+    | *
+    | /
+    | ==
+    | !=
+    | <
+    | >
+    | <=
+    | >=
+
+unary_op
+    : +
+    | -
+    | !
