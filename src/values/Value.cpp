@@ -9,6 +9,7 @@ namespace yapl {
     std::string value_type_to_string(VALUE_TYPE vt)
     {
         switch (vt) {
+            case VALUE_TYPE::INTEGER: return "int";
             case VALUE_TYPE::STRING: return "str";
             default: return "unhandled";
         }
