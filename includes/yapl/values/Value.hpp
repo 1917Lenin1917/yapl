@@ -24,6 +24,9 @@ enum class VALUE_TYPE
 	ARRAY,
 };
 
+std::string value_type_to_string(VALUE_TYPE vt);
+
+
 class Value
 {
 private:

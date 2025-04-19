@@ -7,6 +7,7 @@
 #include "yapl/values/StringValue.hpp"
 #include "yapl/values/FloatValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
+#include "yapl/exceptions/RuntimeError.hpp"
 
 #include <memory>
 
@@ -92,14 +93,8 @@ std::shared_ptr<Value> IntegerValue::BinaryMinus(const std::shared_ptr<Value> &o
 			return std::make_unique<IntegerValue>(value - dynamic_cast<BooleanValue*>(other.get())->value);
 		case VALUE_TYPE::FLOAT:
 			return std::make_unique<FloatValue>(static_cast<float>(value) - dynamic_cast<FloatValue*>(other.get())->value);
-		case VALUE_TYPE::STRING:
-			std::cerr << std::format("Cannot subtract string from number. This is not JS.\n");
-			return nullptr;
 		default:
-		{
-			std::cerr << std::format("Unhandled type() in BinaryMinus of objects  and .\n");
-			return nullptr;
-		}
+            throw yapl::RuntimeError(std::format("Unsupported operand types for -: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 std::shared_ptr<Value> IntegerValue::BinarySlash(const std::shared_ptr<Value> &other)
@@ -112,16 +107,8 @@ std::shared_ptr<Value> IntegerValue::BinarySlash(const std::shared_ptr<Value> &o
 			return std::make_unique<IntegerValue>(value / dynamic_cast<BooleanValue*>(other.get())->value);
 		case VALUE_TYPE::FLOAT:
 			return std::make_unique<FloatValue>(static_cast<float>(value) / dynamic_cast<FloatValue*>(other.get())->value);
-		case VALUE_TYPE::STRING:
-		{
-			std::cerr << std::format("Cannot divide number by string. This is not JS. Maybe this operator should do something else later?\n");
-			return nullptr;
-		}
 		default:
-		{
-			std::cerr << std::format("Unhandled type() in BinarySlash of objects  and .\n");
-			return nullptr;
-		}
+            throw yapl::RuntimeError(std::format("Unsupported operand types for /: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 
@@ -156,7 +143,8 @@ std::shared_ptr<Value> IntegerValue::BinaryTimes(const std::shared_ptr<Value> &o
 			}
 			return std::make_unique<ArrayValue>(values);
 		}
-		default: { return nullptr; }
+        default:
+            throw yapl::RuntimeError(std::format("Unsupported operand types for *: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 
@@ -167,7 +155,8 @@ std::shared_ptr<Value> IntegerValue::BinaryMOD(const std::shared_ptr<Value> &oth
         {
             return std::make_unique<IntegerValue>(this->value % dynamic_cast<IntegerValue*>(other.get())->value);
         }
-        default: { return nullptr; }
+        default:
+            throw yapl::RuntimeError(std::format("Unsupported operand types for %: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
     }
 }
 
@@ -181,11 +170,8 @@ std::shared_ptr<Value> IntegerValue::BinaryLT(const std::shared_ptr<Value> &othe
 			return std::make_unique<BooleanValue>(value < dynamic_cast<BooleanValue*>(other.get())->value);
 		case VALUE_TYPE::FLOAT:
 			return std::make_unique<BooleanValue>(static_cast<float>(value) < dynamic_cast<FloatValue*>(other.get())->value);
-		default:
-		{
-			std::cerr << std::format("Unhandled type() in BinaryEQ of objects  and .\n");
-			return nullptr;
-		}
+        default:
+            throw yapl::RuntimeError(std::format("Unsupported operand types for <: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 
@@ -199,7 +185,8 @@ std::shared_ptr<Value> IntegerValue::BinaryGT(const std::shared_ptr<Value> &othe
 			return std::make_unique<BooleanValue>(value > dynamic_cast<BooleanValue*>(other.get())->value);
 		case VALUE_TYPE::FLOAT:
 			return std::make_unique<BooleanValue>(static_cast<float>(value) > dynamic_cast<FloatValue*>(other.get())->value);
-		default: { return nullptr; }
+        default:
+            throw yapl::RuntimeError(std::format("Unsupported operand types for >: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 
@@ -213,7 +200,8 @@ std::shared_ptr<Value> IntegerValue::BinaryLQ(const std::shared_ptr<Value> &othe
 			return std::make_unique<BooleanValue>(value <= dynamic_cast<BooleanValue*>(other.get())->value);
 		case VALUE_TYPE::FLOAT:
 			return std::make_unique<BooleanValue>(static_cast<float>(value) <= dynamic_cast<FloatValue*>(other.get())->value);
-		default: { return nullptr; }
+        default:
+            throw yapl::RuntimeError(std::format("Unsupported operand types for <=: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 
@@ -227,7 +215,8 @@ std::shared_ptr<Value> IntegerValue::BinaryGQ(const std::shared_ptr<Value> &othe
 			return std::make_unique<BooleanValue>(value >= dynamic_cast<BooleanValue*>(other.get())->value);
 		case VALUE_TYPE::FLOAT:
 			return std::make_unique<BooleanValue>(static_cast<float>(value) >= dynamic_cast<FloatValue*>(other.get())->value);
-		default: { return nullptr; }
+        default:
+            throw yapl::RuntimeError(std::format("Unsupported operand types for >=: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 
@@ -241,11 +230,8 @@ std::shared_ptr<Value> IntegerValue::BinaryEQ(const std::shared_ptr<Value> &othe
 			return std::make_unique<BooleanValue>(value == dynamic_cast<BooleanValue*>(other.get())->value);
 		case VALUE_TYPE::FLOAT:
 			return std::make_unique<BooleanValue>(static_cast<float>(value) == dynamic_cast<FloatValue*>(other.get())->value);
-		default:
-		{
-			std::cerr << std::format("Unhandled type() in BinaryEQ of objects  and .\n");
-			return nullptr;
-		}
+        default:
+            throw yapl::RuntimeError(std::format("Unsupported operand types for ==: '{}' and '{}'", value_type_to_string(this->type), value_type_to_string(other->type)));
 	}
 }
 }
