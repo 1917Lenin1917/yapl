@@ -93,10 +93,54 @@ std::vector<Token> Lexer::make_tokens()
             case '\t':
             case '\r':
             case ' ': { continue; }
-            case '+': { tokens.emplace_back(TOKEN_TYPE::PLUS, nullptr, current_line, current_col_pos, current_col_pos); break; }
-            case '-': { tokens.emplace_back(TOKEN_TYPE::MINUS, nullptr, current_line, current_col_pos, current_col_pos); break; }
-            case '*': { tokens.emplace_back(TOKEN_TYPE::TIMES, nullptr, current_line, current_col_pos, current_col_pos); break; }
-            case '%': { tokens.emplace_back(TOKEN_TYPE::MOD, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '+':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::PLUSEQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::PLUS, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
+            case '-':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::MINUSEQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::MINUS, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
+            case '*':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::TIMESEQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::TIMES, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
+            case '%':
+            {
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::MODEQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
+                    break;
+                }
+                tokens.emplace_back(TOKEN_TYPE::MOD, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
             case '/':
             {
                 if (m_pos + 1 != text_len && m_text[m_pos+1] == '/')
@@ -108,6 +152,13 @@ std::vector<Token> Lexer::make_tokens()
                     }
                     current_line += 1;
                     current_col_pos = 0;
+                    break;
+                }
+                if (m_pos+1 < m_text.length() && m_text[m_pos+1] == '=')
+                {
+                    tokens.emplace_back(TOKEN_TYPE::SLASHEQ, nullptr, current_line, current_col_pos, current_col_pos);
+                    m_pos++;
+                    current_col_pos += 1;
                     break;
                 }
                 tokens.emplace_back(TOKEN_TYPE::SLASH, nullptr, current_line, current_col_pos, current_col_pos);

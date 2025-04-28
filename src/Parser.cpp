@@ -384,6 +384,27 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 		std::unique_ptr<StatementASTNode> stmnt = std::make_unique<StatementASTNode>(identifier, std::move(expr));
 		return std::move(stmnt);
 	}
+    if (m_tokens[m_pos].type == TOKEN_TYPE::PLUSEQ
+        || m_tokens[m_pos].type == TOKEN_TYPE::MINUSEQ
+        || m_tokens[m_pos].type == TOKEN_TYPE::TIMESEQ
+        || m_tokens[m_pos].type == TOKEN_TYPE::MODEQ
+        || m_tokens[m_pos].type == TOKEN_TYPE::SLASHEQ)
+    {
+        static std::unordered_map<TOKEN_TYPE, TOKEN_TYPE> tt_to_tt = {
+                {TOKEN_TYPE::PLUSEQ, TOKEN_TYPE::PLUS},
+                {TOKEN_TYPE::MINUSEQ, TOKEN_TYPE::MINUS},
+                {TOKEN_TYPE::TIMESEQ, TOKEN_TYPE::TIMES},
+                {TOKEN_TYPE::MODEQ, TOKEN_TYPE::MOD},
+                {TOKEN_TYPE::SLASHEQ, TOKEN_TYPE::SLASH},
+        };
+        auto new_token = tt_to_tt[m_tokens[m_pos].type];
+        advance(); // eat pluseq
+        auto expr = parse_semic_expr();
+        auto expanded_expr = std::make_unique<BinaryOpASTNode>(Token{new_token}, std::make_unique<IdentifierASTNode>(identifier), std::move(expr));
+
+        std::unique_ptr<StatementASTNode> stmnt = std::make_unique<StatementASTNode>(identifier, std::move(expanded_expr));
+        return std::move(stmnt);
+    }
 	if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK) // then this is a[1] = 5; or just a[1];
 	{
 		m_pos--;
