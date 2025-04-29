@@ -26,6 +26,7 @@ add_executable(yapl src/main.cpp
         src/values/ArrayValue.cpp
         src/exceptions/SyntaxError.cpp
         src/exceptions/RuntimeError.cpp
+        src/values/TypeObjectValue.cpp
 )
 
 add_subdirectory(externals/Catch2)

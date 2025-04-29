@@ -9,67 +9,9 @@
 
 namespace yapl {
 
-void ArrayValue::make_size()
-{
-	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("size")  };
-	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
-	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("int") };
-	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
-	{
-		return std::make_unique<IntegerValue>(this->value.size());
-	});
-
-	auto f = std::make_unique<FunctionASTNode>(
-			std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
-																									 std::move(body));
-	m_methods.push_back(std::move(f));
-	m_method_definitions["size"] = m_methods[m_methods.size() - 1].get();
-}
-
-void ArrayValue::make_append()
-{
-	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("append")  };
-	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
-	arg_list.push_back(std::make_unique<FunctionArgumentASTNode>(Token{TOKEN_TYPE::IDENTIFIER, new char[]("value")}, Token{TOKEN_TYPE::IDENTIFIER, new char[]("any")}));
-	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("void") };
-	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
-	{
-		auto arg = f_obj->function_scope->vars[f_obj->argument_names[0]];
-		this->value.push_back(arg->value->Copy());
-		return nullptr;
-		// return std::make_unique<IntegerValue>(this->value.size());
-	});
-
-	auto f = std::make_unique<FunctionASTNode>(
-			std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, 1), return_type)),
-																									 std::move(body));
-	m_methods.push_back(std::move(f));
-	m_method_definitions["append"] = m_methods[m_methods.size() - 1].get();
-}
-
-void ArrayValue::make_pop()
-{
-	const Token name{ TOKEN_TYPE::IDENTIFIER, new char[]("pop")  };
-	std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
-	const Token return_type{ TOKEN_TYPE::IDENTIFIER, new char[]("void") };
-	auto body = std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj)
-	{
-        this->value.pop_back();
-        return nullptr;
-	});
-
-	auto f = std::make_unique<FunctionASTNode>(
-			std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
-																									 std::move(body));
-	m_methods.push_back(std::move(f));
-	m_method_definitions["pop"] = m_methods[m_methods.size() - 1].get();
-}
 ArrayValue::ArrayValue(std::vector<std::shared_ptr<Value>>& value)
-		:Value(VALUE_TYPE::ARRAY), value(std::move(value))
+		:Value(VALUE_TYPE::ARRAY, ArrayTypeObject), value(std::move(value)) // FIXME: this could potentially cause a lot of issues, probably should just make a copy, or take &&
 {
-	make_size();
-	make_append();
-	make_pop();
 }
 
 
@@ -112,69 +54,27 @@ void ArrayValue::OperatorIndexSet(const std::shared_ptr<Value> &idx, std::shared
 	v->Set(new_val);
 }
 
-
-std::shared_ptr<Value> ArrayValue::UnaryMinus()
+void init_array_methods(TypeObject* tp)
 {
-	return nullptr;
+
+    MAKE_METHOD(tp, "size", "int", ARG("this", "this"))
+    {
+        auto self = static_cast<ArrayValue*>(f_obj->function_scope->vars["this"]->value.get());
+        return std::make_unique<IntegerValue>(self->value.size());
+    };
+    MAKE_METHOD(tp, "append", "void", ARG("this", "this"), ARG("value", "any"))
+    {
+        auto self = static_cast<ArrayValue*>(f_obj->function_scope->vars["this"]->value.get());
+        auto arg = f_obj->function_scope->vars[f_obj->argument_names[0]];
+        self->value.push_back(arg->value->Copy());
+        return nullptr;
+    };
+    MAKE_METHOD(tp, "pop", "any", ARG("this", "this"))
+    {
+        auto self = static_cast<ArrayValue*>(f_obj->function_scope->vars["this"]->value.get());
+        self->value.pop_back();
+        return nullptr;
+    };
 }
 
-std::shared_ptr<Value> ArrayValue::UnaryPlus()
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::UnaryNot()
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryPlus(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryMinus(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinarySlash(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryTimes(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryMOD(const std::shared_ptr<Value> &other)
-{
-    return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryLT(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryGT(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryLQ(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryGQ(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
-
-std::shared_ptr<Value> ArrayValue::BinaryEQ(const std::shared_ptr<Value> &other)
-{
-	return nullptr;
-}
 }

@@ -57,4 +57,24 @@
 //let a = [1, 2, 3];
 
 
-1 - ''
+//print(((1).to_string()).type())
+//let a = 1
+//let dirs = a.dir()
+//
+//for let i; i < dirs.size(); i = i + 1; {
+//  print(dirs[i])
+//}
+//print(a.dir())
+
+//let a = 2;
+//print(a)
+//a += 1
+//print(a)
+//a -= 1
+//print(a)
+//a *= 5
+//print(a)
+//a /= 2
+//print(a)
+
+print((1).type())

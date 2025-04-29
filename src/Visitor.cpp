@@ -2,6 +2,8 @@
 // Created by lenin on 17.11.2024.
 //
 
+#include <format>
+
 #include "yapl/Visitor.hpp"
 
 #include "yapl/values/Value.hpp"
@@ -10,6 +12,7 @@
 #include "yapl/values/FloatValue.hpp"
 #include "yapl/values/StringValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
+#include "yapl/exceptions/RuntimeError.hpp"
 
 namespace yapl {
 
@@ -121,27 +124,70 @@ namespace yapl {
     {
         const auto lhs = node.LHS->visit(*this);
         const auto rhs = node.RHS->visit(*this);
+
+        binop_fn op, rop;
+
         if (node.op.type == TOKEN_TYPE::PLUS)
-            return lhs->BinaryPlus(rhs);
+        {
+            op  = lhs->tp->nb_add;
+            rop = rhs->tp->nb_add;
+        }
         if (node.op.type == TOKEN_TYPE::TIMES)
-            return lhs->BinaryTimes(rhs);
+        {
+            op  = lhs->tp->nb_mul;
+            rop = rhs->tp->nb_mul;
+        }
         if (node.op.type == TOKEN_TYPE::MINUS)
-            return lhs->BinaryMinus(rhs);
+        {
+            op  = lhs->tp->nb_sub;
+            rop = rhs->tp->nb_sub;
+        }
         if (node.op.type == TOKEN_TYPE::SLASH)
-            return lhs->BinarySlash(rhs);
-        if (node.op.type == TOKEN_TYPE::LT)
-            return lhs->BinaryLT(rhs);
-        if (node.op.type == TOKEN_TYPE::GT)
-            return lhs->BinaryGT(rhs);
-        if (node.op.type == TOKEN_TYPE::LQ)
-            return lhs->BinaryLQ(rhs);
-        if (node.op.type == TOKEN_TYPE::GQ)
-            return lhs->BinaryGQ(rhs);
-        if (node.op.type == TOKEN_TYPE::EQ)
-            return lhs->BinaryEQ(rhs);
+        {
+            op  = lhs->tp->nb_div;
+            rop = rhs->tp->nb_div;
+        }
         if (node.op.type == TOKEN_TYPE::MOD)
-            return lhs->BinaryMOD(rhs);
-        return nullptr;
+        {
+            op  = lhs->tp->nb_mod;
+            rop = rhs->tp->nb_mod;
+        }
+        if (node.op.type == TOKEN_TYPE::LT)
+        {
+            op  = lhs->tp->nb_lt;
+            rop = rhs->tp->nb_lt;
+        }
+        if (node.op.type == TOKEN_TYPE::GT)
+        {
+            op  = lhs->tp->nb_gt;
+            rop = rhs->tp->nb_gt;
+        }
+        if (node.op.type == TOKEN_TYPE::LQ)
+        {
+            op  = lhs->tp->nb_le;
+            rop = rhs->tp->nb_le;
+        }
+        if (node.op.type == TOKEN_TYPE::GQ)
+        {
+            op  = lhs->tp->nb_ge;
+            rop = rhs->tp->nb_ge;
+        }
+        if (node.op.type == TOKEN_TYPE::EQ)
+        {
+            op  = lhs->tp->nb_eq;
+            rop = rhs->tp->nb_eq;
+        }
+        // TODO: add NEQ!!!
+
+        if (op) {
+            VPtr r = op(lhs, rhs);
+            if (r != NotImplemented) return r;
+        }
+        if (rop) {            // reverse call
+            VPtr r = rop(rhs, lhs);
+            if (r != NotImplemented) return r;
+        }
+        throw yapl::RuntimeError(std::format("Unsupported operand types for {}: '{}' and '{}'", ttype_to_string(node.op.type), value_type_to_string(lhs->type), value_type_to_string(rhs->type)));
     }
 
     std::shared_ptr<Value> Visitor::visit_StatementASTNode(const StatementASTNode &node)
@@ -303,24 +349,20 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
     {
-        // FIXME: copy LHS logic from indexing operator, so you can call method of stuff like (1+2).to_string()
-//        auto object = interpreter.get_variable(node.identifier.value);
-//        if (!object)
-//        {
-//            std::cerr << "Object " << node.identifier.value << " doesn't exist\n";
-//            return nullptr;
-//        }
-
         auto object = node.base_expr->visit(*this);
         auto func_def = object->get_method_definition(node.name.value);
         auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
         auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
         size_t arg_amount = arg_list->get_argument_amount();
-        if (arg_amount != -1 && node.args.size() != arg_amount)
+        if (arg_amount != -1 && node.args.size() + 1 != arg_amount)
         {
             std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
             return nullptr;
         }
+
+        // pass object reference to the method as the first argument
+        func->set_argument(std::make_unique<Variable>(false, object->type, object), "this");
+
         // set args with passed expressions
         for (size_t i = 0; i < node.args.size(); i++)
         {
