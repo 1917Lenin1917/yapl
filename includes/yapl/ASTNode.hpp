@@ -174,6 +174,8 @@ public:
   std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
   explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, int custom_arg_amount = 999)
     :BaseASTNode(), m_arg_amount(custom_arg_amount == 999 ? args.size() : custom_arg_amount), args(std::move(args)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args, int custom_arg_amount = 999)
+    :BaseASTNode(), m_arg_amount(custom_arg_amount == 999 ? args.size() : custom_arg_amount), args(std::move(args)) {}
 
   std::string print(size_t indent_size) override;
 
@@ -274,9 +276,9 @@ public:
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 
-  std::function<std::unique_ptr<Value>(std::shared_ptr<Function>)> func;
+  std::function<std::shared_ptr<Value>(std::shared_ptr<Function>)> func;
 
-  explicit BuiltinCustomVisitFunctionASTNode(std::function<std::unique_ptr<Value>(std::shared_ptr<Function>)> func)
+  explicit BuiltinCustomVisitFunctionASTNode(std::function<std::shared_ptr<Value>(std::shared_ptr<Function>)> func)
     :BaseASTNode(), func(std::move(func)) {}
 };
 class IfElseExpressionASTNode final : public BaseASTNode

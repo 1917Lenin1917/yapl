@@ -19,20 +19,17 @@ public:
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-	std::shared_ptr<Value> UnaryMinus() override;
-	std::shared_ptr<Value> UnaryPlus() override;
-	std::shared_ptr<Value> UnaryNot() override;
-
-	std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
-    std::shared_ptr<Value> BinaryMOD(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value> &other) override;
-
 };
+
+inline TypeObject* StringTypeObject = nullptr;
+
+void init_str_methods(TypeObject* tp);
+
+static void init_str_tp()
+{
+    StringTypeObject = new TypeObject{"str"};
+    init_base_methods(StringTypeObject);
+    init_str_methods(StringTypeObject);
+}
+
 }

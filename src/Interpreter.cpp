@@ -8,6 +8,7 @@
 #include "yapl/values/FloatValue.hpp"
 #include "yapl/values/BooleanValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
+#include "yapl/values/TypeObjectValue.hpp"
 #include <memory>
 
 namespace yapl {
@@ -25,9 +26,10 @@ void Interpreter::make_builtin_print()
                 for (const auto& name : f_obj->argument_names)
                 {
                     const auto& arg = f_obj->function_scope->vars.at(name);
-                    // std::cout << arg->value->print() << " ";
-                    std::cout << arg->value->print();
+                    std::cout << arg->value->print() << " ";
+//                    std::cout << arg->value->print();
                 }
+                std::cout << "\n";
                 return nullptr;
             });
     auto f = std::make_unique<FunctionASTNode>(
@@ -78,6 +80,13 @@ Interpreter::Interpreter()
     make_builtin_print();
     make_builtin_read_int();
     make_builtin_read_string();
+
+    init_int_tp();
+    init_float_type();
+    init_array_tp();
+    init_bool_tp();
+    init_str_tp();
+    init_tp_tp();
 }
 
 bool Interpreter::function_exists(const std::string &name) const
