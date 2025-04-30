@@ -3,6 +3,7 @@
 //
 
 #include "yapl/values/StringValue.hpp"
+#include "yapl/values/IntegerValue.hpp"
 
 namespace yapl {
 
@@ -23,6 +24,21 @@ std::unique_ptr<Value> StringValue::Copy() const
 void init_str_methods(TypeObject* tp)
 {
 
+}
+
+void init_str_tp()
+{
+    StringTypeObject = new TypeObject{"str"};
+    init_base_methods(StringTypeObject);
+    init_str_methods(StringTypeObject);
+
+    StringTypeObject->nb_add = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_str(as_str(self.get())->value + std::to_string(as_int(other.get())->value));
+
+        return NotImplemented;
+    };
 }
 
 }

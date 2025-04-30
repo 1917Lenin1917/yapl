@@ -22,18 +22,19 @@ void Interpreter::make_builtin_print()
     auto return_type = MAKE_TOKEN("void");
     std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
     auto body = MAKE_BODY(
-            {
-                for (const auto& name : f_obj->argument_names)
-                {
-                    const auto& arg = f_obj->function_scope->vars.at(name);
-                    std::cout << arg->value->print() << " ";
-//                    std::cout << arg->value->print();
-                }
-                std::cout << "\n";
-                return nullptr;
-            });
+    {
+        auto args = static_cast<ArrayValue*>(f_obj->function_scope->vars.at("args")->value.get());
+        for (const auto& arg : args->value)
+        {
+            std::cout << arg->print() << " ";
+        }
+        std::cout << "\n";
+        return nullptr;
+    });
+    auto args_arg = std::make_unique<FunctionArgumentASTNode>(Token{TOKEN_TYPE::IDENTIFIER, new char[]{"args"}}, Token{TOKEN_TYPE::IDENTIFIER, new char[]{"any"}}, true);
     auto f = std::make_unique<FunctionASTNode>(
-            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, std::move(args_arg),
+                                                                                                                nullptr), return_type)),
             std::move(body));
     builtin_functions.push_back(std::move(f));
     function_definitions["print"] = builtin_functions[builtin_functions.size() - 1].get();
@@ -50,7 +51,7 @@ void Interpreter::make_builtin_read_int()
                 return nullptr;
             });
     auto f = std::make_unique<FunctionASTNode>(
-            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list), return_type)),
             std::move(body));
     builtin_functions.push_back(std::move(f));
     function_definitions["read_int"] = builtin_functions[builtin_functions.size() - 1].get();
@@ -67,7 +68,7 @@ void Interpreter::make_builtin_read_string()
                 return nullptr;
             });
     auto f = std::make_unique<FunctionASTNode>(
-            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, -1), return_type)),
+            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list), return_type)),
             std::move(body));
     builtin_functions.push_back(std::move(f));
     function_definitions["read_str"] = builtin_functions[builtin_functions.size() - 1].get();

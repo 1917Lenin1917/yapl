@@ -10,6 +10,8 @@
 #include "TypeObject.hpp"
 
 #include "FloatValue.hpp"
+#include "BooleanValue.hpp"
+#include "StringValue.hpp"
 
 namespace yapl {
 
@@ -42,6 +44,11 @@ static void init_int_tp()
     init_base_methods(IntegerTypeObject);
     init_int_methods(IntegerTypeObject);
 
+    IntegerTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
+    {
+        auto v = args.size() == 1 ? as_int(args[0].get())->value : 0;
+        return std::make_unique<IntegerValue>(v);
+    };
 
     IntegerTypeObject->nb_add = [](const VPtr& self, const VPtr& other) -> VPtr
     {
@@ -49,6 +56,8 @@ static void init_int_tp()
             return mk_int(as_int(self.get())->value + as_int(other.get())->value);
         if (other->tp == FloatTypeObject)
             return mk_float(as_int(self.get())->value + as_float(other.get())->value);
+        if (other->tp == StringTypeObject)
+            return mk_str(std::to_string(as_int(self.get())->value) + as_str(other.get())->value);
 
         return NotImplemented;
     };
@@ -85,6 +94,14 @@ static void init_int_tp()
             return mk_int(as_int(self.get())->value % as_int(other.get())->value);
 
         return NotImplemented;
+    };
+
+    IntegerTypeObject->nb_lt = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_bool(as_int(self.get())->value < as_int(other.get())->value);
+
+       return NotImplemented;
     };
 }
 

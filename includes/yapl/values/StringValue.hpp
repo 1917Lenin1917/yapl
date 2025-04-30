@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "Value.hpp"
 #include <memory>
+
+#include "Value.hpp"
 
 namespace yapl {
 
@@ -25,11 +26,6 @@ inline TypeObject* StringTypeObject = nullptr;
 
 void init_str_methods(TypeObject* tp);
 
-static void init_str_tp()
-{
-    StringTypeObject = new TypeObject{"str"};
-    init_base_methods(StringTypeObject);
-    init_str_methods(StringTypeObject);
-}
+void init_str_tp();
 
 }

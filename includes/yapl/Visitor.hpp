@@ -33,6 +33,7 @@ class FunctionArgumentListASTNode;
 class FunctionDeclASTNode;
 class FunctionCallASTNode;
 class MethodCallASTNode;
+class StarredExpressionASTNode;
 class FunctionASTNode;
 class BuiltinCustomVisitFunctionASTNode;
 
@@ -68,6 +69,7 @@ public:
     std::shared_ptr<Value> visit_FunctionDeclASTNode(const FunctionDeclASTNode &node);
     std::shared_ptr<Value> visit_FunctionCallASTNode(const FunctionCallASTNode& node);
     std::shared_ptr<Value> visit_MethodCallASTNode(const MethodCallASTNode &node);
+    std::shared_ptr<Value> visit_StarredExpressionASTNode(const StarredExpressionASTNode &node);
     std::shared_ptr<Value> visit_FunctionASTNode(const FunctionASTNode &node);
     std::shared_ptr<Value> visit_BuiltinCustomVisitFunctionASTNode(const BuiltinCustomVisitFunctionASTNode &node);
 };

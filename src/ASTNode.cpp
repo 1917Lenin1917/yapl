@@ -481,4 +481,11 @@ namespace yapl {
         return visitor.visit_RootASTNode(*this);
     }
 
+    std::string StarredExpressionASTNode::print(size_t indent_size) {
+        return std::string();
+    }
+
+    std::shared_ptr<Value> StarredExpressionASTNode::visit(Visitor &visitor) {
+        return visitor.visit_StarredExpressionASTNode(*this);
+    }
 } // namespace yapl

@@ -16,6 +16,7 @@ class Value;
 
 using VPtr = std::shared_ptr<Value>;
 
+using make_fn = std::function<VPtr(const std::vector<VPtr>& args)>;
 using unop_fn = std::function<VPtr(const VPtr&)>;
 using binop_fn = std::function<VPtr(const VPtr&, const VPtr&)>;
 
@@ -25,6 +26,8 @@ struct TypeObject
 
     std::vector<std::unique_ptr<FunctionASTNode>> methods;
     std::unordered_map<std::string, FunctionASTNode*> method_dict;
+
+    make_fn nb_make = nullptr;
 
     unop_fn nb_pos = nullptr;    // + (unary)
     unop_fn nb_neg = nullptr;    // - (unary)
