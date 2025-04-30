@@ -45,6 +45,17 @@ std::unique_ptr<BaseASTNode> Parser::parse_literal()
 	return res;
 }
 
+
+std::unique_ptr<BaseASTNode> Parser::parse_starred_expr_or_expr()
+{
+    if (m_tokens[m_pos].type == TOKEN_TYPE::TIMES)
+    {
+        advance();
+        return std::make_unique<StarredExpressionASTNode>(std::move(parse_expr()));
+    }
+    return parse_expr();
+}
+
 std::unique_ptr<BaseASTNode> Parser::parse_function_call(Token identifier)
 {
     std::vector<std::unique_ptr<BaseASTNode>> args;
@@ -52,7 +63,8 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_call(Token identifier)
     advance(); // eat (
     while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
     {
-        args.push_back(std::move(parse_expr()));
+//        args.push_back(std::move(parse_expr()));
+        args.push_back(std::move(parse_starred_expr_or_expr()));
         if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
         {
             advance();
@@ -360,21 +372,10 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 	advance(); // eat id
 	if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
 	{
-		std::vector<std::unique_ptr<BaseASTNode>> args;
-		// function call;
-		advance(); // eat (
-		while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN) 
-		{
-			args.push_back(std::move(parse_expr()));
-			if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
-			{
-				advance();
-			}
-		}	
-		advance(); // eat )
+        auto expr = parse_function_call(identifier);
         check(TOKEN_TYPE::SEMICOLON);
-		advance(); // eat ;
-		return std::make_unique<FunctionCallASTNode>(identifier, args);
+        advance();
+        return expr;
 	}
 	if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
 	{
@@ -435,6 +436,9 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
     check(TOKEN_TYPE::LPAREN);
 	advance(); // eat (
 	std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
+    std::unique_ptr<FunctionArgumentASTNode> args_arg, kwargs_arg;
+    bool has_args = false;
+    bool has_kwargs = false;
 	while (m_pos < m_tokens.size())
 	{
 		if (m_tokens[m_pos].type == TOKEN_TYPE::RPAREN)
@@ -442,23 +446,85 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
 			advance(); // eat )
 			break;
 		}
+        // check if args
+        if (m_tokens[m_pos].type == TOKEN_TYPE::TIMES)
+        {
+            // check if kwargs
+            if (m_tokens[m_pos+1].type == TOKEN_TYPE::TIMES)
+            {
+                // cannot have multiple kwargs
+                if (has_kwargs)
+                    throw SyntaxError(
+                            m_filename,
+                            m_tokens[m_pos+1].line,
+                            m_tokens[m_pos].col_start,
+                            m_tokens[m_pos+1].col_start,
+                            m_source_lines[m_tokens[m_pos+1].line-1],
+                            "Cannot have multiple **kwargs"
+                    );
+                advance(); // eat *
+                advance(); // eat *
+
+                check(TOKEN_TYPE::IDENTIFIER);
+                Token identifier = m_tokens[m_pos];
+                advance(); // eat identifier
+                has_kwargs = true;
+                kwargs_arg = std::make_unique<FunctionArgumentASTNode>(identifier,
+                                                                                 Token{ TOKEN_TYPE::IDENTIFIER,
+                                                                                        new char[]{ "any" } },
+                                                                                 false, true);
+                if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+                {
+                    advance(); // eat comma
+                }
+                continue;
+            }
+
+            // cannot have multiple args
+            if (has_args)
+                throw SyntaxError(
+                        m_filename,
+                        m_tokens[m_pos].line,
+                        m_tokens[m_pos].col_start,
+                        m_tokens[m_pos].col_start,
+                        m_source_lines[m_tokens[m_pos].line-1],
+                        "Cannot have multiple *args"
+                );
+            advance(); // eat *
+
+            check(TOKEN_TYPE::IDENTIFIER);
+            Token identifier = m_tokens[m_pos];
+            advance(); // eat identifier
+            has_args = true;
+            args_arg = std::make_unique<FunctionArgumentASTNode>(identifier,
+                                                                           Token{ TOKEN_TYPE::IDENTIFIER,
+                                                                                  new char[]{ "any" } },
+                                                                           true, false);
+            if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+            {
+                advance(); // eat comma
+            }
+            continue;
+        }
 		// parse an argument
 		Token identifier = m_tokens[m_pos];
         check(TOKEN_TYPE::IDENTIFIER);
 		advance(); // eat ident
+        /*
         check(TOKEN_TYPE::COLON);
-		advance(); // eat :
-		Token type = m_tokens[m_pos];
+        advance(); // eat :
+        Token type = m_tokens[m_pos];
         check(TOKEN_TYPE::IDENTIFIER);
-		advance(); // eat type
+        advance(); // eat type
+         */
 		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA) 
 		{
 			advance(); // eat comma
 		}
 
-		args.push_back(std::move(std::make_unique<FunctionArgumentASTNode>(identifier, type)));
+		args.push_back(std::move(std::make_unique<FunctionArgumentASTNode>(identifier, Token{ TOKEN_TYPE::IDENTIFIER, new char[]{ "any" } })));
 	}
-	return std::move(std::make_unique<FunctionArgumentListASTNode>(args));
+	return std::move(std::make_unique<FunctionArgumentListASTNode>(args, std::move(args_arg), std::move(kwargs_arg)));
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_function_declaration()
@@ -468,13 +534,15 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_declaration()
     check(TOKEN_TYPE::IDENTIFIER);
 	advance(); // eat identifier
 	auto fargs = parse_function_arguments();
+    /*
     check(TOKEN_TYPE::COLON);
 	advance(); // eat :
 	auto ftype = m_tokens[m_pos];
     check(TOKEN_TYPE::IDENTIFIER);
 	advance(); // eat type
+    */
 
-	return std::move(std::make_unique<FunctionDeclASTNode>(fname, std::move(fargs), ftype));
+	return std::move(std::make_unique<FunctionDeclASTNode>(fname, std::move(fargs), Token{ TOKEN_TYPE::IDENTIFIER, new char[]{ "any" } }));
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_return() 

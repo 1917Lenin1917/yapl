@@ -24,6 +24,12 @@ namespace yapl {
 #define mk_str(v) std::make_unique<StringValue>(v)
 #define as_str(v) static_cast<StringValue*>(v)
 
+#define mk_bool(v) std::make_unique<BooleanValue>(v)
+#define as_bool(v) static_cast<BooleanValue*>(v)
+
+#define mk_arr(v) std::make_unique<ArrayValue>(v)
+#define as_arr(v) static_cast<ArrayValue*>(v)
+
 struct TypeObject;
 
 class FunctionASTNode;
@@ -71,7 +77,7 @@ struct MethodAutoReg {
                 std::make_unique<FunctionDeclASTNode>(
                         name_tok,
                         std::make_unique<FunctionArgumentListASTNode>(
-                                std::move(args), -1),
+                                std::move(args)),
                         ret_tok),
                 std::move(body_node));
         self->AddMethod(name_lit, std::move(func));
@@ -131,6 +137,8 @@ public:
 	[[nodiscard]] virtual std::string print() const = 0;
 	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
 	virtual void Set(const std::shared_ptr<Value>& v) { throw std::runtime_error("Not implemented"); }
+
+    [[nodiscard]] virtual bool IsTruthy() const { return false; };
 
     [[nodiscard]] std::shared_ptr<ArrayValue> GetMethods() const;
 

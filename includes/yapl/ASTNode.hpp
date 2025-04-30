@@ -158,9 +158,10 @@ class FunctionArgumentASTNode final : public BaseASTNode
 public:
   Token name;
   Token type;
+  bool is_args, is_kwargs;
 
-  FunctionArgumentASTNode(const Token& n, const Token& t)
-    :BaseASTNode(), name(n), type(t) {}
+  FunctionArgumentASTNode(const Token& n, const Token& t, bool is_args = false, bool is_kwargs = false)
+    :BaseASTNode(), name(n), type(t), is_args(is_args), is_kwargs(is_kwargs) {}
 
   std::string print(size_t indent_size) override;
 
@@ -172,10 +173,16 @@ class FunctionArgumentListASTNode final : public BaseASTNode
   int m_arg_amount = -1;
 public:
   std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, int custom_arg_amount = 999)
-    :BaseASTNode(), m_arg_amount(custom_arg_amount == 999 ? args.size() : custom_arg_amount), args(std::move(args)) {}
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args, int custom_arg_amount = 999)
-    :BaseASTNode(), m_arg_amount(custom_arg_amount == 999 ? args.size() : custom_arg_amount), args(std::move(args)) {}
+  std::unique_ptr<FunctionArgumentASTNode> args_arg, kwargs_arg;
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)) {}
+
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, std::unique_ptr<FunctionArgumentASTNode> args_arg, std::unique_ptr<FunctionArgumentASTNode> kwargs_arg)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)), args_arg(std::move(args_arg)), kwargs_arg(std::move(kwargs_arg)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args, std::unique_ptr<FunctionArgumentASTNode> args_arg, std::unique_ptr<FunctionArgumentASTNode> kwargs_arg)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)), args_arg(std::move(args_arg)), kwargs_arg(std::move(kwargs_arg)) {}
 
   std::string print(size_t indent_size) override;
 
@@ -324,6 +331,17 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class StarredExpressionASTNode final : public BaseASTNode
+{
+public:
+    std::unique_ptr<BaseASTNode> expression;
+    explicit StarredExpressionASTNode(std::unique_ptr<BaseASTNode> expr)
+        :BaseASTNode(), expression(std::move(expr)) {}
+
+    std::string print(size_t indent_size) override;
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
 class RootASTNode final : public BaseASTNode

@@ -14,6 +14,11 @@ ArrayValue::ArrayValue(std::vector<std::shared_ptr<Value>>& value)
 {
 }
 
+ArrayValue::ArrayValue(std::vector<std::shared_ptr<Value>>&& value)
+        :Value(VALUE_TYPE::ARRAY, ArrayTypeObject), value(std::move(value)) // FIXME: this could potentially cause a lot of issues, probably should just make a copy, or take &&
+{
+
+}
 
 std::string ArrayValue::print() const
 {

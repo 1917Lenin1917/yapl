@@ -17,6 +17,8 @@ public:
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
+
+    [[nodiscard]] bool IsTruthy() const override { return value; }
 };
 
 inline TypeObject* BooleanTypeObject = nullptr;

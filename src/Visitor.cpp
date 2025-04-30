@@ -226,18 +226,14 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node)
     {
-        // FIXME: this really should be a macro|helper function
-        if (dynamic_cast<BooleanValue*>(node.condition->visit(*this)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value)
-            // TODO: the problem is if condition is not boolean. Probably should add method to all values to check if its truthy or falsy
-//        auto condition_eval = node.condition->visit(*this);
-//        if (dynamic_cast<BooleanValue*>(condition_eval.get())->value)
+        if (node.condition->visit(*this)->IsTruthy())
         {
             interpreter.push_scope();
             auto res = node.true_scope->visit(*this);
             interpreter.pop_scope();
             return res;
         }
-        if (node.false_scope)
+        else if (node.false_scope)
         {
             interpreter.push_scope();
             auto res = node.false_scope->visit(*this);
@@ -249,7 +245,7 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_WhileLoopASTNode(const WhileLoopASTNode &node)
     {
-        while (dynamic_cast<BooleanValue*>(node.condition->visit(*this)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value == true)
+        while(node.condition->visit(*this)->IsTruthy())
         {
             interpreter.push_scope();
             node.scope->visit(*this);
@@ -262,7 +258,7 @@ namespace yapl {
     {
         interpreter.push_scope();
         node.declaration->visit(*this);
-        while (dynamic_cast<BooleanValue*>(node.condition->visit(*this)->BinaryEQ(std::make_unique<BooleanValue>(true)).get())->value == true)
+        while (node.condition->visit(*this)->IsTruthy())
         {
             interpreter.push_scope();
             node.scope->visit(*this);
@@ -326,18 +322,44 @@ namespace yapl {
         auto func_def = interpreter.get_function_def(node.name.value);
         auto func = interpreter.push_function(node.name.value);
         auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
-        size_t arg_amount = arg_list->get_argument_amount();
-        if (arg_amount != -1 && node.args.size() != arg_amount)
+        // check if we have variadic args
+        // TODO: handle kwargs
+        if (const auto& args_arg = arg_list->args_arg)
         {
-            std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
-            return nullptr;
+            auto list = std::vector<VPtr>{  };
+            for (const auto& arg : node.args)
+            {
+                // TODO: this dynamic_cast is probably really slow!
+                if (const auto& str_expr = dynamic_cast<StarredExpressionASTNode*>(arg.get()))
+                {
+                    auto v = str_expr->visit(*this);
+                    for (const auto& val : as_arr(v.get())->value)
+                    {
+                        list.push_back(val);
+                    }
+                    continue;
+                }
+                list.push_back(arg->visit(*this));
+            }
+            auto VPtrList = std::make_unique<ArrayValue>(list);
+            func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
         }
-        // set args with passed expressions
-        for (size_t i = 0; i < node.args.size(); i++)
+        else
         {
-            auto value = node.args[i]->visit(*this);
-            func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
-            // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
+            // TODO: add starred expression handling
+            size_t arg_amount = arg_list->get_argument_amount();
+            if (arg_amount != -1 && node.args.size() != arg_amount)
+            {
+                std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
+                return nullptr;
+            }
+            // set args with passed expressions
+            for (size_t i = 0; i < node.args.size(); i++)
+            {
+                auto value = node.args[i]->visit(*this);
+                func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
+                // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
+            }
         }
         func_def->body->visit(*this);
         auto ret_value = func->return_value;
@@ -398,5 +420,14 @@ namespace yapl {
         auto func_obj = interpreter.function_stack[interpreter.function_stack.size() - 1];
         func_obj->return_value = node.func(func_obj);
         return nullptr;
+    }
+
+    std::shared_ptr<Value> Visitor::visit_StarredExpressionASTNode(const StarredExpressionASTNode &node) {
+        auto val = node.expression->visit(*this);
+        // TODO: add proper check for iterable
+        // for now we'll just work with arrays only
+        if (val->tp != ArrayTypeObject)
+            throw RuntimeError("Starred expression expected an array object.");
+        return val;
     }
 }
