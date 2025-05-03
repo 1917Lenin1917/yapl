@@ -30,6 +30,11 @@ static void init_float_type()
     FloatTypeObject = new TypeObject{"float"};
     init_base_methods(FloatTypeObject);
     init_float_methods(FloatTypeObject);
+
+    FloatTypeObject->nb_neg = [](const VPtr& self) -> VPtr
+    {
+        return mk_float(-as_float(self.get())->value);
+    };
 }
 
 }

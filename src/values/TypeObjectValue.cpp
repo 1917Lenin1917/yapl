@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "yapl/values/TypeObjectValue.hpp"
+#include "yapl/values/ArrayValue.hpp"
 
 namespace yapl {
 
@@ -24,14 +25,14 @@ std::unique_ptr<Value> TypeObjectValue::Copy() const
 
 void init_tp_methods(TypeObject *tp)
 {
-    MAKE_METHOD(tp, "make", "value", ARG("this", "this"), ARG("value", "any"))
+    MAKE_METHOD_WITH_VARGS(tp, "make", "value", ARG("this", "this"))
     {
         // TODO: rewrite methods using variadic args
         auto self = static_cast<TypeObjectValue*>(f_obj->function_scope->vars["this"]->value.get());
-        if (f_obj->function_scope->vars.contains("value"))
+        if (f_obj->function_scope->vars.contains("args"))
         {
-            auto value = f_obj->function_scope->vars["value"]->value;
-            return self->value->nb_make({ value });
+            auto value = f_obj->function_scope->vars["args"]->value;
+            return self->value->nb_make(as_arr(value.get())->value);
         }
         return self->value->nb_make({});
     };

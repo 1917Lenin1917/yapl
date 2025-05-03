@@ -16,6 +16,7 @@ public:
 	std::string value; // probably should be a const char* ??
 
 	explicit StringValue(std::string value);
+    explicit StringValue(std::string value, int repeat);
 
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;

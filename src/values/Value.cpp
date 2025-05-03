@@ -38,7 +38,7 @@ VPtr Value::dispatch(yapl::unop_fn slot, const char *opname)
 {
     if (!slot) return NotImplemented;
 
-    VPtr r = slot(std::shared_ptr<Value>(this));
+    VPtr r = slot(shared_from_this());
     return r != NotImplemented ? r : NotImplemented;
 }
 
@@ -46,7 +46,7 @@ VPtr Value::dispatch(yapl::binop_fn slot, const yapl::VPtr &rhs, const char *opn
 {
     if (!slot) return NotImplemented;
 
-    VPtr r = slot(std::shared_ptr<Value>(this), rhs);
+    VPtr r = slot(shared_from_this(), rhs);
     return r != NotImplemented ? r : NotImplemented;
 }
 
