@@ -31,19 +31,6 @@ namespace yapl {
     std::shared_ptr<Value> Visitor::visit_LiteralASTNode(const LiteralASTNode &node)
     {
         throw RuntimeError("visit_LiteralASTNode is deprecated!");
-        switch (node.token.type)
-        {
-            case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerValue>(std::stoi(node.token.value));
-            case TOKEN_TYPE::BOOL: return std::make_unique<BooleanValue>(node.token.value == std::string("true")); // This is too inefficient. Change.
-            case TOKEN_TYPE::FLOAT: return std::make_unique<FloatValue>(std::stof(node.token.value));
-            case TOKEN_TYPE::STRING: return std::make_unique<StringValue>(std::string(node.token.value));
-            default:
-            {
-                // Add a proper logger
-                std::cerr << "Unknown literal type!\n";
-                return nullptr;
-            }
-        }
     }
 
     std::shared_ptr<Value> Visitor::visit_IntegerASTNode(const IntegerASTNode &node)
@@ -65,23 +52,11 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
     {
-        // TODO: Implement logic for IdentifierASTNode
-        // e.g., look up variable or function name from node.token
-        for (int i = interpreter.scope_stack.size() - 1; i >= 0; i--)
+        if (const auto var = interpreter.GetVariable(node.token.value))
         {
-            const auto& scope = interpreter.scope_stack[i];
-            if (scope->vars.contains(node.token.value))
-            {
-                auto original_value = scope->vars[node.token.value]->value;
-                // auto ret_value = original_value->Copy();
-                // return ret_value;
-                return original_value;
-            }
+            return var->value;
         }
-        std::cerr << std::format("Variable {} doesn't exist.\n", node.token.value);
-        return nullptr;
-
-        return nullptr;
+        throw RuntimeError(std::format("Variable '{}' doesn't exist.", node.token.value));
     }
 
     std::shared_ptr<Value> Visitor::visit_ArrayASTNode(const ArrayASTNode &node)
@@ -104,26 +79,13 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_VariableASTNode(const VariableASTNode &node)
     {
-        // TODO: Implement logic for VariableASTNode
-        // e.g., handle variable declaration/initialization
-        for (size_t i = interpreter.scope_stack.size(); i --> 0;)
+        if (auto var = interpreter.GetVariable(node.name.value))
         {
-            auto scope = interpreter.scope_stack[i];
-            if (scope->vars.contains(node.name.value))
-            {
-                std::cerr << std::format("Variable {} is already defined in stack idx {}/{}.\n", node.name.value, i, interpreter.scope_stack.size());
-                return nullptr;
-            }
+           throw RuntimeError(std::format("Variable {} is already defined.", node.name.value));
         }
 
-        auto scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
-        if (node.value)
-        {
-            auto expr_value = node.value->visit(*this);
-            scope->vars[node.name.value] = std::make_shared<Variable>(node.type.type == TOKEN_TYPE::CONST, VALUE_TYPE::INTEGER, expr_value);
-            return nullptr;
-        }
-        scope->vars[node.name.value] = std::make_shared<Variable>(node.type.type == TOKEN_TYPE::CONST, VALUE_TYPE::INTEGER, std::make_unique<IntegerValue>(0));
+        interpreter.AddVariable(node.name.value, node.type.type == TOKEN_TYPE::CONST, node.value ? node.value->visit(*this) : mk_int(0));
+
         return nullptr;
     }
 
@@ -344,7 +306,6 @@ namespace yapl {
         }
 
         auto func_def = interpreter.get_function_def(node.name.value);
-        auto func = interpreter.push_function(node.name.value);
         auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
         // check if we have variadic args
         // TODO: handle kwargs
@@ -366,24 +327,36 @@ namespace yapl {
                 list.push_back(arg->visit(*this));
             }
             auto VPtrList = std::make_unique<ArrayValue>(list);
+            auto func = interpreter.push_function(node.name.value);
             func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
+
+            func_def->body->visit(*this);
+            auto ret_value = func->return_value;
+            interpreter.pop_scope();
+            interpreter.pop_function();
+
+            return ret_value;
         }
-        else
+
+        // TODO: add starred expression handling
+        size_t arg_amount = arg_list->get_argument_amount();
+        if (arg_amount != -1 && node.args.size() != arg_amount)
         {
-            // TODO: add starred expression handling
-            size_t arg_amount = arg_list->get_argument_amount();
-            if (arg_amount != -1 && node.args.size() != arg_amount)
-            {
-                std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
-                return nullptr;
-            }
-            // set args with passed expressions
-            for (size_t i = 0; i < node.args.size(); i++)
-            {
-                auto value = node.args[i]->visit(*this);
-                func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
-                // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
-            }
+            std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
+            return nullptr;
+        }
+        std::vector<VPtr> values;
+        // set args with passed expressions
+        for (const auto & arg : node.args)
+        {
+            auto value = arg->visit(*this);
+            values.push_back(value);
+        }
+        auto func = interpreter.push_function(node.name.value);
+        for (int i = 0; i < values.size(); i++)
+        {
+            auto value = values[i];
+            func->set_argument(std::make_unique<Variable>(false, value->type, value), arg_list->get_argument_name(i));
         }
         func_def->body->visit(*this);
         auto ret_value = func->return_value;
@@ -397,12 +370,8 @@ namespace yapl {
     {
         auto object = node.base_expr->visit(*this);
         auto func_def = object->get_method_definition(node.name.value);
-        auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
         auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
 
-
-        // pass object reference to the method as the first argument
-        func->set_argument(std::make_unique<Variable>(false, object->type, object), "this");
 
         // check if we have variadic args
         // TODO: handle kwargs
@@ -424,24 +393,39 @@ namespace yapl {
                 list.push_back(arg->visit(*this));
             }
             auto VPtrList = std::make_unique<ArrayValue>(list);
-            func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
-        }
-        else
-        {
-            size_t arg_amount = arg_list->get_argument_amount();
-            if (arg_amount != -1 && node.args.size() + 1 != arg_amount)
-            {
-                std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
-                return nullptr;
-            }
 
-            // set args with passed expressions
-            for (size_t i = 0; i < node.args.size(); i++)
-            {
-                auto value = node.args[i]->visit(*this);
-                func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
-                // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
-            }
+            auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
+            // pass object reference to the method as the first argument
+            func->set_argument(std::make_unique<Variable>(false, object->type, object), "this");
+            func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
+            func_def->body->visit(*this);
+            auto ret_value = func->return_value;
+            interpreter.pop_scope();
+            interpreter.pop_function();
+
+            return ret_value;
+        }
+        size_t arg_amount = arg_list->get_argument_amount();
+        if (arg_amount != -1 && node.args.size() + 1 != arg_amount)
+        {
+            std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
+            return nullptr;
+        }
+
+        std::vector<VPtr> values;
+        // set args with passed expressions
+        for (const auto & arg : node.args)
+        {
+            auto value = arg->visit(*this);
+            values.push_back(value);
+        }
+        auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
+        // pass object reference to the method as the first argument
+        func->set_argument(std::make_unique<Variable>(false, object->type, object), "this");
+        for (int i = 0; i < values.size(); i++)
+        {
+            auto value = values[i];
+            func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
         }
         func_def->body->visit(*this);
         auto ret_value = func->return_value;
@@ -456,19 +440,19 @@ namespace yapl {
         const auto& f_decl = dynamic_cast<FunctionDeclASTNode*>(node.decl.get());
         if (interpreter.function_exists(f_decl->name.value))
         {
-            std::cout << "Function " << f_decl->name.value << " already exists!\n";
-            return nullptr;
+            throw RuntimeError(std::format("Function {} already exists.", f_decl->name.value));
         }
 
+        // FIXME: create a copy of FunctionASTNode maybe?
         interpreter.add_function_definition(f_decl->name.value, const_cast<FunctionASTNode *>(&node));
 
         // TODO: maybe add a function type, so functions can be passed like objects or lambdas
-        return nullptr; // should there be a function type??
+        return nullptr;
     }
 
     std::shared_ptr<Value> Visitor::visit_BuiltinCustomVisitFunctionASTNode(const BuiltinCustomVisitFunctionASTNode &node)
     {
-        auto func_obj = interpreter.function_stack[interpreter.function_stack.size() - 1];
+        const auto func_obj = interpreter.GetCurrentFunction();
         func_obj->return_value = node.func(func_obj);
         return nullptr;
     }

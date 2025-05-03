@@ -127,4 +127,18 @@
 //print(tp)
 //print(tp.make(0))
 
-10; 10.20; "test"; true; false;
+//let a = 5;
+//print(a);
+
+fn test() {
+  let b = "test_b";
+  print(b);
+}
+
+fn test2() {
+  let b = 1;
+  print("test2_b", b)
+  test();
+}
+
+test2();

@@ -48,7 +48,7 @@ void init_str_tp()
             return mk_str("");
         if (args.size() == 1)
         {
-            auto v = args[0];
+            const auto& v = args[0];
             if (v->tp == StringTypeObject)
                 return mk_str(as_str(v.get())->value);
             if (v->tp == IntegerTypeObject)
@@ -60,8 +60,8 @@ void init_str_tp()
         }
         if (args.size() == 2)
         {
-            auto v = args[0];
-            auto times = args[1];
+            const auto& v = args[0];
+            const auto& times = args[1];
             if (times->tp != IntegerTypeObject)
                 throw RuntimeError("Invalid type when calling str(...). Expected 'int', got '" + times->tp->name + "' instead.");
             if (v->tp == StringTypeObject)
@@ -73,7 +73,7 @@ void init_str_tp()
             // TODO: add more
             return NotImplemented;
         }
-
+        return NotImplemented;
     };
 
     StringTypeObject->nb_add = [](const VPtr& self, const VPtr& other) -> VPtr

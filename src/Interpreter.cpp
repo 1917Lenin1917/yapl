@@ -127,6 +127,45 @@ std::shared_ptr<Function> Interpreter::push_function(const std::string& name)
 
     return func;
 }
+
+std::shared_ptr<Variable> Interpreter::AddVariable(const std::string &name, bool is_const, VPtr value)
+{
+    auto scope = scope_stack[scope_stack.size() - 1];
+    scope->vars[name] = std::make_shared<Variable>(is_const, value->type, value);
+    return scope->vars[name];
+}
+
+/*
+ * When calling this method, we assume that we're at the top of the call stack. So we can only see last stack's and its parent's vars as well as global vars
+ */
+std::shared_ptr<Variable> Interpreter::GetVariable(const std::string &name)
+{
+    // look through newest scope and its parents
+    auto scope = scope_stack[scope_stack.size() - 1];
+    while (scope)
+    {
+        if (scope->vars.contains(name))
+        {
+            return scope->vars.at(name);
+        }
+        scope = scope->parent_scope;
+    }
+
+    // look in globals
+    if (const auto global_stack = scope_stack[0]; global_stack->vars.contains(name))
+    {
+        return global_stack->vars.at(name);
+    }
+
+    return nullptr;
+
+}
+
+std::shared_ptr<Function> Interpreter::GetCurrentFunction()
+{
+    return function_stack[function_stack.size() - 1];
+}
+
 void Interpreter::pop_function()
 {
     function_stack.pop_back();

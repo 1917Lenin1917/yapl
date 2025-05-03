@@ -37,6 +37,9 @@ public:
     std::shared_ptr<Variable> get_variable(const std::string& name) const;
     void add_function_definition(const std::string& name, FunctionASTNode* fn);
     std::shared_ptr<Function> push_function(const std::string& name);
+    std::shared_ptr<Variable> AddVariable(const std::string& name, bool is_const, std::shared_ptr<Value> value);
+    std::shared_ptr<Variable> GetVariable(const std::string& name);
+    std::shared_ptr<Function> GetCurrentFunction();
     void pop_function();
     void pop_scope();
     void push_scope();
