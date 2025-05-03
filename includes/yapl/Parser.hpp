@@ -57,6 +57,7 @@ public:
   std::unique_ptr<BaseASTNode> parse_function_declaration();
   std::unique_ptr<BaseASTNode> parse_ifelse_statement();
   std::unique_ptr<BaseASTNode> parse_scope();
+  std::unique_ptr<BaseASTNode> parse_starred_expr_or_expr();
   std::unique_ptr<BaseASTNode> parse_function();
 
   // root = (var_decl | expr | ... ;)*

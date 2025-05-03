@@ -4,13 +4,21 @@
 
 #pragma once
 
+#include <string>
+
 #include "Value.hpp"
+#include "TypeObject.hpp"
+
+#include "FloatValue.hpp"
+#include "BooleanValue.hpp"
+#include "StringValue.hpp"
 
 namespace yapl {
 
+class StringValue;
+
 class IntegerValue final : public Value
 {
-    void make_to_string();
 public:
 	int value;
 
@@ -19,26 +27,87 @@ public:
 	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-	std::shared_ptr<Value> UnaryMinus() override;
-	std::shared_ptr<Value> UnaryPlus() override;
-	std::shared_ptr<Value> UnaryNot() override;
-
 	void Set(const std::shared_ptr<Value> &v) override
 	{
 		value = dynamic_cast<IntegerValue*>(v.get())->value;
 	}
-
-	std::shared_ptr<Value> BinaryPlus(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryMinus(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinarySlash(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryTimes(const std::shared_ptr<Value> &other) override;
-    std::shared_ptr<Value> BinaryMOD(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryLT(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryGT(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryLQ(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryGQ(const std::shared_ptr<Value> &other) override;
-	std::shared_ptr<Value> BinaryEQ(const std::shared_ptr<Value> &other) override;
-
-
 };
+
+inline TypeObject* IntegerTypeObject = nullptr;
+
+void init_int_methods(TypeObject* tp);
+
+static void init_int_tp()
+{
+    IntegerTypeObject = new TypeObject{ "int" };
+
+    init_base_methods(IntegerTypeObject);
+    init_int_methods(IntegerTypeObject);
+
+    IntegerTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
+    {
+        auto v = args.size() == 1 ? as_int(args[0].get())->value : 0;
+        return std::make_unique<IntegerValue>(v);
+    };
+
+    IntegerTypeObject->nb_neg = [](const VPtr& self) -> VPtr
+    {
+        return mk_int(-as_int(self.get())->value);
+    };
+
+    IntegerTypeObject->nb_add = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_int(as_int(self.get())->value + as_int(other.get())->value);
+        if (other->tp == FloatTypeObject)
+            return mk_float(as_int(self.get())->value + as_float(other.get())->value);
+        if (other->tp == StringTypeObject)
+            return mk_str(std::to_string(as_int(self.get())->value) + as_str(other.get())->value);
+
+        return NotImplemented;
+    };
+    IntegerTypeObject->nb_sub = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_int(as_int(self.get())->value - as_int(other.get())->value);
+        if (other->tp == FloatTypeObject)
+            return mk_float(as_int(self.get())->value - as_float(other.get())->value);
+
+        return NotImplemented;
+    };
+    IntegerTypeObject->nb_mul = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_int(as_int(self.get())->value * as_int(other.get())->value);
+        if (other->tp == FloatTypeObject)
+            return mk_float(as_int(self.get())->value * as_float(other.get())->value);
+
+        return NotImplemented;
+    };
+    IntegerTypeObject->nb_div = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_int(as_int(self.get())->value / as_int(other.get())->value);
+        if (other->tp == FloatTypeObject)
+            return mk_float(as_int(self.get())->value / as_float(other.get())->value);
+
+        return NotImplemented;
+    };
+    IntegerTypeObject->nb_mod = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_int(as_int(self.get())->value % as_int(other.get())->value);
+
+        return NotImplemented;
+    };
+
+    IntegerTypeObject->nb_lt = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_bool(as_int(self.get())->value < as_int(other.get())->value);
+
+       return NotImplemented;
+    };
+}
+
 }

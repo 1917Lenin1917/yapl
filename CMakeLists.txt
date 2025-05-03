@@ -25,6 +25,8 @@ add_executable(yapl src/main.cpp
         src/values/StringValue.cpp
         src/values/ArrayValue.cpp
         src/exceptions/SyntaxError.cpp
+        src/exceptions/RuntimeError.cpp
+        src/values/TypeObjectValue.cpp
 )
 
 add_subdirectory(externals/Catch2)
@@ -48,5 +50,6 @@ add_executable(tests
         src/values/StringValue.cpp
         src/values/ArrayValue.cpp
         src/exceptions/SyntaxError.cpp
+        src/exceptions/RuntimeError.cpp
 )
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)

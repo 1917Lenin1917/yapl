@@ -66,7 +66,7 @@ int main(int argc, char** argv)
   auto rtime2 = std::chrono::system_clock::now();
   std::cout << "Parsing took: " << std::chrono::duration_cast<std::chrono::microseconds>(rtime2-rtime1) << "\n";
   std::cout << std::endl;
-//  std::cout << ast->print(0) << "\n";
+  std::cout << ast->print(0) << "\n";
 
   Interpreter intp;
   Visitor v{intp};

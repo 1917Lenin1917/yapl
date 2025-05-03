@@ -27,6 +27,69 @@ namespace yapl {
 
 
 //
+// IntegerASTNode
+//
+
+std::string IntegerASTNode::print(size_t indent_size)
+{
+    return REPEAT(indent_size*2, ' ')
+           + std::format("{{ NodeType: IntegerASTNode, Value: {} }}",value);
+}
+
+std::shared_ptr<Value> IntegerASTNode::visit(yapl::Visitor &visitor)
+{
+    return visitor.visit_IntegerASTNode(*this);
+}
+
+//
+// StringASTNode
+//
+
+std::string StringASTNode::print(size_t indent_size)
+{
+    return REPEAT(indent_size*2, ' ')
+           + std::format("{{ NodeType: StringASTNode, Value: {} }}",value);
+}
+
+std::shared_ptr<Value> StringASTNode::visit(yapl::Visitor &visitor)
+{
+    return visitor.visit_StringASTNode(*this);
+}
+
+
+//
+// BooleanASTNode
+//
+
+std::string BooleanASTNode::print(size_t indent_size)
+{
+    return REPEAT(indent_size*2, ' ')
+           + std::format("{{ NodeType: BooleanASTNode, Value: {} }}",value);
+}
+
+std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
+{
+    return visitor.visit_BooleanASTNode(*this);
+}
+
+//
+// FloatASTNode
+//
+
+    std::string FloatASTNode::print(size_t indent_size)
+    {
+        return REPEAT(indent_size*2, ' ')
+               + std::format("{{ NodeType: FloatASTNode, Value: {} }}",value);
+    }
+
+    std::shared_ptr<Value> FloatASTNode::visit(yapl::Visitor &visitor)
+    {
+        return visitor.visit_FloatASTNode(*this);
+    }
+
+
+
+//
 // IdentifierASTNode
 //
     std::string IdentifierASTNode::print(size_t indent_size)
@@ -481,4 +544,11 @@ namespace yapl {
         return visitor.visit_RootASTNode(*this);
     }
 
+    std::string StarredExpressionASTNode::print(size_t indent_size) {
+        return std::string();
+    }
+
+    std::shared_ptr<Value> StarredExpressionASTNode::visit(Visitor &visitor) {
+        return visitor.visit_StarredExpressionASTNode(*this);
+    }
 } // namespace yapl

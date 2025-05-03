@@ -46,6 +46,61 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class IntegerASTNode final : public BaseASTNode
+{
+public:
+    int value;
+    explicit IntegerASTNode(const Token& t)
+            :BaseASTNode()
+    {
+        value = std::stoi(t.value);
+    }
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class FloatASTNode final : public BaseASTNode
+{
+public:
+    float value;
+    explicit FloatASTNode(const Token& t)
+            :BaseASTNode()
+    {
+        value = std::stof(t.value);
+    }
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+class BooleanASTNode final : public BaseASTNode
+{
+public:
+    bool value;
+    explicit BooleanASTNode(const Token& t)
+            :BaseASTNode()
+    {
+        value = t.value == std::string("true");
+    }
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+class StringASTNode final : public BaseASTNode
+{
+public:
+    std::string value;
+    explicit StringASTNode(const Token& t)
+            :BaseASTNode(), value(t.value) {}
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class IdentifierASTNode final : public BaseASTNode
 {
 public:
@@ -158,9 +213,10 @@ class FunctionArgumentASTNode final : public BaseASTNode
 public:
   Token name;
   Token type;
+  bool is_args, is_kwargs;
 
-  FunctionArgumentASTNode(const Token& n, const Token& t)
-    :BaseASTNode(), name(n), type(t) {}
+  FunctionArgumentASTNode(const Token& n, const Token& t, bool is_args = false, bool is_kwargs = false)
+    :BaseASTNode(), name(n), type(t), is_args(is_args), is_kwargs(is_kwargs) {}
 
   std::string print(size_t indent_size) override;
 
@@ -172,8 +228,16 @@ class FunctionArgumentListASTNode final : public BaseASTNode
   int m_arg_amount = -1;
 public:
   std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, int custom_arg_amount = 999)
-    :BaseASTNode(), m_arg_amount(custom_arg_amount == 999 ? args.size() : custom_arg_amount), args(std::move(args)) {}
+  std::unique_ptr<FunctionArgumentASTNode> args_arg, kwargs_arg;
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)) {}
+
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, std::unique_ptr<FunctionArgumentASTNode> args_arg, std::unique_ptr<FunctionArgumentASTNode> kwargs_arg)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)), args_arg(std::move(args_arg)), kwargs_arg(std::move(kwargs_arg)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args, std::unique_ptr<FunctionArgumentASTNode> args_arg, std::unique_ptr<FunctionArgumentASTNode> kwargs_arg)
+    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)), args_arg(std::move(args_arg)), kwargs_arg(std::move(kwargs_arg)) {}
 
   std::string print(size_t indent_size) override;
 
@@ -274,9 +338,9 @@ public:
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 
-  std::function<std::unique_ptr<Value>(std::shared_ptr<Function>)> func;
+  std::function<std::shared_ptr<Value>(std::shared_ptr<Function>)> func;
 
-  explicit BuiltinCustomVisitFunctionASTNode(std::function<std::unique_ptr<Value>(std::shared_ptr<Function>)> func)
+  explicit BuiltinCustomVisitFunctionASTNode(std::function<std::shared_ptr<Value>(std::shared_ptr<Function>)> func)
     :BaseASTNode(), func(std::move(func)) {}
 };
 class IfElseExpressionASTNode final : public BaseASTNode
@@ -322,6 +386,17 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class StarredExpressionASTNode final : public BaseASTNode
+{
+public:
+    std::unique_ptr<BaseASTNode> expression;
+    explicit StarredExpressionASTNode(std::unique_ptr<BaseASTNode> expr)
+        :BaseASTNode(), expression(std::move(expr)) {}
+
+    std::string print(size_t indent_size) override;
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
 class RootASTNode final : public BaseASTNode

@@ -23,10 +23,15 @@ enum class TOKEN_TYPE
 
     // OPERATORS
     PLUS,   // +
+    PLUSEQ, // +=
     MINUS,  // -
+    MINUSEQ,// -=
     TIMES,  // *
+    TIMESEQ,// *=
     MOD,    // %
+    MODEQ,  // %=
     SLASH,  // /
+    SLASHEQ,// /=
     PERIOD, // .
     NOT,    // !
     ASSIGN, // =
