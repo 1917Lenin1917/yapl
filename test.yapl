@@ -115,15 +115,16 @@
 //print(-12)
 
 
-fn rofls(value) {
-  if value < 10 {
-    return int
-  }
-  return str
-}
+//fn rofls(value) {
+//  if value < 10 {
+//    return int
+//  }
+//  return str
+//}
+//
+//let tp = rofls(read_int())
+//
+//print(tp)
+//print(tp.make(0))
 
-let tp = rofls(read_int())
-
-print(tp)
-print(tp.make(0))
-
+10; 10.20; "test"; true; false;

@@ -46,6 +46,61 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class IntegerASTNode final : public BaseASTNode
+{
+public:
+    int value;
+    explicit IntegerASTNode(const Token& t)
+            :BaseASTNode()
+    {
+        value = std::stoi(t.value);
+    }
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class FloatASTNode final : public BaseASTNode
+{
+public:
+    float value;
+    explicit FloatASTNode(const Token& t)
+            :BaseASTNode()
+    {
+        value = std::stof(t.value);
+    }
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+class BooleanASTNode final : public BaseASTNode
+{
+public:
+    bool value;
+    explicit BooleanASTNode(const Token& t)
+            :BaseASTNode()
+    {
+        value = t.value == std::string("true");
+    }
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+class StringASTNode final : public BaseASTNode
+{
+public:
+    std::string value;
+    explicit StringASTNode(const Token& t)
+            :BaseASTNode(), value(t.value) {}
+
+    std::string print(size_t indent_size) override;
+
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class IdentifierASTNode final : public BaseASTNode
 {
 public:
