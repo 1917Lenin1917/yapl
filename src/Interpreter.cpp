@@ -47,8 +47,7 @@ void Interpreter::make_builtin_read_int()
     auto body = MAKE_BODY(
             {
                 int value; std::cin >> value;
-                f_obj->return_value = std::make_shared<IntegerValue>(value);
-                return nullptr;
+                return std::make_shared<IntegerValue>(value);
             });
     auto f = std::make_unique<FunctionASTNode>(
             std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list), return_type)),
@@ -64,8 +63,7 @@ void Interpreter::make_builtin_read_string()
     auto body = MAKE_BODY(
             {
                 std::string value; std::cin >> value;
-                f_obj->return_value = std::make_shared<StringValue>(value);
-                return nullptr;
+                return std::make_shared<StringValue>(value);
             });
     auto f = std::make_unique<FunctionASTNode>(
             std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list), return_type)),
@@ -88,6 +86,19 @@ Interpreter::Interpreter()
     init_bool_tp();
     init_str_tp();
     init_tp_tp();
+
+    types[IntegerTypeObject->name] = mk_type(IntegerTypeObject);
+    types[FloatTypeObject->name] = mk_type(FloatTypeObject);
+    types[ArrayTypeObject->name] = mk_type(ArrayTypeObject);
+    types[BooleanTypeObject->name] = mk_type(BooleanTypeObject);
+    types[StringTypeObject->name] = mk_type(StringTypeObject);
+    types[TypeObjectTypeObject->name] = mk_type(TypeObjectTypeObject);
+
+    auto scope = scope_stack[0];
+    for (const auto& [first, second] : types)
+    {
+        scope->vars[first] = std::make_unique<Variable>(true, VALUE_TYPE::TYPE, second);
+    }
 }
 
 bool Interpreter::function_exists(const std::string &name) const

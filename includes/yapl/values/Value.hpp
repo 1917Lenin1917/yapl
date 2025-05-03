@@ -15,20 +15,24 @@
 namespace yapl {
 
 
-#define mk_int(v) std::make_unique<IntegerValue>(v)
+#define mk_int(v) std::make_shared<IntegerValue>(v)
 #define as_int(v) static_cast<IntegerValue*>(v)
 
-#define mk_float(v) std::make_unique<FloatValue>(v)
+#define mk_float(v) std::make_shared<FloatValue>(v)
 #define as_float(v) static_cast<FloatValue*>(v)
 
-#define mk_str(v) std::make_unique<StringValue>(v)
+#define mk_str(v) std::make_shared<StringValue>(v)
+#define mk_str_rp(v, r) std::make_shared<StringValue>(v, r)
 #define as_str(v) static_cast<StringValue*>(v)
 
-#define mk_bool(v) std::make_unique<BooleanValue>(v)
+#define mk_bool(v) std::make_shared<BooleanValue>(v)
 #define as_bool(v) static_cast<BooleanValue*>(v)
 
-#define mk_arr(v) std::make_unique<ArrayValue>(v)
+#define mk_arr(v) std::make_shared<ArrayValue>(v)
 #define as_arr(v) static_cast<ArrayValue*>(v)
+
+#define mk_type(v) std::make_shared<TypeObjectValue>(v)
+#define as_type(v) static_cast<TypeObjectValue*>(v)
 
 struct TypeObject;
 
@@ -60,6 +64,7 @@ struct MethodAutoReg {
     char*  name_lit;
     char*  ret_lit;
     std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
+    std::unique_ptr<FunctionArgumentASTNode> args_arg = nullptr;
 
     template<class Body>
     void operator=(Body&& user_body) {
@@ -77,7 +82,7 @@ struct MethodAutoReg {
                 std::make_unique<FunctionDeclASTNode>(
                         name_tok,
                         std::make_unique<FunctionArgumentListASTNode>(
-                                std::move(args)),
+                                std::move(args), std::move(args_arg), nullptr),
                         ret_tok),
                 std::move(body_node));
         self->AddMethod(name_lit, std::move(func));
@@ -99,12 +104,22 @@ make_arg_vector(P&&... p)
         Token{TOKEN_TYPE::IDENTIFIER, new char[](name_lit)},            \
         Token{TOKEN_TYPE::IDENTIFIER, new char[](type_lit)})
 
-#define MAKE_METHOD(this, name_lit, ret_lit, ...)                             \
+#define VA_ARG(name_lit, type_lit)                                         \
+    std::make_unique<FunctionArgumentASTNode>(                             \
+        Token{TOKEN_TYPE::IDENTIFIER, new char[](name_lit)},               \
+        Token{TOKEN_TYPE::IDENTIFIER, new char[](type_lit)}, true, false)
+
+#define MAKE_METHOD(this, name_lit, ret_lit, ...)                       \
     MethodAutoReg<std::remove_pointer_t<decltype(this)>>{               \
         this, new char[](name_lit), new char[](ret_lit),                \
-        make_arg_vector(__VA_ARGS__)                                    \
+        make_arg_vector(__VA_ARGS__), nullptr                           \
     } = [&](std::shared_ptr<Function> f_obj)->std::shared_ptr<Value>
 
+#define MAKE_METHOD_WITH_VARGS(this, name_lit, ret_lit, ...)            \
+    MethodAutoReg<std::remove_pointer_t<decltype(this)>>{               \
+        this, new char[](name_lit), new char[](ret_lit),                \
+        make_arg_vector(__VA_ARGS__), VA_ARG("args", "args")            \
+    } = [&](std::shared_ptr<Function> f_obj)->std::shared_ptr<Value>
 
 #define DEFINE_UNOP(method, slot_member, sym)        \
     VPtr method()                                    \
@@ -119,7 +134,7 @@ make_arg_vector(P&&... p)
         return dispatch(tp->slot_member, rhs, sym); \
     }
 
-class Value
+class Value : public std::enable_shared_from_this<Value>
 {
 public:
     TypeObject* tp = nullptr;
@@ -142,8 +157,8 @@ public:
 
     [[nodiscard]] std::shared_ptr<ArrayValue> GetMethods() const;
 
-    DEFINE_UNOP(UnaryMinus, nb_pos, "+")
-    DEFINE_UNOP(UnaryPlus, nb_neg, "-")
+    DEFINE_UNOP(UnaryPlus, nb_pos, "+")
+    DEFINE_UNOP(UnaryMinus, nb_neg, "-")
     DEFINE_UNOP(UnaryNot, nb_not, "!")
 
     DEFINE_BINOP(BinaryPlus,  nb_add, "+")

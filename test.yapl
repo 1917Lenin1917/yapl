@@ -84,15 +84,46 @@
 //print(1 + "2")
 //print("2" + 1)
 
-fn test_args(*args) {
-  print(args)
-  print(*args)
-}
-
-test_args(1, 2, 3, 4, 5, 6)
-test_args()
-print(1, 2, 3, 4, 5, 6)
+//fn test_args(a, *args) {
+//  print(args)
+//  print(*args)
+//}
+//
+//test_args(1, 2, 3, 4, 5, 6)
+//test_args()
+//print(1, 2, 3, 4, 5, 6)
 
 //let a = ((1).type()).make(20)
 //print(a.type())
 //print(a)
+
+//print(int)
+//print(int.make(20))
+//
+//print(str)
+//print(str.make("hello"))
+//print(str.make(10))
+//print(str.make(20.23))
+//
+//print("\n")
+//
+//print(str.make("hello", 2))
+//print(str.make(10, 1))
+//print(str.make(20.23, 12))
+
+//-12
+//print(-12)
+
+
+fn rofls(value) {
+  if value < 10 {
+    return int
+  }
+  return str
+}
+
+let tp = rofls(read_int())
+
+print(tp)
+print(tp.make(0))
+

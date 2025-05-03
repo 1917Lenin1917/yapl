@@ -13,6 +13,7 @@
 #include "Scope.hpp"
 
 namespace yapl {
+class Value;
 class FunctionASTNode;
 class Function;
 class Scope;
@@ -23,11 +24,14 @@ class Interpreter {
     void make_builtin_read_int();
     void make_builtin_read_string();
 public:
+    std::string module_name;
+
+    std::unordered_map<std::string, std::shared_ptr<Value>> types;
     std::unordered_map<std::string, FunctionASTNode*> function_definitions;
     std::vector<std::shared_ptr<Function>> function_stack;
     std::vector<std::shared_ptr<Scope>> scope_stack;
-
     std::vector<std::unique_ptr<FunctionASTNode>> builtin_functions;
+
     Interpreter();
     bool function_exists(const std::string& name) const;
     std::shared_ptr<Variable> get_variable(const std::string& name) const;

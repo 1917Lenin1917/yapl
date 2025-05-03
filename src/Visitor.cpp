@@ -111,13 +111,19 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_UnaryOpASTNode(const UnaryOpASTNode &node)
     {
+        VPtr ret_val;
+        auto value = node.RHS->visit(*this);
         switch (node.op.type)
         {
-            case TOKEN_TYPE::MINUS: { return node.RHS->visit(*this)->UnaryMinus(); }
-            case TOKEN_TYPE::PLUS: { return node.RHS->visit(*this)->UnaryPlus(); }
-            case TOKEN_TYPE::NOT: { return node.RHS->visit(*this)->UnaryNot(); }
+            case TOKEN_TYPE::MINUS: { ret_val = value->UnaryMinus(); break; }
+            case TOKEN_TYPE::PLUS: { ret_val = value->UnaryPlus(); break; }
+            case TOKEN_TYPE::NOT: { ret_val = value->UnaryNot(); break; }
             default: { std::cerr << "Unary unhandled default\n"; return nullptr; }
         }
+        if (ret_val == NotImplemented)
+            throw yapl::RuntimeError(std::format("Unsupported operand type for unary {}: '{}'", ttype_to_string(node.op.type), value_type_to_string(value->type)));
+
+        return ret_val;
     }
 
     std::shared_ptr<Value> Visitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
@@ -375,22 +381,49 @@ namespace yapl {
         auto func_def = object->get_method_definition(node.name.value);
         auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
         auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
-        size_t arg_amount = arg_list->get_argument_amount();
-        if (arg_amount != -1 && node.args.size() + 1 != arg_amount)
-        {
-            std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
-            return nullptr;
-        }
+
 
         // pass object reference to the method as the first argument
         func->set_argument(std::make_unique<Variable>(false, object->type, object), "this");
 
-        // set args with passed expressions
-        for (size_t i = 0; i < node.args.size(); i++)
+        // check if we have variadic args
+        // TODO: handle kwargs
+        if (const auto& args_arg = arg_list->args_arg)
         {
-            auto value = node.args[i]->visit(*this);
-            func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
-            // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
+            auto list = std::vector<VPtr>{  };
+            for (const auto& arg : node.args)
+            {
+                // TODO: this dynamic_cast is probably really slow!
+                if (const auto& str_expr = dynamic_cast<StarredExpressionASTNode*>(arg.get()))
+                {
+                    auto v = str_expr->visit(*this);
+                    for (const auto& val : as_arr(v.get())->value)
+                    {
+                        list.push_back(val);
+                    }
+                    continue;
+                }
+                list.push_back(arg->visit(*this));
+            }
+            auto VPtrList = std::make_unique<ArrayValue>(list);
+            func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
+        }
+        else
+        {
+            size_t arg_amount = arg_list->get_argument_amount();
+            if (arg_amount != -1 && node.args.size() + 1 != arg_amount)
+            {
+                std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
+                return nullptr;
+            }
+
+            // set args with passed expressions
+            for (size_t i = 0; i < node.args.size(); i++)
+            {
+                auto value = node.args[i]->visit(*this);
+                func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
+                // func->function_scope->vars[arg_list->args[i].get()->name.value] = std::make_unique<Variable>(false, value->type, std::move(value));
+            }
         }
         func_def->body->visit(*this);
         auto ret_value = func->return_value;

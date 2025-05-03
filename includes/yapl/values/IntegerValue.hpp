@@ -50,6 +50,11 @@ static void init_int_tp()
         return std::make_unique<IntegerValue>(v);
     };
 
+    IntegerTypeObject->nb_neg = [](const VPtr& self) -> VPtr
+    {
+        return mk_int(-as_int(self.get())->value);
+    };
+
     IntegerTypeObject->nb_add = [](const VPtr& self, const VPtr& other) -> VPtr
     {
         if (other->tp == IntegerTypeObject)
