@@ -30,6 +30,7 @@ namespace yapl {
 
     std::shared_ptr<Value> Visitor::visit_LiteralASTNode(const LiteralASTNode &node)
     {
+        throw RuntimeError("visit_LiteralASTNode is deprecated!");
         switch (node.token.type)
         {
             case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerValue>(std::stoi(node.token.value));
@@ -43,6 +44,23 @@ namespace yapl {
                 return nullptr;
             }
         }
+    }
+
+    std::shared_ptr<Value> Visitor::visit_IntegerASTNode(const IntegerASTNode &node)
+    {
+        return mk_int(node.value);
+    }
+    std::shared_ptr<Value> Visitor::visit_StringASTNode(const StringASTNode &node)
+    {
+        return mk_str(node.value);
+    }
+    std::shared_ptr<Value> Visitor::visit_FloatASTNode(const FloatASTNode &node)
+    {
+        return mk_float(node.value);
+    }
+    std::shared_ptr<Value> Visitor::visit_BooleanASTNode(const BooleanASTNode &node)
+    {
+        return mk_bool(node.value);
     }
 
     std::shared_ptr<Value> Visitor::visit_IdentifierASTNode(const IdentifierASTNode &node)

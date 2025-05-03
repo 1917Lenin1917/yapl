@@ -15,6 +15,10 @@ class Interpreter; // forward declaration because c++ is strange
 class Value;
 class RootASTNode;
 class LiteralASTNode;
+class IntegerASTNode;
+class FloatASTNode;
+class StringASTNode;
+class BooleanASTNode;
 class IdentifierASTNode;
 class ArrayASTNode;
 class IndexASTNode;
@@ -51,6 +55,10 @@ public:
 
     std::shared_ptr<Value> visit_RootASTNode(const RootASTNode &node);
     std::shared_ptr<Value> visit_LiteralASTNode(const LiteralASTNode &node);
+    std::shared_ptr<Value> visit_IntegerASTNode(const IntegerASTNode &node);
+    std::shared_ptr<Value> visit_FloatASTNode(const FloatASTNode &node);
+    std::shared_ptr<Value> visit_BooleanASTNode(const BooleanASTNode &node);
+    std::shared_ptr<Value> visit_StringASTNode(const StringASTNode &node);
     std::shared_ptr<Value> visit_IdentifierASTNode(const IdentifierASTNode &node);
     std::shared_ptr<Value> visit_ArrayASTNode(const ArrayASTNode &node);
     std::shared_ptr<Value> visit_IndexASTNode(const IndexASTNode &node);

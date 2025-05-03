@@ -40,9 +40,23 @@ void Parser::check(TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT)
 
 std::unique_ptr<BaseASTNode> Parser::parse_literal()
 {
-	auto res = std::make_unique<LiteralASTNode>(m_tokens[m_pos]);
+    auto token = m_tokens[m_pos];
 	advance();
-	return res;
+
+    switch (token.type) {
+        case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerASTNode>(token);
+        case TOKEN_TYPE::STRING:
+        case TOKEN_TYPE::FSTRING: return std::make_unique<StringASTNode>(token);
+        case TOKEN_TYPE::FLOAT: return std::make_unique<FloatASTNode>(token);
+        case TOKEN_TYPE::BOOL: return std::make_unique<BooleanASTNode>(token);
+        default: throw SyntaxError(
+                    m_filename,
+                    token.line,
+                    token.col_start,
+                    token.col_end,
+                    m_source_lines[token.line-1],
+                    std::format("Unexpected token {} when parsing literal.", ttype_to_string(token.type)));
+    }
 }
 
 
