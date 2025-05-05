@@ -34,6 +34,9 @@ namespace yapl {
 #define mk_type(v) std::make_shared<TypeObjectValue>(v)
 #define as_type(v) static_cast<TypeObjectValue*>(v)
 
+#define mk_dict() std::make_shared<DictValue>()
+#define as_dict(v) static_cast<DictValue*>(v)
+
 struct TypeObject;
 
 class FunctionASTNode;
@@ -53,7 +56,8 @@ enum class VALUE_TYPE
 	BOOL,
 	STRING,
 	ARRAY,
-    TYPE
+  TYPE,
+  DICT
 };
 
 std::string value_type_to_string(VALUE_TYPE vt);

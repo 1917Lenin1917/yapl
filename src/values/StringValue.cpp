@@ -42,6 +42,11 @@ void init_str_tp()
     init_base_methods(StringTypeObject);
     init_str_methods(StringTypeObject);
 
+    StringTypeObject->nb_hash = [](const VPtr& self) -> std::size_t
+    {
+        return std::hash<std::string>{}(as_str(self.get())->value);
+    };
+
     StringTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
     {
         if (args.empty())

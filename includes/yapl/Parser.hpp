@@ -38,6 +38,7 @@ public:
   std::unique_ptr<BaseASTNode> parse_indexing(Token identifier);
   std::unique_ptr<BaseASTNode> parse_identifier();
   std::unique_ptr<BaseASTNode> parse_array();
+  std::unique_ptr<BaseASTNode> parse_dict();
   std::unique_ptr<BaseASTNode> parse_primary_expr();
   std::unique_ptr<BaseASTNode> parse_unary();
   std::unique_ptr<BaseASTNode> parse_paren_expr();

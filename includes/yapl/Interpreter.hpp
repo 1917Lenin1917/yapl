@@ -20,9 +20,6 @@ class Scope;
 class Variable;
 
 class Interpreter {
-    void make_builtin_print();
-    void make_builtin_read_int();
-    void make_builtin_read_string();
 public:
     std::string module_name;
 
@@ -44,6 +41,12 @@ public:
     void pop_scope();
     void push_scope();
     FunctionASTNode* get_function_def(const std::string& name);
+
+    void AddMethod(const std::string& method_name, std::unique_ptr<FunctionASTNode>&& function)
+    {
+        builtin_functions.push_back(std::move(function));
+        function_definitions[method_name] = builtin_functions.back().get();
+    }
 };
 }
 

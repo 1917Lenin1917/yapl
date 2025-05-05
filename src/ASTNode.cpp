@@ -151,8 +151,18 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
         return visitor.visit_ArrayASTNode(*this);
     }
 
+    std::string DictASTNode::print(size_t indent_size)
+    {
+        return "TODO: DICT DEFINITION";
+    }
 
-//
+    std::shared_ptr<Value> DictASTNode::visit(Visitor &visitor)
+    {
+        return visitor.visit_DictASTNode(*this);
+    }
+
+
+    //
 // VariableASTNode
 //
     std::string VariableASTNode::print(size_t indent_size)

@@ -2,6 +2,9 @@
 // Created by lenin on 15.11.2024.
 //
 
+#include <memory>
+#include <sstream>
+
 #include "yapl/Interpreter.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/values/StringValue.hpp"
@@ -9,19 +12,18 @@
 #include "yapl/values/BooleanValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
 #include "yapl/values/TypeObjectValue.hpp"
-#include <memory>
+#include <yapl/values/DictValue.hpp>
 
 namespace yapl {
 
 #define MAKE_TOKEN(token_name) Token{ TOKEN_TYPE::IDENTIFIER, new char[](token_name)  }
 #define MAKE_BODY(body_fn) std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj) body_fn )
 
-void Interpreter::make_builtin_print()
+Interpreter::Interpreter()
 {
-    auto name = MAKE_TOKEN("print");
-    auto return_type = MAKE_TOKEN("void");
-    std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
-    auto body = MAKE_BODY(
+    scope_stack.push_back(std::make_unique<Scope>()); // make global scope
+
+    MAKE_METHOD_WITH_VARGS(this, "print", "any")
     {
         auto args = static_cast<ArrayValue*>(f_obj->function_scope->vars.at("args")->value.get());
         for (const auto& arg : args->value)
@@ -30,55 +32,27 @@ void Interpreter::make_builtin_print()
         }
         std::cout << "\n";
         return nullptr;
-    });
-    auto args_arg = std::make_unique<FunctionArgumentASTNode>(Token{TOKEN_TYPE::IDENTIFIER, new char[]{"args"}}, Token{TOKEN_TYPE::IDENTIFIER, new char[]{"any"}}, true);
-    auto f = std::make_unique<FunctionASTNode>(
-            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list, std::move(args_arg),
-                                                                                                                nullptr), return_type)),
-            std::move(body));
-    builtin_functions.push_back(std::move(f));
-    function_definitions["print"] = builtin_functions[builtin_functions.size() - 1].get();
-}
-void Interpreter::make_builtin_read_int()
-{
-    auto name = MAKE_TOKEN("read_int");
-    auto return_type = MAKE_TOKEN("int");
-    std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
-    auto body = MAKE_BODY(
-            {
-                int value; std::cin >> value;
-                return std::make_shared<IntegerValue>(value);
-            });
-    auto f = std::make_unique<FunctionASTNode>(
-            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list), return_type)),
-            std::move(body));
-    builtin_functions.push_back(std::move(f));
-    function_definitions["read_int"] = builtin_functions[builtin_functions.size() - 1].get();
-}
-void Interpreter::make_builtin_read_string()
-{
-    auto name = MAKE_TOKEN("read_str");
-    auto return_type = MAKE_TOKEN("str");
-    std::vector<std::unique_ptr<FunctionArgumentASTNode>> arg_list;
-    auto body = MAKE_BODY(
-            {
-                std::string value; std::cin >> value;
-                return std::make_shared<StringValue>(value);
-            });
-    auto f = std::make_unique<FunctionASTNode>(
-            std::move(std::make_unique<FunctionDeclASTNode>(name, std::make_unique<FunctionArgumentListASTNode>(arg_list), return_type)),
-            std::move(body));
-    builtin_functions.push_back(std::move(f));
-    function_definitions["read_str"] = builtin_functions[builtin_functions.size() - 1].get();
-}
+    };
 
-Interpreter::Interpreter()
-{
-    scope_stack.push_back(std::make_unique<Scope>()); // make global scope
+    MAKE_METHOD(this, "read_int", "int")
+    {
+        int value; std::cin >> value;
+        return std::make_shared<IntegerValue>(value);
+    };
 
-    make_builtin_print();
-    make_builtin_read_int();
-    make_builtin_read_string();
+    MAKE_METHOD(this, "read_str", "str")
+    {
+        std::string value; std::cin >> value;
+        return std::make_shared<StringValue>(value);
+    };
+
+    MAKE_METHOD(this, "id", "any", ARG("obj", "any"))
+    {
+        auto arg = f_obj->function_scope->vars["obj"];
+        std::stringstream ss;
+        ss << static_cast<void*>(arg->value.get());
+        return mk_str(ss.str());
+    };
 
     init_int_tp();
     init_float_type();
@@ -86,6 +60,8 @@ Interpreter::Interpreter()
     init_bool_tp();
     init_str_tp();
     init_tp_tp();
+    init_dict_tp();
+
 
     types[IntegerTypeObject->name] = mk_type(IntegerTypeObject);
     types[FloatTypeObject->name] = mk_type(FloatTypeObject);
@@ -93,6 +69,7 @@ Interpreter::Interpreter()
     types[BooleanTypeObject->name] = mk_type(BooleanTypeObject);
     types[StringTypeObject->name] = mk_type(StringTypeObject);
     types[TypeObjectTypeObject->name] = mk_type(TypeObjectTypeObject);
+    types[DictTypeObject->name] = mk_type(DictTypeObject);
 
     auto scope = scope_stack[0];
     for (const auto& [first, second] : types)
