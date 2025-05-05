@@ -141,6 +141,19 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class DictASTNode final : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<BaseASTNode>> keys;
+  std::vector<std::unique_ptr<BaseASTNode>> values;
+
+  explicit DictASTNode(std::vector<std::unique_ptr<BaseASTNode>>&& keys, std::vector<std::unique_ptr<BaseASTNode>>&& values)
+    :BaseASTNode(), keys(std::move(keys)), values(std::move(values)) { }
+
+  std::string print(size_t indent_size) override;
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class VariableASTNode final : public BaseASTNode
 {
 public:

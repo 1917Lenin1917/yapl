@@ -45,12 +45,13 @@
 //
 //main();
 
-//fn fib(a: int): int {
+//fn fib(a) {
 //  if (a < 2) { return a; }
 //  else { return fib(a-1) + fib(a-2); }
 //}
 //
 //print(fib(35));
+
 //let a = (1+2).to_string();
 //print("Type is: ", a.type(), "\n");
 
@@ -130,15 +131,28 @@
 //let a = 5;
 //print(a);
 
-fn test() {
-  let b = "test_b";
-  print(b);
-}
+//fn test() {
+//  let b = "test_b";
+//  print(b);
+//}
+//
+//fn test2() {
+//  let b = 1;
+//  print("test2_b", b)
+//  test();
+//}
+//
+//test2();
 
-fn test2() {
-  let b = 1;
-  print("test2_b", b)
-  test();
-}
+//print("penis")
+//test_dict[1] = "test"
+//test_dict[[]] = 12
+//print(test_dict)
 
-test2();
+//let a = 1
+//let b = 1
+//let c = 1
+//
+//print(id(a), id(b), id(c))
+
+//print({1: "test", "2": "penis"})

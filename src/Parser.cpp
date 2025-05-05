@@ -163,6 +163,32 @@ std::unique_ptr<BaseASTNode> Parser::parse_array()
 	return std::make_unique<ArrayASTNode>(values);
 }
 
+std::unique_ptr<BaseASTNode> Parser::parse_dict()
+{
+	advance(); // {
+	std::vector<std::unique_ptr<BaseASTNode>> keys, values;
+
+	while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
+	{
+		auto key = parse_expr();
+		check(TOKEN_TYPE::COLON);
+		advance();
+		auto val = parse_expr();
+
+		keys.push_back(std::move(key));
+		values.push_back(std::move(val));
+
+		if (m_tokens[m_pos].type == TOKEN_TYPE::RBRACK)
+			break;
+
+		check(TOKEN_TYPE::COMMA);
+		advance();
+	}
+	advance(); // }
+
+	return std::make_unique<DictASTNode>(std::move(keys), std::move(values));
+}
+
 
 std::unique_ptr<BaseASTNode> Parser::parse_primary_expr()
 {
@@ -188,6 +214,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_primary_expr()
 		case TOKEN_TYPE::IDENTIFIER: { return parse_identifier(); }
 		case TOKEN_TYPE::LPAREN: { return parse_paren_expr(); }
 		case TOKEN_TYPE::LSQBRACK: { return parse_array(); }
+		case TOKEN_TYPE::LBRACK: { return parse_dict(); }
 		case TOKEN_TYPE::PLUS:
 		case TOKEN_TYPE::MINUS:
 		case TOKEN_TYPE::NOT: { return parse_unary(); }

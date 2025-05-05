@@ -21,6 +21,7 @@ class StringASTNode;
 class BooleanASTNode;
 class IdentifierASTNode;
 class ArrayASTNode;
+class DictASTNode;
 class IndexASTNode;
 class VariableASTNode;
 class UnaryOpASTNode;
@@ -56,6 +57,7 @@ public:
   std::shared_ptr<Value> visit_StringASTNode(const StringASTNode &node);
   std::shared_ptr<Value> visit_IdentifierASTNode(const IdentifierASTNode &node);
   std::shared_ptr<Value> visit_ArrayASTNode(const ArrayASTNode &node);
+  std::shared_ptr<Value> visit_DictASTNode(const DictASTNode &node);
   std::shared_ptr<Value> visit_IndexASTNode(const IndexASTNode &node);
   std::shared_ptr<Value> visit_VariableASTNode(const VariableASTNode &node);
   std::shared_ptr<Value> visit_UnaryOpASTNode(const UnaryOpASTNode &node);

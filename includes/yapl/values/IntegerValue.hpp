@@ -44,6 +44,11 @@ static void init_int_tp()
     init_base_methods(IntegerTypeObject);
     init_int_methods(IntegerTypeObject);
 
+    IntegerTypeObject->nb_hash = [](const VPtr& self) -> std::size_t
+    {
+        return std::hash<int>{}(as_int(self.get())->value);
+    };
+
     IntegerTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
     {
         auto v = args.size() == 1 ? as_int(args[0].get())->value : 0;
@@ -107,6 +112,12 @@ static void init_int_tp()
             return mk_bool(as_int(self.get())->value < as_int(other.get())->value);
 
        return NotImplemented;
+    };
+    IntegerTypeObject->nb_eq = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_bool(as_int(self.get())->value == as_int(other.get())->value);
+        return NotImplemented;
     };
 }
 
