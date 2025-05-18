@@ -6,6 +6,8 @@
 
 #include "yapl/Visitor.hpp"
 
+#include <yapl/values/UserDefinedValue.hpp>
+
 #include "yapl/values/Value.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/values/BooleanValue.hpp"
@@ -13,6 +15,7 @@
 #include "yapl/values/StringValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
 #include "yapl/values/DictValue.hpp"
+#include "yapl/values/TypeObjectValue.hpp"
 
 #include "yapl/exceptions/RuntimeError.hpp"
 
@@ -195,24 +198,10 @@ std::shared_ptr<Value> Visitor::visit_BinaryOpASTNode(const BinaryOpASTNode &nod
 
 std::shared_ptr<Value> Visitor::visit_StatementASTNode(const StatementASTNode &node)
 {
-    for (size_t i = interpreter.scope_stack.size(); i --> 0 ;)
-    {
-        const auto& scope = interpreter.scope_stack[i];
-        if (scope->vars.contains(node.identifier.value))
-        {
-            auto& var = scope->vars[node.identifier.value];
-            if (var->is_const)
-            {
-                std::cerr << std::format("Variable {} is constant.\n", node.identifier.value);
-                return nullptr;
-            }
-            auto rhs = node.RHS->visit(*this);
-            var->value = std::move(rhs); // does this get freed automatically?
-            return nullptr;
-        }
-    }
+    auto base = node.base->visit(*this);
+    auto RHS = node.RHS->visit(*this);
+    base->Set(RHS);
 
-    std::cerr << std::format("Variable {} doesn't exist.\n", node.identifier.value);
     return nullptr;
 }
 
@@ -451,7 +440,7 @@ std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode 
     for (int i = 0; i < values.size(); i++)
     {
         auto value = values[i];
-        func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i));
+        func->set_argument(std::make_unique<Variable>(false, value->type, std::move(value)), arg_list->get_argument_name(i+1)); // skip first arg (this)
     }
     func_def->body->visit(*this);
     auto ret_value = func->return_value;
@@ -459,6 +448,20 @@ std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode 
     interpreter.pop_function();
 
     return ret_value;
+}
+
+std::shared_ptr<Value> Visitor::visit_GetPropertyASTNode(const GetPropertyASTNode &node)
+{
+    auto obj = node.base_expr->visit(*this);
+    return obj->GetField(node.name.value);
+}
+
+std::shared_ptr<Value> Visitor::visit_SetPropertyASTNode(const SetPropertyASTNode &node)
+{
+    auto obj = node.base_expr->visit(*this);
+    auto RHS = node.RHS->visit(*this);
+
+    return obj->SetField(node.name.value, RHS);
 }
 
 std::shared_ptr<Value> Visitor::visit_FunctionASTNode(const FunctionASTNode &node)
@@ -473,6 +476,39 @@ std::shared_ptr<Value> Visitor::visit_FunctionASTNode(const FunctionASTNode &nod
     interpreter.add_function_definition(f_decl->name.value, const_cast<FunctionASTNode *>(&node));
 
     // TODO: maybe add a function type, so functions can be passed like objects or lambdas
+    return nullptr;
+}
+
+std::shared_ptr<Value> Visitor::visit_ClassASTNode(const ClassASTNode &node)
+{
+    auto UserDefinedTypeObject = new TypeObject{ node.name.value };
+    auto new_type = mk_type(UserDefinedTypeObject);
+
+    interpreter.types[new_type->value->name] = new_type;
+    auto scope = interpreter.scope_stack[0];
+    scope->vars[new_type->value->name] = std::make_unique<Variable>(true, VALUE_TYPE::TYPE, new_type);
+
+    for (const auto& v : node.member_functions)
+    {
+        auto fn = static_cast<FunctionASTNode*>(v.get());
+        auto fn_decl = static_cast<FunctionDeclASTNode*>(fn->decl.get());
+
+        new_type->value->AddMethod(fn_decl->name.value, std::unique_ptr<FunctionASTNode>(fn)); // FIXME: this is a bug
+    }
+
+    // constructor is required
+    new_type->value->nb_make = [UserDefinedTypeObject, this](const std::vector<VPtr>& args) -> VPtr
+    {
+        auto new_obj = std::make_shared<UserDefinedValue>(UserDefinedTypeObject);
+        auto init_args = std::vector<std::unique_ptr<BaseASTNode>>{};
+        init_args.reserve(args.size());
+        for (const auto& arg : args)
+            init_args.push_back(std::make_unique<InternalGetValueASTNode>(arg));
+        const auto method = std::make_unique<MethodCallASTNode>(std::make_unique<InternalGetValueASTNode>(new_obj), Token{TOKEN_TYPE::IDENTIFIER, new char[]{"init"}}, init_args);
+        visit_MethodCallASTNode(*method);
+        return new_obj;
+    };
+
     return nullptr;
 }
 

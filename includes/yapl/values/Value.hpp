@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <utility>
 #include <vector>
 #include <unordered_map>
 #include <memory>
@@ -57,7 +58,8 @@ enum class VALUE_TYPE
 	STRING,
 	ARRAY,
   TYPE,
-  DICT
+  DICT,
+  USER_DEFINED
 };
 
 std::string value_type_to_string(VALUE_TYPE vt);
@@ -141,17 +143,19 @@ make_arg_vector(P&&... p)
 class Value : public std::enable_shared_from_this<Value>
 {
 public:
-    TypeObject* tp = nullptr;
+  std::unordered_map<std::string, VPtr> fields;
+
+  TypeObject* tp = nullptr;
 	VALUE_TYPE type;
 
 	explicit Value(VALUE_TYPE type, TypeObject* tp);
 	virtual ~Value() = default;
 
-    void AddMethod(const std::string& method_name, std::unique_ptr<FunctionASTNode>&& function)
-    {
-        tp->methods.push_back(std::move(function));
-        tp->method_dict[method_name] = tp->methods.back().get();
-    }
+  void AddMethod(const std::string& method_name, std::unique_ptr<FunctionASTNode>&& function)
+  {
+      tp->methods.push_back(std::move(function));
+      tp->method_dict[method_name] = tp->methods.back().get();
+  }
 
 	[[nodiscard]] virtual std::string print() const = 0;
 	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
@@ -176,6 +180,16 @@ public:
     DEFINE_BINOP(BinaryLQ, nb_le,  "<=")
     DEFINE_BINOP(BinaryGQ, nb_ge,  ">=")
     DEFINE_BINOP(BinaryEQ, nb_eq,  "==")
+
+  std::shared_ptr<Value> GetField(const std::string& name)
+  {
+    return fields.at(name);
+  }
+  std::shared_ptr<Value> SetField(const std::string& name, VPtr value)
+  {
+    fields[name] = std::move(value);
+    return fields.at(name);
+  }
 
 	[[nodiscard]] virtual std::shared_ptr<Value> OperatorIndex(const std::shared_ptr<Value>& idx)
 	{

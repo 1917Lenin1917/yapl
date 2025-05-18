@@ -56,6 +56,7 @@ std::string ttype_to_string(TOKEN_TYPE tt)
         case TOKEN_TYPE::CONST:     { return "CONST"; }
         case TOKEN_TYPE::RETURN:    { return "RETURN"; }
         case TOKEN_TYPE::WHILE:     { return "WHILE"; }
+        case TOKEN_TYPE::CLASS:     { return "CLASS"; }
 
         // UNIQUE
         case TOKEN_TYPE::IDENTIFIER:{ return "IDENTIFIER"; }
