@@ -156,3 +156,32 @@
 //print(id(a), id(b), id(c))
 
 //print({1: "test", "2": "penis"})
+
+
+class Penis
+{
+  fn init(this, name)
+  {
+    this.name = name
+  }
+
+  fn print(this)
+  {
+    print("Penis { ", this.name, " }")
+  }
+
+  fn change_name(this, new_name)
+  {
+    this.name = new_name
+  }
+}
+
+const penis = Penis.make("Maksim")
+penis.print()
+penis.change_name("Sergay")
+penis.print()
+print(penis.name)
+
+fn test() { }
+
+print(test)

@@ -66,6 +66,7 @@ enum class TOKEN_TYPE
     CONST,
     RETURN,
     WHILE,
+    CLASS,
 
     // UNIQUE
     IDENTIFIER,

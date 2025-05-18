@@ -34,11 +34,12 @@ public:
 
   std::unique_ptr<BaseASTNode> parse_literal();
   std::unique_ptr<BaseASTNode> parse_function_call(Token identifier);
-  std::unique_ptr<BaseASTNode> parse_method_call(Token identifier);
+  std::unique_ptr<BaseASTNode> parse_method_or_property_call(Token identifier);
   std::unique_ptr<BaseASTNode> parse_indexing(Token identifier);
   std::unique_ptr<BaseASTNode> parse_identifier();
   std::unique_ptr<BaseASTNode> parse_array();
   std::unique_ptr<BaseASTNode> parse_dict();
+  std::unique_ptr<BaseASTNode> parse_class();
   std::unique_ptr<BaseASTNode> parse_primary_expr();
   std::unique_ptr<BaseASTNode> parse_unary();
   std::unique_ptr<BaseASTNode> parse_paren_expr();

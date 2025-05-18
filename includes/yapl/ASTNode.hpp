@@ -34,6 +34,17 @@ public:
   virtual std::shared_ptr<Value> visit(Visitor &visitor) = 0;
 };
 
+class InternalGetValueASTNode final : public BaseASTNode
+{
+  std::shared_ptr<Value> value;
+public:
+  explicit InternalGetValueASTNode(std::shared_ptr<Value> v)
+    :value(std::move(v)) {}
+
+  std::string print(size_t indent_size) override { return ""; }
+  std::shared_ptr<Value> visit(Visitor &visitor) override { return value; }
+};
+
 class LiteralASTNode final : public BaseASTNode
 {
 public:
@@ -154,6 +165,19 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class ClassASTNode final : public BaseASTNode
+{
+public:
+  Token name;
+  std::vector<std::unique_ptr<BaseASTNode>> member_functions;
+
+  explicit ClassASTNode(const Token &name, std::vector<std::unique_ptr<BaseASTNode>>&& member_functions)
+    :name(name), member_functions(std::move(member_functions)) {}
+
+  std::string print(size_t indent_size) override;
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class VariableASTNode final : public BaseASTNode
 {
 public:
@@ -198,10 +222,10 @@ public:
 class StatementASTNode final : public BaseASTNode
 {
 public:
-    Token identifier;
+    std::unique_ptr<BaseASTNode> base;
     std::unique_ptr<BaseASTNode> RHS;
-  StatementASTNode(const Token& t, std::unique_ptr<BaseASTNode> r)
-    :BaseASTNode(), identifier(t), RHS(std::move(r)) {}
+  StatementASTNode(std::unique_ptr<BaseASTNode> base, std::unique_ptr<BaseASTNode> r)
+    :BaseASTNode(), base(std::move(base)), RHS(std::move(r)) {}
 
   std::string print(size_t indent_size) override;
 
@@ -280,10 +304,37 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class GetPropertyASTNode final : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> base_expr;
+	Token name;
+
+	GetPropertyASTNode(std::unique_ptr<BaseASTNode> base_expr, const Token& nm)
+		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm) {}
+
+	std::string print(size_t indent_size) override;
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
+class SetPropertyASTNode final : public BaseASTNode
+{
+public:
+  std::unique_ptr<BaseASTNode> base_expr;
+	Token name;
+  std::unique_ptr<BaseASTNode> RHS;
+
+	SetPropertyASTNode(std::unique_ptr<BaseASTNode> base_expr, const Token& nm, std::unique_ptr<BaseASTNode> RHS)
+		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm), RHS(std::move(RHS)) {}
+
+	std::string print(size_t indent_size) override;
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class MethodCallASTNode final : public BaseASTNode
 {
 public:
-    std::unique_ptr<BaseASTNode> base_expr;
+  std::unique_ptr<BaseASTNode> base_expr;
 	Token name;
 	std::vector<std::unique_ptr<BaseASTNode>> args;
 	MethodCallASTNode(std::unique_ptr<BaseASTNode> base_expr, const Token& nm, std::vector<std::unique_ptr<BaseASTNode>>& args)

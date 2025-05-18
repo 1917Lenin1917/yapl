@@ -41,6 +41,9 @@ class MethodCallASTNode;
 class StarredExpressionASTNode;
 class FunctionASTNode;
 class BuiltinCustomVisitFunctionASTNode;
+class ClassASTNode;
+class GetPropertyASTNode;
+class SetPropertyASTNode;
 
 class Visitor
 {
@@ -74,8 +77,11 @@ public:
   std::shared_ptr<Value> visit_FunctionDeclASTNode(const FunctionDeclASTNode &node);
   std::shared_ptr<Value> visit_FunctionCallASTNode(const FunctionCallASTNode& node);
   std::shared_ptr<Value> visit_MethodCallASTNode(const MethodCallASTNode &node);
+  std::shared_ptr<Value> visit_GetPropertyASTNode(const GetPropertyASTNode &node);
+  std::shared_ptr<Value> visit_SetPropertyASTNode(const SetPropertyASTNode &node);
   std::shared_ptr<Value> visit_StarredExpressionASTNode(const StarredExpressionASTNode &node);
   std::shared_ptr<Value> visit_FunctionASTNode(const FunctionASTNode &node);
+  std::shared_ptr<Value> visit_ClassASTNode(const ClassASTNode &node);
   std::shared_ptr<Value> visit_BuiltinCustomVisitFunctionASTNode(const BuiltinCustomVisitFunctionASTNode &node);
 };
 

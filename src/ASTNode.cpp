@@ -161,6 +161,26 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
         return visitor.visit_DictASTNode(*this);
     }
 
+std::string ClassASTNode::print(size_t indent_size)
+{
+    std::string res;
+    res += REPEAT(indent_size*2, ' ') + "{\n";
+    res += REPEAT((indent_size+1)*2, ' ') + "NodeType: ClassASTNode,\n";
+    res += REPEAT((indent_size+1)*2, ' ') + "Name: " + name.value + ",\n";
+    res += REPEAT((indent_size+1)*2, ' ') + "Methods:\n{\n";
+    for(const auto& v : member_functions)
+        res += v->print(indent_size+1) + ",\n";
+    res += REPEAT((indent_size+1)*2, ' ') + "}\n";
+    res += REPEAT(indent_size*2, ' ') + "}\n";
+
+    return res;
+}
+
+std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
+{
+    return visitor.visit_ClassASTNode(*this);
+}
+
 
     //
 // VariableASTNode
@@ -232,7 +252,7 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
         std::string res;
         res += REPEAT(indent_size*2, ' ') + "{\n";
         res += REPEAT((indent_size+1)*2, ' ') + "NodeType: StatementASTNode,\n";
-        res += REPEAT((indent_size+1)*2, ' ') + "Identifier: " + identifier.value + ",\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "Base: " + base->print(indent_size+1) + ",\n";
         res += REPEAT((indent_size+1)*2, ' ') + "RHS: \n";
         res += RHS->print(indent_size+1) + "\n";
         res += REPEAT(indent_size*2, ' ') + "}";
@@ -328,8 +348,28 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
         return visitor.visit_FunctionDeclASTNode(*this);
     }
 
+    std::string GetPropertyASTNode::print(size_t indent_size)
+    {
+        return "TODO";
+    }
 
-//
+    std::shared_ptr<Value> GetPropertyASTNode::visit(Visitor &visitor)
+    {
+        return visitor.visit_GetPropertyASTNode(*this);
+    }
+
+    std::string SetPropertyASTNode::print(size_t indent_size)
+    {
+        return "TODO";
+    }
+
+    std::shared_ptr<Value> SetPropertyASTNode::visit(Visitor &visitor)
+    {
+        return visitor.visit_SetPropertyASTNode(*this);
+    }
+
+
+    //
 // MethodCallASTNode
 //
     std::string MethodCallASTNode::print(size_t indent_size)
