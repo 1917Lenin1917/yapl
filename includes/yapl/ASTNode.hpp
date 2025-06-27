@@ -347,10 +347,10 @@ public:
 class FunctionCallASTNode final : public BaseASTNode
 {
 public:
-	Token name;
+  std::unique_ptr<BaseASTNode> base;
 	std::vector<std::unique_ptr<BaseASTNode>> args;
-	FunctionCallASTNode(const Token& id, std::vector<std::unique_ptr<BaseASTNode>>& args)
-		:BaseASTNode(), name(id), args(std::move(args)) {}
+	FunctionCallASTNode(std::unique_ptr<BaseASTNode> base, std::vector<std::unique_ptr<BaseASTNode>>& args)
+		:BaseASTNode(), base(std::move(base)), args(std::move(args)) {}
 
 	std::string print(size_t indent_size) override;
 

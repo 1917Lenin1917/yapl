@@ -13,10 +13,13 @@ namespace yapl {
 
 class FunctionASTNode;
 class Value;
+class Visitor;
+class BaseASTNode;
 
 using VPtr = std::shared_ptr<Value>;
 
 using make_fn = std::function<VPtr(const std::vector<VPtr>& args)>;
+using call_fn = std::function<VPtr(Visitor& visitor, const VPtr& self, const std::vector<std::unique_ptr<BaseASTNode>>& args)>;
 using hash_fn = std::function<std::size_t(const VPtr&)>;
 using unop_fn = std::function<VPtr(const VPtr&)>;
 using binop_fn = std::function<VPtr(const VPtr&, const VPtr&)>;
@@ -40,6 +43,7 @@ struct TypeObject
     unop_fn nb_pos = nullptr;    // + (unary)
     unop_fn nb_neg = nullptr;    // - (unary)
     unop_fn nb_not = nullptr;    // ! (unary)
+    call_fn nb_call = nullptr;
 
     binop_fn nb_add = nullptr;    // +
     binop_fn nb_sub = nullptr;    // -

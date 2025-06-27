@@ -96,7 +96,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_call(Token identifier)
         }
     }
     advance(); // eat )
-    return std::make_unique<FunctionCallASTNode>(identifier, args);
+    return std::make_unique<FunctionCallASTNode>(std::make_unique<IdentifierASTNode>(identifier), args);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_method_or_property_call(Token identifier)
