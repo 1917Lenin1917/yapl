@@ -24,6 +24,15 @@ Value::Value(const VALUE_TYPE type, TypeObject* tp)
 {
 }
 
+std::shared_ptr<Value> Value::Call(const std::vector<VPtr> &args)
+{
+    return NotImplemented;
+    // if (!tp->nb_call) return NotImplemented;
+    //
+    // VPtr r = tp->nb_call(shared_from_this(), args);
+    // return r != NotImplemented ? r : NotImplemented;
+}
+
 std::shared_ptr<ArrayValue> Value::GetMethods() const
 {
     std::vector<std::shared_ptr<Value>> values;

@@ -314,71 +314,14 @@ std::shared_ptr<Value> Visitor::visit_FunctionDeclASTNode(const FunctionDeclASTN
 
 std::shared_ptr<Value> Visitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
 {
-    if (!interpreter.function_exists(node.name.value))
-    {
-        std::cout << "Function doesn't exist\n";
-        return nullptr;
-    }
+    // if (!interpreter.function_exists(node.name.value))
+    // {
+    //     std::cout << "Function doesn't exist\n";
+    //     return nullptr;
+    // }
+    auto base = node.base->visit(*this);
+    return base->tp->nb_call(*this, base, node.args);
 
-    auto func_def = interpreter.get_function_def(node.name.value);
-    auto arg_list = dynamic_cast<FunctionArgumentListASTNode*>(dynamic_cast<FunctionDeclASTNode*>(func_def->decl.get())->args.get());
-    // check if we have variadic args
-    // TODO: handle kwargs
-    if (const auto& args_arg = arg_list->args_arg)
-    {
-        auto list = std::vector<VPtr>{  };
-        for (const auto& arg : node.args)
-        {
-            // TODO: this dynamic_cast is probably really slow!
-            if (const auto& str_expr = dynamic_cast<StarredExpressionASTNode*>(arg.get()))
-            {
-                auto v = str_expr->visit(*this);
-                for (const auto& val : as_arr(v.get())->value)
-                {
-                    list.push_back(val);
-                }
-                continue;
-            }
-            list.push_back(arg->visit(*this));
-        }
-        auto VPtrList = std::make_unique<ArrayValue>(list);
-        auto func = interpreter.push_function(node.name.value);
-        func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
-
-        func_def->body->visit(*this);
-        auto ret_value = func->return_value;
-        interpreter.pop_scope();
-        interpreter.pop_function();
-
-        return ret_value;
-    }
-
-    // TODO: add starred expression handling
-    size_t arg_amount = arg_list->get_argument_amount();
-    if (arg_amount != -1 && node.args.size() != arg_amount)
-    {
-        std::cerr << std::format("Invalid amount of arguments provided to function {}. Expected {} arguments, instead got {}.\n", node.name.value, arg_amount, node.args.size());
-        return nullptr;
-    }
-    std::vector<VPtr> values;
-    // set args with passed expressions
-    for (const auto & arg : node.args)
-    {
-        auto value = arg->visit(*this);
-        values.push_back(value);
-    }
-    auto func = interpreter.push_function(node.name.value);
-    for (int i = 0; i < values.size(); i++)
-    {
-        auto value = values[i];
-        func->set_argument(std::make_unique<Variable>(false, value->type, value), arg_list->get_argument_name(i));
-    }
-    func_def->body->visit(*this);
-    auto ret_value = func->return_value;
-    interpreter.pop_scope();
-    interpreter.pop_function();
-
-    return ret_value;
 }
 
 std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
@@ -473,10 +416,11 @@ std::shared_ptr<Value> Visitor::visit_FunctionASTNode(const FunctionASTNode &nod
     }
 
     // FIXME: create a copy of FunctionASTNode maybe?
-    interpreter.add_function_definition(f_decl->name.value, const_cast<FunctionASTNode *>(&node));
+    auto fn = interpreter.add_function_definition(f_decl->name.value, const_cast<FunctionASTNode *>(&node));
+    interpreter.scope_stack[0]->vars[f_decl->name.value] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, fn);
 
     // TODO: maybe add a function type, so functions can be passed like objects or lambdas
-    return nullptr;
+    return fn;
 }
 
 std::shared_ptr<Value> Visitor::visit_ClassASTNode(const ClassASTNode &node)

@@ -38,6 +38,9 @@ namespace yapl {
 #define mk_dict() std::make_shared<DictValue>()
 #define as_dict(v) static_cast<DictValue*>(v)
 
+#define mk_func(name, fn) std::make_shared<FunctionValue>(name, fn)
+#define as_func(v) static_cast<FunctionValue*>(v)
+
 struct TypeObject;
 
 class FunctionASTNode;
@@ -59,7 +62,8 @@ enum class VALUE_TYPE
 	ARRAY,
   TYPE,
   DICT,
-  USER_DEFINED
+  USER_DEFINED,
+  FUNCTION
 };
 
 std::string value_type_to_string(VALUE_TYPE vt);
@@ -161,25 +165,27 @@ public:
 	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
 	virtual void Set(const std::shared_ptr<Value>& v) { throw std::runtime_error("Not implemented"); }
 
-    [[nodiscard]] virtual bool IsTruthy() const { return false; };
+  std::shared_ptr<Value> Call(const std::vector<VPtr>& args);
 
-    [[nodiscard]] std::shared_ptr<ArrayValue> GetMethods() const;
+  [[nodiscard]] virtual bool IsTruthy() const { return false; };
 
-    DEFINE_UNOP(UnaryPlus, nb_pos, "+")
-    DEFINE_UNOP(UnaryMinus, nb_neg, "-")
-    DEFINE_UNOP(UnaryNot, nb_not, "!")
+  [[nodiscard]] std::shared_ptr<ArrayValue> GetMethods() const;
 
-    DEFINE_BINOP(BinaryPlus,  nb_add, "+")
-    DEFINE_BINOP(BinaryMinus, nb_sub, "-")
-    DEFINE_BINOP(BinaryTimes, nb_mul, "*")
-    DEFINE_BINOP(BinarySlash, nb_div, "/")
-    DEFINE_BINOP(BinaryMOD,   nb_mod, "%")
+  DEFINE_UNOP(UnaryPlus, nb_pos, "+")
+  DEFINE_UNOP(UnaryMinus, nb_neg, "-")
+  DEFINE_UNOP(UnaryNot, nb_not, "!")
 
-    DEFINE_BINOP(BinaryLT, nb_lt,  "<")
-    DEFINE_BINOP(BinaryGT, nb_gt,  ">")
-    DEFINE_BINOP(BinaryLQ, nb_le,  "<=")
-    DEFINE_BINOP(BinaryGQ, nb_ge,  ">=")
-    DEFINE_BINOP(BinaryEQ, nb_eq,  "==")
+  DEFINE_BINOP(BinaryPlus,  nb_add, "+")
+  DEFINE_BINOP(BinaryMinus, nb_sub, "-")
+  DEFINE_BINOP(BinaryTimes, nb_mul, "*")
+  DEFINE_BINOP(BinarySlash, nb_div, "/")
+  DEFINE_BINOP(BinaryMOD,   nb_mod, "%")
+
+  DEFINE_BINOP(BinaryLT, nb_lt,  "<")
+  DEFINE_BINOP(BinaryGT, nb_gt,  ">")
+  DEFINE_BINOP(BinaryLQ, nb_le,  "<=")
+  DEFINE_BINOP(BinaryGQ, nb_ge,  ">=")
+  DEFINE_BINOP(BinaryEQ, nb_eq,  "==")
 
   std::shared_ptr<Value> GetField(const std::string& name)
   {

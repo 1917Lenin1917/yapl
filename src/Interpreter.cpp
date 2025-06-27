@@ -13,6 +13,8 @@
 #include "yapl/values/ArrayValue.hpp"
 #include "yapl/values/TypeObjectValue.hpp"
 #include <yapl/values/DictValue.hpp>
+#include <yapl/values/FunctionValue.hpp>
+
 
 namespace yapl {
 
@@ -61,6 +63,7 @@ Interpreter::Interpreter()
     init_str_tp();
     init_tp_tp();
     init_dict_tp();
+    init_function_tp();
 
 
     types[IntegerTypeObject->name] = mk_type(IntegerTypeObject);
@@ -70,11 +73,16 @@ Interpreter::Interpreter()
     types[StringTypeObject->name] = mk_type(StringTypeObject);
     types[TypeObjectTypeObject->name] = mk_type(TypeObjectTypeObject);
     types[DictTypeObject->name] = mk_type(DictTypeObject);
+    types[FunctionTypeObject->name] = mk_type(FunctionTypeObject);
 
     auto scope = scope_stack[0];
     for (const auto& [first, second] : types)
     {
-        scope->vars[first] = std::make_unique<Variable>(true, VALUE_TYPE::TYPE, second);
+        scope->vars[first] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE, second);
+    }
+    for (const auto& [first, second] : function_definitions)
+    {
+        scope->vars[first] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, mk_func(first, second));
     }
 }
 
@@ -90,9 +98,12 @@ std::shared_ptr<Variable> Interpreter::get_variable(const std::string &name) con
           return scope->vars[name];
   return nullptr;
 }
-void Interpreter::add_function_definition(const std::string &name, FunctionASTNode *fn)
+std::shared_ptr<Value> Interpreter::add_function_definition(const std::string &name, FunctionASTNode *fn)
 {
     function_definitions[name] = fn;
+    auto global_scope = scope_stack[0];
+
+    return mk_func(name, fn);
 }
 
 std::shared_ptr<Function> Interpreter::push_function(const std::string& name)

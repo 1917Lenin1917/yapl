@@ -29,6 +29,7 @@ add_executable(yapl src/main.cpp
         src/values/TypeObjectValue.cpp
         src/values/DictValue.cpp
         src/values/UserDefinedValue.cpp
+        src/values/FunctionValue.cpp
 )
 
 add_subdirectory(externals/Catch2)

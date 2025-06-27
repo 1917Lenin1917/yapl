@@ -403,7 +403,8 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         std::string res;
         res += REPEAT(indent_size*2, ' ') + "{\n";
         res += REPEAT((indent_size+1)*2, ' ') + "NodeType: FunctionCallASTNode,\n";
-        res += REPEAT((indent_size+1)*2, ' ') + "Name: " + name.value + ",\n";
+        // res += REPEAT((indent_size+1)*2, ' ') + "Name: " + name.value + ",\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "Base: " + base->print(indent_size+1) + ",\n";
         res += REPEAT((indent_size+1)*2, ' ') + "Arguments: \n";
         res += REPEAT((indent_size+1)*2, ' ') + "{\n";
         for (const auto& arg : args)
