@@ -204,7 +204,13 @@ std::vector<Token> Lexer::make_tokens()
             case '(': { paren_depth++; tokens.emplace_back(TOKEN_TYPE::LPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case ')': { paren_depth--; tokens.emplace_back(TOKEN_TYPE::RPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '{': { brace_depth++; tokens.emplace_back(TOKEN_TYPE::LBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
-            case '}': { brace_depth--; tokens.emplace_back(TOKEN_TYPE::RBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '}':
+            {
+                check_insert_semicolon(tokens);
+                brace_depth--;
+                tokens.emplace_back(TOKEN_TYPE::RBRACK, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
             case '[': { sq_br_depth++; tokens.emplace_back(TOKEN_TYPE::LSQBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case ']': { sq_br_depth--; tokens.emplace_back(TOKEN_TYPE::RSQBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case ';': { tokens.emplace_back(TOKEN_TYPE::SEMICOLON, nullptr, current_line, current_col_pos, current_col_pos); break; }
