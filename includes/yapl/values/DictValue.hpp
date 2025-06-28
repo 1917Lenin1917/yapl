@@ -6,6 +6,7 @@
 #include <yapl/exceptions/RuntimeError.hpp>
 
 #include "Value.hpp"
+#include "StringValue.hpp"
 
 namespace yapl {
 
@@ -49,7 +50,6 @@ public:
 
   explicit DictValue();
 
-  [[nodiscard]] std::string print() const override;
   [[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
   [[nodiscard]] std::shared_ptr<Value> OperatorIndex(const std::shared_ptr<Value> &idx) override;
@@ -63,6 +63,22 @@ void init_dict_methods(TypeObject* tp);
 static void init_dict_tp()
 {
   DictTypeObject = new TypeObject{ "dict" };
+
+  DictTypeObject->nb_str = [](const VPtr& self)
+  {
+    auto value = as_dict(self.get())->value;
+    if (value.empty())
+      return mk_str("{}");
+
+    std::string res = "{";
+    for (const auto& [k, v] : value)
+    {
+      res += std::format("{}: {}, ", k->print(), v->print());
+    }
+    res.erase(res.end()-2, res.end());
+    res += "}";
+    return mk_str(res);
+  };
 
   init_base_methods(DictTypeObject);
   init_dict_methods(DictTypeObject);

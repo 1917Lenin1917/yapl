@@ -157,31 +157,82 @@
 
 //print({1: "test", "2": "penis"})
 
-class Penis
-{
-  fn init(this, name)
-  {
-    this.name = name
+//class Penis
+//{
+//  fn init(this, name)
+//  {
+//    this.name = name
+//  }
+//
+//  fn print(this)
+//  {
+//    print("Penis { ", this.name, " }")
+//  }
+//
+//  fn change_name(this, new_name)
+//  {
+//    this.name = new_name
+//  }
+//}
+//
+//const penis = Penis.make("Maksim")
+//penis.print()
+//penis.change_name("Sergay")
+//penis.print()
+//print(penis.name)
+//
+//fn test() { }
+//
+//print(test)
+//print("penis")
+//
+//
+class Point {
+  fn init(this, X, Y) {
+    this.x = X
+    this.y = Y
   }
 
-  fn print(this)
-  {
-    print("Penis { ", this.name, " }")
+  fn print(this) {
+    print("Point {", this.x, ",", this.y, "}")
   }
 
-  fn change_name(this, new_name)
-  {
-    this.name = new_name
+  // other: Point
+  fn dist(this, other) {
+    const dx = other.x - this.x
+    const dy = other.y - this.y
+
+    return sqrt(dx*dx + dy*dy)
   }
 }
 
-const penis = Penis.make("Maksim")
-penis.print()
-penis.change_name("Sergay")
-penis.print()
-print(penis.name)
+const p1 = Point.make(1, 1)
+const p2 = Point.make(0, 0)
 
-fn test() { }
+print(p1.dist(p2))
 
-print(test)
-print("penis")
+
+class Line {
+  fn init(this, p1, p2) {
+    this.start = p1
+    this.end = p2
+  }
+
+  fn print(this) {
+    this.start.print()
+    this.end.print()
+  }
+
+  fn __str__(this) {
+    return "Line {" + this.len() + "}"
+  }
+
+  fn len(this) {
+    return this.start.dist(this.end)
+  }
+}
+
+const line = Line.make(p1, p2)
+const line_len = line.len()
+print(line)
+print(line_len)

@@ -11,12 +11,6 @@ namespace yapl {
 FunctionValue::FunctionValue(std::string name, FunctionASTNode *fn)
     :Value(VALUE_TYPE::FUNCTION, FunctionTypeObject), name(std::move(name)), fn(fn) {}
 
-std::string FunctionValue::print() const
-{
-    auto decl = static_cast<FunctionDeclASTNode*>(fn->decl.get());
-    return { decl->name.value };
-}
-
 std::unique_ptr<Value> FunctionValue::Copy() const
 {
     return nullptr;

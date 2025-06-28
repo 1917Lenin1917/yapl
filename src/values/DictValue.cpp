@@ -13,21 +13,6 @@ DictValue::DictValue()
 
 }
 
-std::string DictValue::print() const
-{
-  if (value.empty())
-    return "{}";
-
-  std::string res = "{";
-  for (const auto& [k, v] : value)
-  {
-    res += std::format("{}: {}, ", k->print(), v->print());
-  }
-  res.erase(res.end()-2, res.end());
-  res += "}";
-  return res;
-}
-
 std::unique_ptr<Value> DictValue::Copy() const
 {
   // FIXME:

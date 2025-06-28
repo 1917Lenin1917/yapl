@@ -19,11 +19,6 @@ IntegerValue::IntegerValue(const int value)
 {
 }
 
-std::string IntegerValue::print() const
-{
-	return std::to_string(value);
-}
-
 std::unique_ptr<Value> IntegerValue::Copy() const
 {
 	return std::make_unique<IntegerValue>(value);

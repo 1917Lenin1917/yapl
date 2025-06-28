@@ -12,11 +12,6 @@ namespace yapl {
 TypeObjectValue::TypeObjectValue(yapl::TypeObject *value)
     :Value(VALUE_TYPE::TYPE, TypeObjectTypeObject), value(value) {}
 
-std::string TypeObjectValue::print() const
-{
-    return std::format("<class '{}'>", value->name);
-}
-
 std::unique_ptr<Value> TypeObjectValue::Copy() const
 {
     return std::make_unique<TypeObjectValue>(this->value);

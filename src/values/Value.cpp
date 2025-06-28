@@ -24,6 +24,20 @@ Value::Value(const VALUE_TYPE type, TypeObject* tp)
 {
 }
 
+std::string Value::print()
+{
+  {
+    if (const auto str = tp->nb_str)
+    {
+      auto str_v  = str(shared_from_this());
+      return as_str(str_v.get())->value;
+    }
+
+    return std::format("<object of type '{}' at {}>", tp->name, static_cast<const void*>(this));
+  }
+}
+
+
 std::shared_ptr<Value> Value::Call(const std::vector<VPtr> &args)
 {
     return NotImplemented;

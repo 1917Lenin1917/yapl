@@ -6,6 +6,9 @@
 #include <sstream>
 
 #include "yapl/Interpreter.hpp"
+
+#include <cmath>
+
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/values/StringValue.hpp"
 #include "yapl/values/FloatValue.hpp"
@@ -54,6 +57,13 @@ Interpreter::Interpreter()
         std::stringstream ss;
         ss << static_cast<void*>(arg->value.get());
         return mk_str(ss.str());
+    };
+
+    MAKE_METHOD(this, "sqrt", "any", ARG("num", "any"))
+    {
+        auto arg = f_obj->function_scope->vars["num"];
+        auto num = as_int(arg->value.get())->value;
+        return mk_float(std::sqrt(num));
     };
 
     init_int_tp();

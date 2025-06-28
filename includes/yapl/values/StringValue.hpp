@@ -18,7 +18,6 @@ public:
 	explicit StringValue(std::string value);
     explicit StringValue(std::string value, int repeat);
 
-	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 };

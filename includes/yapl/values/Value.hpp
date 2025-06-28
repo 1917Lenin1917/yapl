@@ -161,7 +161,7 @@ public:
       tp->method_dict[method_name] = tp->methods.back().get();
   }
 
-	[[nodiscard]] virtual std::string print() const = 0;
+	[[nodiscard]] virtual std::string print();
 	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
 	virtual void Set(const std::shared_ptr<Value>& v) { throw std::runtime_error("Not implemented"); }
 

@@ -9,11 +9,6 @@ namespace yapl {
 BooleanValue::BooleanValue(const bool value)
 		:Value(VALUE_TYPE::BOOL, BooleanTypeObject), value(value) {}
 
-std::string BooleanValue::print() const
-{
-	return value ? "true" : "false";
-}
-
 std::unique_ptr<Value> BooleanValue::Copy() const
 {
 	return std::make_unique<BooleanValue>(value);

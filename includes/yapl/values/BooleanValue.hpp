@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Value.hpp"
+#include "StringValue.hpp"
 
 namespace yapl {
 
@@ -15,10 +16,9 @@ public:
 
 	explicit BooleanValue(bool value);
 
-	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
-    [[nodiscard]] bool IsTruthy() const override { return value; }
+	[[nodiscard]] bool IsTruthy() const override { return value; }
 };
 
 inline TypeObject* BooleanTypeObject = nullptr;
@@ -28,6 +28,13 @@ void init_bool_methods(TypeObject* tp);
 static void init_bool_tp()
 {
     BooleanTypeObject = new TypeObject{"boolean"};
+
+		BooleanTypeObject->nb_str = [](const VPtr& self)
+		{
+			auto v = as_bool(self.get());
+			auto str = v->value ? "true" : "false";
+			return mk_str(str);
+		};
 
     init_base_methods(BooleanTypeObject);
     init_bool_methods(BooleanTypeObject);

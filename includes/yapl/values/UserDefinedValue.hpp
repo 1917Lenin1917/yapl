@@ -12,7 +12,6 @@ class UserDefinedValue final : public Value
 public:
   explicit UserDefinedValue(TypeObject* tp);
 
-  std::string print() const override;
   std::unique_ptr<Value> Copy() const override;
 };
 
