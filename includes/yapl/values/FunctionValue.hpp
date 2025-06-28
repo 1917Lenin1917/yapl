@@ -4,6 +4,7 @@
 
 #pragma once
 #include "Value.hpp"
+#include "StringValue.hpp"
 
 namespace yapl {
 
@@ -17,7 +18,6 @@ public:
 
   explicit FunctionValue(std::string name, FunctionASTNode* fn);
 
-  std::string print() const override;
   std::unique_ptr<Value> Copy() const override;
 };
 
@@ -28,6 +28,14 @@ void init_function_methods(TypeObject* tp);
 static void init_function_tp()
 {
   FunctionTypeObject = new TypeObject{"function"};
+
+  FunctionTypeObject->nb_str = [](const VPtr& self)
+  {
+    auto fn = as_func(self.get())->fn;
+
+    auto decl = static_cast<FunctionDeclASTNode*>(fn->decl.get());
+    return mk_str(decl->name.value);
+  };
 
   init_base_methods(FunctionTypeObject);
   init_function_methods(FunctionTypeObject);

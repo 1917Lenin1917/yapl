@@ -9,11 +9,6 @@ namespace yapl {
 FloatValue::FloatValue(float value)
 		:Value(VALUE_TYPE::FLOAT, FloatTypeObject), value(value) {}
 
-std::string FloatValue::print() const
-{
-	return std::to_string(value);
-}
-
 std::unique_ptr<Value> FloatValue::Copy() const
 {
 	return std::make_unique<FloatValue>(value);

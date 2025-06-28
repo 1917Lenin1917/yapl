@@ -48,8 +48,16 @@ public:
   std::unique_ptr<BaseASTNode> parse_return();
   std::unique_ptr<BaseASTNode> parse_binop_rhs(int expr_prec, std::unique_ptr<BaseASTNode> LHS);
   std::vector<std::unique_ptr<BaseASTNode>> parse_variable_declaration();
+
+  std::unique_ptr<BaseASTNode> parse_method_call(std::unique_ptr<BaseASTNode> identifier);
+
+  std::unique_ptr<BaseASTNode> parse_property_get(std::unique_ptr<BaseASTNode> identifier);
+
   std::unique_ptr<BaseASTNode> parse_for_loop();
   std::unique_ptr<BaseASTNode> parse_while_loop();
+
+  std::unique_ptr<BaseASTNode> parse_property_or_method_chain(std::unique_ptr<BaseASTNode> identifier);
+
   // statement :: identifier = expr
   // statement :: identifier
   // statement :: identifier()

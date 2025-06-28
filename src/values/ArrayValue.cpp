@@ -20,19 +20,6 @@ ArrayValue::ArrayValue(std::vector<std::shared_ptr<Value>>&& value)
 
 }
 
-std::string ArrayValue::print() const
-{
-	std::string ret_value = "[";
-	auto size = value.size();
-	for (size_t i = 0; i < size; i++)
-	{
-		ret_value += value[i]->print();
-		if (i != size-1)
-			ret_value += ", ";
-	}
-	return ret_value + "]";
-}
-
 std::unique_ptr<Value> ArrayValue::Copy() const
 {
 	std::vector<std::shared_ptr<Value>> ret_value;

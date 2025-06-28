@@ -40,9 +40,9 @@ struct TypeObject
 
     hash_fn nb_hash = nullptr;
 
-    unop_fn nb_pos = nullptr;    // + (unary)
-    unop_fn nb_neg = nullptr;    // - (unary)
-    unop_fn nb_not = nullptr;    // ! (unary)
+    unop_fn nb_pos  = nullptr;    // + (unary)
+    unop_fn nb_neg  = nullptr;    // - (unary)
+    unop_fn nb_not  = nullptr;    // ! (unary)
     call_fn nb_call = nullptr;
 
     binop_fn nb_add = nullptr;    // +
@@ -57,6 +57,8 @@ struct TypeObject
     binop_fn nb_le  = nullptr;    // <=
     binop_fn nb_ge  = nullptr;    // >=
     binop_fn nb_eq  = nullptr;    // ==
+
+    unop_fn nb_str  = nullptr;    // __str__
 
 
     void AddMethod(const std::string& method_name, std::unique_ptr<FunctionASTNode>&& function)

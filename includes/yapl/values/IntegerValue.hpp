@@ -24,7 +24,6 @@ public:
 
 	explicit IntegerValue(int value);
 
-	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 	void Set(const std::shared_ptr<Value> &v) override
@@ -43,6 +42,11 @@ static void init_int_tp()
 
     init_base_methods(IntegerTypeObject);
     init_int_methods(IntegerTypeObject);
+
+    IntegerTypeObject->nb_str = [](const VPtr& self)
+    {
+        return mk_str(std::to_string(as_int(self.get())->value));
+    };
 
     IntegerTypeObject->nb_hash = [](const VPtr& self) -> std::size_t
     {

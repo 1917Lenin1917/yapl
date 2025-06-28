@@ -239,7 +239,7 @@ std::vector<Token> Lexer::make_tokens()
                     tokens.push_back(make_number());
                     break;
                 }
-                if (is_letter(c))
+                if (is_letter(c) || c == '_')
                 {
                     tokens.push_back(make_identifier_or_keyword());
                 }

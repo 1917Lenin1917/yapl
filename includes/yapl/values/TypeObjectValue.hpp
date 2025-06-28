@@ -6,6 +6,7 @@
 
 #include "Value.hpp"
 #include "TypeObject.hpp"
+#include "StringValue.hpp"
 
 namespace yapl {
 
@@ -16,7 +17,6 @@ public:
 
     explicit TypeObjectValue(TypeObject* value);
 
-    [[nodiscard]] std::string print() const override;
     [[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 };
@@ -28,6 +28,12 @@ void init_tp_methods(TypeObject *tp);
 static void init_tp_tp()
 {
     TypeObjectTypeObject = new TypeObject{"type"};
+
+    TypeObjectTypeObject->nb_str = [](const VPtr& self)
+    {
+        auto v = as_type(self.get());
+        return mk_str(std::format("<class '{}'>", v->value->name));
+    };
 
     init_base_methods(TypeObjectTypeObject);
     init_tp_methods(TypeObjectTypeObject);

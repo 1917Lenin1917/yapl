@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Value.hpp"
+#include "StringValue.hpp"
 
 namespace yapl {
 
@@ -15,7 +16,6 @@ public:
 
 	explicit FloatValue(float value);
 
-	[[nodiscard]] std::string print() const override;
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 };
@@ -34,6 +34,11 @@ static void init_float_type()
     FloatTypeObject->nb_neg = [](const VPtr& self) -> VPtr
     {
         return mk_float(-as_float(self.get())->value);
+    };
+
+    FloatTypeObject->nb_str = [](const VPtr& self)
+    {
+      return mk_str(std::to_string(as_float(self.get())->value));
     };
 }
 

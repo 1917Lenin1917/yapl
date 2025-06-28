@@ -6,8 +6,6 @@
 
 #include "yapl/Visitor.hpp"
 
-#include <yapl/values/UserDefinedValue.hpp>
-
 #include "yapl/values/Value.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/values/BooleanValue.hpp"
@@ -16,6 +14,7 @@
 #include "yapl/values/ArrayValue.hpp"
 #include "yapl/values/DictValue.hpp"
 #include "yapl/values/TypeObjectValue.hpp"
+#include "yapl/values/UserDefinedValue.hpp"
 
 #include "yapl/exceptions/RuntimeError.hpp"
 
@@ -451,6 +450,18 @@ std::shared_ptr<Value> Visitor::visit_ClassASTNode(const ClassASTNode &node)
         const auto method = std::make_unique<MethodCallASTNode>(std::make_unique<InternalGetValueASTNode>(new_obj), Token{TOKEN_TYPE::IDENTIFIER, new char[]{"init"}}, init_args);
         visit_MethodCallASTNode(*method);
         return new_obj;
+    };
+    new_type->value->nb_str = [this](const VPtr& self) -> VPtr
+    {
+        if (self->tp->method_dict.contains("__str__"))
+        {
+            std::vector<std::unique_ptr<BaseASTNode>> args{};
+            const auto method = std::make_unique<MethodCallASTNode>(std::make_unique<InternalGetValueASTNode>(self), Token{TOKEN_TYPE::IDENTIFIER, new char[]{"__str__"}}, args);
+            auto v = visit_MethodCallASTNode(*method);
+            return v;
+        }
+        auto v = std::format("<object of type '{}' at {}>", self->tp->name, static_cast<const void*>(self.get()));
+        return mk_str(v);
     };
 
     return nullptr;
