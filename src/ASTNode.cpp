@@ -595,6 +595,26 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return visitor.visit_RootASTNode(*this);
     }
 
+    std::string ForEachLoopASTNode::print(size_t indent_size)
+    {
+        std::string res;
+        res += REPEAT(indent_size*2, ' ') + "{\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "NodeType: ForEachLoopASTNode,\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "Identifier: \n";
+        res += print_token(identifier) + ",\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "Iterable: \n";
+        res += iterable_expr->print(indent_size+1) + ",\n";
+        res += REPEAT((indent_size+1)*2, ' ') + "Scope: \n";
+        res += scope->print(indent_size+1) + "\n";
+        res += REPEAT(indent_size*2, ' ') + "}";
+        return res;
+    }
+
+    std::shared_ptr<Value> ForEachLoopASTNode::visit(Visitor &visitor)
+    {
+        return visitor.visit_ForEachLoopASTNode(*this);
+    }
+
     std::string StarredExpressionASTNode::print(size_t indent_size) {
         return std::string();
     }

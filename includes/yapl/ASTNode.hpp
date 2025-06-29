@@ -452,6 +452,21 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class ForEachLoopASTNode final : public BaseASTNode
+{
+public:
+  Token identifier;
+  std::unique_ptr<BaseASTNode> iterable_expr;
+  std::unique_ptr<BaseASTNode> scope;
+
+  ForEachLoopASTNode(const Token &identifier, std::unique_ptr<BaseASTNode> iterable, std::unique_ptr<BaseASTNode> scope)
+    :BaseASTNode(), identifier(identifier), iterable_expr(std::move(iterable)), scope(std::move(scope)) {}
+
+  std::string print(size_t indent_size) override;
+
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
 class StarredExpressionASTNode final : public BaseASTNode
 {
 public:
