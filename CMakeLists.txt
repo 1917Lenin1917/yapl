@@ -30,6 +30,7 @@ add_executable(yapl src/main.cpp
         src/values/DictValue.cpp
         src/values/UserDefinedValue.cpp
         src/values/FunctionValue.cpp
+        src/values/SizeIterator.cpp
 )
 
 add_subdirectory(externals/Catch2)
@@ -54,5 +55,7 @@ add_executable(tests
         src/values/ArrayValue.cpp
         src/exceptions/SyntaxError.cpp
         src/exceptions/RuntimeError.cpp
+        src/exceptions/StopIteration.cpp
+        includes/yapl/values/SizeIterator.hpp
 )
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)

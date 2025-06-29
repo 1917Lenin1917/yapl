@@ -3,6 +3,7 @@
 //
 
 #include "yapl/values/StringValue.hpp"
+#include "yapl/values/SizeIterator.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/exceptions/RuntimeError.hpp"
 
@@ -19,6 +20,13 @@ StringValue::StringValue(std::string value, int repeat)
         this->value += value;
     }
 }
+
+std::shared_ptr<Value> StringValue::OperatorIndex(const std::shared_ptr<Value> &idx)
+{
+    // TODO: validate int
+    return mk_str(std::string{value[as_int(idx.get())->value]});
+}
+
 
 std::unique_ptr<Value> StringValue::Copy() const
 {
@@ -93,6 +101,13 @@ void init_str_tp()
     StringTypeObject->nb_str = [](const VPtr& self)
     {
         return self->Copy();
+    };
+
+    StringTypeObject->nb_iter = [](const VPtr& self)
+    {
+        auto arr = as_str(self.get());
+
+        return mk_size_iter(self, mk_int(arr->value.size()));
     };
 }
 

@@ -41,6 +41,9 @@ namespace yapl {
 #define mk_func(name, fn) std::make_shared<FunctionValue>(name, fn)
 #define as_func(v) static_cast<FunctionValue*>(v)
 
+#define mk_size_iter(iterable, len) std::make_shared<SizeIteratorValue>(iterable, len)
+#define as_size_iter(v) static_cast<SizeIteratorValue*>(v)
+
 struct TypeObject;
 
 class FunctionASTNode;
@@ -63,7 +66,8 @@ enum class VALUE_TYPE
   TYPE,
   DICT,
   USER_DEFINED,
-  FUNCTION
+  FUNCTION,
+  ITERATOR,
 };
 
 std::string value_type_to_string(VALUE_TYPE vt);
@@ -186,6 +190,9 @@ public:
   DEFINE_BINOP(BinaryLQ, nb_le,  "<=")
   DEFINE_BINOP(BinaryGQ, nb_ge,  ">=")
   DEFINE_BINOP(BinaryEQ, nb_eq,  "==")
+
+  DEFINE_UNOP(Iter, nb_iter, "__iter__");
+  DEFINE_UNOP(Next, nb_next, "__next__");
 
   std::shared_ptr<Value> GetField(const std::string& name)
   {

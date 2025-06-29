@@ -6,6 +6,8 @@
 
 #include "yapl/Visitor.hpp"
 
+#include <yapl/exceptions/StopIteration.hpp>
+
 #include "yapl/values/Value.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/values/BooleanValue.hpp"
@@ -192,7 +194,7 @@ std::shared_ptr<Value> Visitor::visit_BinaryOpASTNode(const BinaryOpASTNode &nod
         VPtr r = rop(rhs, lhs);
         if (r != NotImplemented) return r;
     }
-    throw yapl::RuntimeError(std::format("Unsupported operand types for {}: '{}' and '{}'", ttype_to_string(node.op.type), value_type_to_string(lhs->type), value_type_to_string(rhs->type)));
+    throw yapl::RuntimeError(std::format("Unsupported operand types for {}: '{}' and '{}'", ttype_to_string(node.op.type), lhs->tp->name, rhs->tp->name));
 }
 
 std::shared_ptr<Value> Visitor::visit_StatementASTNode(const StatementASTNode &node)
@@ -279,27 +281,33 @@ std::shared_ptr<Value> Visitor::visit_ForEachLoopASTNode(const ForEachLoopASTNod
     // TODO: replace with iterators
     auto iterable = node.iterable_expr->visit(*this);
 
-    std::vector<std::unique_ptr<BaseASTNode>> args;
-    const auto size_method = std::make_unique<MethodCallASTNode>(std::make_unique<InternalGetValueASTNode>(iterable), Token{TOKEN_TYPE::IDENTIFIER, new char[]{"size"}}, args);
+    // std::vector<std::unique_ptr<BaseASTNode>> args;
+    // const auto iter_method = std::make_unique<MethodCallASTNode>(std::make_unique<InternalGetValueASTNode>(iterable), Token{TOKEN_TYPE::IDENTIFIER, new char[]{"__iter__"}}, args);
+    //
+    // auto iter = visit_MethodCallASTNode(*iter_method);
+    auto iter = iterable->Iter();
+    const auto var = std::make_shared<Variable>(false, VALUE_TYPE::INTEGER, nullptr);
 
-    auto size = visit_MethodCallASTNode(*size_method);
-    auto idx = mk_int(0);
-
-    auto var = std::make_shared<Variable>(false, VALUE_TYPE::INTEGER, nullptr);
-    while (idx->value < as_int(size.get())->value)
+    try
     {
-        interpreter.push_scope();
-        auto scope = interpreter.scope_stack[interpreter.scope_stack.size()-1];
-        var->value = iterable->OperatorIndex(idx);
-        scope->vars[node.identifier.value] = var;
+        while (true)
+        {
+            interpreter.push_scope();
+            auto scope = interpreter.scope_stack[interpreter.scope_stack.size()-1];
+            var->value = iter->Next();
+            scope->vars[node.identifier.value] = var;
 
-        node.scope->visit(*this);
+            node.scope->visit(*this);
 
+            interpreter.pop_scope();
+        }
+    }
+    catch (StopIteration& e)
+    {
         interpreter.pop_scope();
-        idx->value++;
+        return nullptr;
     }
 
-    interpreter.pop_scope();
     return nullptr;
 }
 

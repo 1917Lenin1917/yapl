@@ -59,6 +59,8 @@ struct TypeObject
     binop_fn nb_eq  = nullptr;    // ==
 
     unop_fn nb_str  = nullptr;    // __str__
+    unop_fn nb_iter = nullptr;    // __iter__
+    unop_fn nb_next = nullptr;    // __next__
 
 
     void AddMethod(const std::string& method_name, std::unique_ptr<FunctionASTNode>&& function)

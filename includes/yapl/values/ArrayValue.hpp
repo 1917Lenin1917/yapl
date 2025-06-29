@@ -6,6 +6,7 @@
 
 #include "Value.hpp"
 #include "StringValue.hpp"
+#include "SizeIterator.hpp"
 
 namespace yapl {
 
@@ -43,6 +44,13 @@ static void init_array_tp()
 					ret_value += ", ";
 			}
 			return mk_str(ret_value + "]");
+		};
+
+		ArrayTypeObject->nb_iter = [](const VPtr& self)
+		{
+			auto arr = as_arr(self.get());
+
+			return mk_size_iter(self, mk_int(arr->value.size()));
 		};
 
     init_base_methods(ArrayTypeObject);

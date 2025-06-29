@@ -7,6 +7,7 @@
 #include "Value.hpp"
 #include "TypeObject.hpp"
 #include "StringValue.hpp"
+#include "BooleanValue.hpp"
 
 namespace yapl {
 
@@ -47,6 +48,17 @@ static void init_tp_tp()
         }
 
         return self_t->value->nb_make(walked_args);
+    };
+
+    TypeObjectTypeObject->nb_eq = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == TypeObjectTypeObject)
+        {
+            auto self_v = as_type(self.get());
+            auto other_v = as_type(other.get());
+            return mk_bool(self_v->value == other_v->value);
+        }
+        return NotImplemented;
     };
 
     init_base_methods(TypeObjectTypeObject);

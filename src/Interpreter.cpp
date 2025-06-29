@@ -74,6 +74,7 @@ Interpreter::Interpreter()
     init_tp_tp();
     init_dict_tp();
     init_function_tp();
+    init_size_iterator_type();
 
 
     types[IntegerTypeObject->name] = mk_type(IntegerTypeObject);
@@ -84,6 +85,7 @@ Interpreter::Interpreter()
     types[TypeObjectTypeObject->name] = mk_type(TypeObjectTypeObject);
     types[DictTypeObject->name] = mk_type(DictTypeObject);
     types[FunctionTypeObject->name] = mk_type(FunctionTypeObject);
+    types[SizeIteratorTypeObject->name] = mk_type(SizeIteratorTypeObject);
 
     auto scope = scope_stack[0];
     for (const auto& [first, second] : types)

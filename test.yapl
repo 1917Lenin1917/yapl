@@ -240,18 +240,27 @@
 
 //fn test() { print(1) }
 //
-//const list = ["Hello", "World", "!", 123, false, true, 69.420]
-//
-//for item : list {
-//  print(item)
-//}
+const list = ["Hello", "World", "!", 123, false, true, 69.420]
 
-class P {
-  fn init(this, x, y) {
-    this.x = x
-    this.y = y
+
+for item : list {
+  print(item)
+  if (item.type() == str) {
+    print("------ string -------", item.type())
+    for char : item {
+      print(char)
+    }
+    print("------ end string -------")
   }
 }
 
-const p = P(1, 2)
-print(p, p.x, p.y)
+//class P {
+//  fn init(this, x, y) {
+//    this.x = x
+//    this.y = y
+//  }
+//}
+//
+//const p = P(1, 2)
+//print(p, p.x, p.y)
+

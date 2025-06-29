@@ -18,6 +18,8 @@ public:
 	explicit StringValue(std::string value);
     explicit StringValue(std::string value, int repeat);
 
+	std::shared_ptr<Value> OperatorIndex(const std::shared_ptr<Value> &idx) override;
+
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 };
