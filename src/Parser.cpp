@@ -747,6 +747,19 @@ std::unique_ptr<BaseASTNode> Parser::parse_ifelse_statement()
 std::unique_ptr<BaseASTNode> Parser::parse_for_loop()
 {
 	advance(); // eat for token
+
+	// for-each
+	if (m_tokens[m_pos].type == TOKEN_TYPE::IDENTIFIER)
+	{
+		auto identifier = m_tokens[m_pos];
+		advance();
+		check(TOKEN_TYPE::COLON);
+		advance(); // eat :
+		auto over = parse_expr();
+		auto scope = parse_scope();
+
+		return std::make_unique<ForEachLoopASTNode>(identifier, std::move(over), std::move(scope));
+	}
 	auto declaration = std::move(parse_variable_declaration()[0]);
 	auto condition = parse_semic_expr();
 	auto increment = parse_statement_or_ident();

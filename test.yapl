@@ -238,4 +238,20 @@
 //print(line_len)
 
 
-fn test() { print(1) }
+//fn test() { print(1) }
+//
+//const list = ["Hello", "World", "!", 123, false, true, 69.420]
+//
+//for item : list {
+//  print(item)
+//}
+
+class P {
+  fn init(this, x, y) {
+    this.x = x
+    this.y = y
+  }
+}
+
+const p = P(1, 2)
+print(p, p.x, p.y)

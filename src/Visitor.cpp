@@ -269,6 +269,40 @@ std::shared_ptr<Value> Visitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
     return nullptr;
 }
 
+std::shared_ptr<Value> Visitor::visit_ForEachLoopASTNode(const ForEachLoopASTNode &node)
+{
+    auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    interpreter.push_scope();
+    interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
+    auto for_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+
+    // TODO: replace with iterators
+    auto iterable = node.iterable_expr->visit(*this);
+
+    std::vector<std::unique_ptr<BaseASTNode>> args;
+    const auto size_method = std::make_unique<MethodCallASTNode>(std::make_unique<InternalGetValueASTNode>(iterable), Token{TOKEN_TYPE::IDENTIFIER, new char[]{"size"}}, args);
+
+    auto size = visit_MethodCallASTNode(*size_method);
+    auto idx = mk_int(0);
+
+    auto var = std::make_shared<Variable>(false, VALUE_TYPE::INTEGER, nullptr);
+    while (idx->value < as_int(size.get())->value)
+    {
+        interpreter.push_scope();
+        auto scope = interpreter.scope_stack[interpreter.scope_stack.size()-1];
+        var->value = iterable->OperatorIndex(idx);
+        scope->vars[node.identifier.value] = var;
+
+        node.scope->visit(*this);
+
+        interpreter.pop_scope();
+        idx->value++;
+    }
+
+    interpreter.pop_scope();
+    return nullptr;
+}
+
 std::shared_ptr<Value> Visitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode &node)
 {
     auto func = interpreter.function_stack[interpreter.function_stack.size() - 1];

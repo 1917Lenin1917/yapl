@@ -31,6 +31,7 @@ class StatementIndexASTNode;
 class IfElseExpressionASTNode;
 class WhileLoopASTNode;
 class ForLoopASTNode;
+class ForEachLoopASTNode;
 class ReturnStatementASTNode;
 class ScopeASTNode;
 class FunctionArgumentASTNode;
@@ -70,6 +71,7 @@ public:
   std::shared_ptr<Value> visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node);
   std::shared_ptr<Value> visit_WhileLoopASTNode(const WhileLoopASTNode &node);
   std::shared_ptr<Value> visit_ForLoopASTNode(const ForLoopASTNode &node);
+  std::shared_ptr<Value> visit_ForEachLoopASTNode(const ForEachLoopASTNode &node);
   std::shared_ptr<Value> visit_ReturnStatementASTNode(const ReturnStatementASTNode &node);
   std::shared_ptr<Value> visit_ScopeASTNode(const ScopeASTNode &node);
   std::shared_ptr<Value> visit_FunctionArgumentASTNode(const FunctionArgumentASTNode &node);
