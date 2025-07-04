@@ -20,6 +20,12 @@ public:
 
 	std::shared_ptr<Value> OperatorIndex(const std::shared_ptr<Value> &idx) override;
 
+	void Set(const std::shared_ptr<Value> &v) override
+	{
+			value = dynamic_cast<StringValue*>(v.get())->value;
+	}
+
+
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 };

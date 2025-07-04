@@ -57,6 +57,7 @@ struct TypeObject
     binop_fn nb_le  = nullptr;    // <=
     binop_fn nb_ge  = nullptr;    // >=
     binop_fn nb_eq  = nullptr;    // ==
+    binop_fn nb_nq  = nullptr;    // ==
 
     unop_fn nb_str  = nullptr;    // __str__
     unop_fn nb_iter = nullptr;    // __iter__

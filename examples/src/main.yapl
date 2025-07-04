@@ -27,23 +27,24 @@
 //var x = 42;
 //let message = "Hello, World!\n";
 //const factor = 2;
-//fn multiply(a: int, b: int): int {
-// return a * b;
+//fn multiply(a, b) {
+// return a * b
 //}
-//fn main(): void {
-// var result = multiply(x, factor);
+//
+//fn main() {
+// var result = multiply(x, factor)
 // if (result > 50) {
-//   print("That's big!\n", message);
+//   print("That's big!\n", message)
 // } else {
-//   print("Not so big...\n");
+//   print("Not so big...\n")
 // }
 //  // For loop
 //  for var i; i < 3; i = i + 1; {
-//    print("i is: ", i, "\n");
+//    print("i is: ", i, "\n")
 //  }
 //}
 //
-//main();
+//main()
 
 //fn fib(a) {
 //  if (a < 2) { return a; }
@@ -240,19 +241,19 @@
 
 //fn test() { print(1) }
 //
-const list = ["Hello", "World", "!", 123, false, true, 69.420]
-
-
-for item : list {
-  print(item)
-  if (item.type() == str) {
-    print("------ string -------", item.type())
-    for char : item {
-      print(char)
-    }
-    print("------ end string -------")
-  }
-}
+//const list = ["Hello", "World", "!", 123, false, true, 69.420]
+//
+//
+//for item : list {
+//  print(item)
+//  if (item.type() == str) {
+//    print("------ string -------", item.type())
+//    for char : item {
+//      print(char)
+//    }
+//    print("------ end string -------")
+//  }
+//}
 
 //class P {
 //  fn init(this, x, y) {
@@ -264,3 +265,19 @@ for item : list {
 //const p = P(1, 2)
 //print(p, p.x, p.y)
 
+
+//print(pad_left("1111", "0", 2))
+
+//class Penis { fn init(this) { this.x = "" } }
+//const penis = Penis()
+//penis.x = 5
+//print(penis.x)
+
+import { pad_left, pad_right } from 'utils.yapl'
+
+const strng = '12345'
+const pad_len = 10
+const pad_char = '#'
+
+print(pad_left(strng, pad_char, pad_len))
+print(pad_right(strng, pad_char, pad_len))

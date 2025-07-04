@@ -36,7 +36,11 @@ std::unique_ptr<Value> StringValue::Copy() const
 
 void init_str_methods(TypeObject* tp)
 {
-
+    MAKE_METHOD(tp, "size", "int", ARG("this", "this"))
+    {
+        auto self = as_str(f_obj->function_scope->vars["this"]->value.get());
+        return std::make_unique<IntegerValue>(self->value.size());
+    };
 }
 
 void init_str_tp()

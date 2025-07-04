@@ -1,0 +1,20 @@
+fn generate_padding(char, len) {
+  if char.size() != 1 { return string } // TODO: add null
+  const pad_len = len - string.size()
+  let padding = ""
+  for let i; i < pad_len; i += 1; {
+    padding += char
+  }
+
+  return padding
+}
+
+export fn pad_left(string, char, len) {
+  const padding = generate_padding(char, len)
+  return padding + string;
+}
+
+export fn pad_right(string, char, len) {
+  const padding = generate_padding(char, len)
+  return string + padding;
+}

@@ -184,7 +184,11 @@ std::shared_ptr<Value> Visitor::visit_BinaryOpASTNode(const BinaryOpASTNode &nod
         op  = lhs->tp->nb_eq;
         rop = rhs->tp->nb_eq;
     }
-    // TODO: add NEQ!!!
+    if (node.op.type == TOKEN_TYPE::NEQ)
+    {
+        op  = lhs->tp->nb_nq;
+        rop = rhs->tp->nb_nq;
+    }
 
     if (op) {
         VPtr r = op(lhs, rhs);
@@ -199,11 +203,26 @@ std::shared_ptr<Value> Visitor::visit_BinaryOpASTNode(const BinaryOpASTNode &nod
 
 std::shared_ptr<Value> Visitor::visit_StatementASTNode(const StatementASTNode &node)
 {
-    auto base = node.base->visit(*this);
-    auto RHS = node.RHS->visit(*this);
-    base->Set(RHS);
+    // Assume node.base is identifier node
+    if (auto id = dynamic_cast<IdentifierASTNode*>(node.base.get()))
+    {
+        auto var = interpreter.GetVariable(id->token.value);
+        auto RHS = node.RHS->visit(*this);
+
+        var->value = RHS;
+
+        return nullptr;
+    }
 
     return nullptr;
+
+    // // TODO: this breaks if type of base and RHS is different
+    // auto base = node.base->visit(*this);
+    // auto RHS = node.RHS->visit(*this);
+    //
+    // base->Set(RHS);
+    //
+    // return nullptr;
 }
 
 std::shared_ptr<Value> Visitor::visit_StatementIndexASTNode(const StatementIndexASTNode &node)
