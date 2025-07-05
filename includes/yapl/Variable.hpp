@@ -17,5 +17,6 @@ public:
   bool is_const = false;
   VALUE_TYPE type;
   std::shared_ptr<Value> value;
+  std::string module_name;
 };
 }

@@ -1,0 +1,5 @@
+const SEPARATOR = ", "
+
+fn get_separator() { return SEPARATOR }
+
+export { SEPARATOR, get_separator }

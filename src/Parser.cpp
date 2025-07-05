@@ -587,6 +587,74 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 
 }
 
+std::unique_ptr<BaseASTNode> Parser::parse_import()
+{
+	check(TOKEN_TYPE::IMPORT);
+	advance(); // eat import
+
+	check(TOKEN_TYPE::LBRACK);
+	advance(); // eat {
+
+	std::vector<Token> identifiers;
+
+	while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
+	{
+		check(TOKEN_TYPE::IDENTIFIER);
+		auto id = m_tokens[m_pos];
+		identifiers.push_back(id);
+		advance();
+
+		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+		{
+			advance(); // eat ,
+		}
+	}
+
+	advance(); // eat }
+
+	check(TOKEN_TYPE::FROM);
+	advance(); // eat from
+
+	check(TOKEN_TYPE::STRING);
+	auto module = parse_literal();
+
+	check(TOKEN_TYPE::SEMICOLON);
+	advance();
+
+	return std::make_unique<ImportASTNode>(std::move(identifiers), std::move(module));
+}
+
+std::unique_ptr<BaseASTNode> Parser::parse_export()
+{
+	// TODO: allow more variants for export (e.g. inline export fn ...)
+	check(TOKEN_TYPE::EXPORT);
+	advance(); // eat export
+
+	check(TOKEN_TYPE::LBRACK);
+	advance(); // eat {
+
+	std::vector<std::unique_ptr<BaseASTNode>> vars;
+	while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
+	{
+		check(TOKEN_TYPE::IDENTIFIER);
+		auto id = m_tokens[m_pos];
+		advance(); // eat id
+
+		vars.push_back(std::make_unique<IdentifierASTNode>(id));
+
+		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+		{
+			advance(); // eat ,
+		}
+
+	}
+
+	check(TOKEN_TYPE::RBRACK);
+	advance(); // eat }
+
+	return std::make_unique<ExportASTNode>(std::move(vars));
+}
+
 std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
 {
     check(TOKEN_TYPE::LPAREN);
@@ -872,6 +940,8 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
                 case TOKEN_TYPE::WHILE: { root->nodes.push_back(std::move(parse_while_loop())); break; }
                 case TOKEN_TYPE::FOR: { root->nodes.push_back(std::move(parse_for_loop())); break; }
 								case TOKEN_TYPE::CLASS: { root->nodes.push_back(std::move(parse_class())); break; }
+								case TOKEN_TYPE::IMPORT: { root->nodes.push_back(std::move(parse_import())); break; }
+								case TOKEN_TYPE::EXPORT: { root->nodes.push_back(std::move(parse_export())); break; }
                 default: { root->nodes.push_back(std::move(parse_semic_expr())); break; }
             }
         }

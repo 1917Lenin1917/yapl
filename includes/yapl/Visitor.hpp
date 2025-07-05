@@ -10,6 +10,16 @@
 
 #include "memory"
 
+#ifdef __linux__
+#define DEBUG std::raise(SIGINT);
+#endif
+#ifdef __APPLE__
+#define DEBUG std::raise(SIGINT);
+#endif
+#ifdef __MINGW32__
+#define DEBUG __debugbreak();
+#endif
+
 namespace yapl {
 class Interpreter; // forward declaration because c++ is strange
 class Value;
@@ -45,6 +55,8 @@ class BuiltinCustomVisitFunctionASTNode;
 class ClassASTNode;
 class GetPropertyASTNode;
 class SetPropertyASTNode;
+class ImportASTNode;
+class ExportASTNode;
 
 class Visitor
 {
@@ -67,6 +79,8 @@ public:
   std::shared_ptr<Value> visit_UnaryOpASTNode(const UnaryOpASTNode &node);
   std::shared_ptr<Value> visit_BinaryOpASTNode(const BinaryOpASTNode &node);
   std::shared_ptr<Value> visit_StatementASTNode(const StatementASTNode &node);
+  std::shared_ptr<Value> visit_ImportASTNode(const ImportASTNode &node);
+  std::shared_ptr<Value> visit_ExportASTNode(const ExportASTNode &node);
   std::shared_ptr<Value> visit_StatementIndexASTNode(const StatementIndexASTNode &node);
   std::shared_ptr<Value> visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node);
   std::shared_ptr<Value> visit_WhileLoopASTNode(const WhileLoopASTNode &node);

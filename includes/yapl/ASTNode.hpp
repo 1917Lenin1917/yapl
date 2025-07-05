@@ -232,6 +232,31 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class ImportASTNode final : public BaseASTNode
+{
+public:
+  std::vector<Token> identifiers;
+  std::unique_ptr<BaseASTNode> module;
+
+  ImportASTNode(std::vector<Token>&& ids, std::unique_ptr<BaseASTNode> module)
+    :BaseASTNode(), identifiers(std::move(ids)), module(std::move(module)) {}
+
+  std::string print(size_t indent_size) override;
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+class ExportASTNode final : public BaseASTNode
+{
+public:
+  std::vector<std::unique_ptr<BaseASTNode>> variables;
+
+  explicit ExportASTNode(std::vector<std::unique_ptr<BaseASTNode>>&& vars)
+    :BaseASTNode(), variables(std::move(vars)) {}
+
+  std::string print(size_t indent_size) override;
+  std::shared_ptr<Value> visit(Visitor &visitor) override;
+};
+
+
 class StatementIndexASTNode final : public BaseASTNode
 {
 public:

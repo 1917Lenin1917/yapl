@@ -10,6 +10,7 @@ namespace yapl {
 
 void Lexer::check_insert_semicolon(std::vector<Token>& tokens)
 {
+    if (inside_import) return;
     // At every newline we try to auto-insert a semicolon, since parser grammar already requires them
     // We should check for
     // 1) now parens and brackets are open
@@ -207,6 +208,7 @@ std::vector<Token> Lexer::make_tokens()
             case '}':
             {
                 check_insert_semicolon(tokens);
+                inside_import = false;
                 brace_depth--;
                 tokens.emplace_back(TOKEN_TYPE::RBRACK, nullptr, current_line, current_col_pos, current_col_pos);
                 break;
@@ -286,7 +288,7 @@ Token Lexer::make_number()
     char* value = new char[m_pos - start + 2];
     memcpy(value, m_text.data()+start, m_pos-start+1);
     value[m_pos - start + 1] = '\0';
-    return { is_float ? TOKEN_TYPE::FLOAT : TOKEN_TYPE::INTEGER, value, current_line, (int)start_col_pos, (int)(current_col_pos) };
+    return Token{ is_float ? TOKEN_TYPE::FLOAT : TOKEN_TYPE::INTEGER, value, current_line, (int)start_col_pos, (int)(current_col_pos) };
 }
 
 Token Lexer::make_string()
@@ -343,7 +345,7 @@ Token Lexer::make_string()
         }
     }
     value[len] = '\0';
-    return { m_text[m_pos] == '`' ? TOKEN_TYPE::FSTRING : TOKEN_TYPE::STRING, value, current_line, (int)start_col_pos, (int)(current_col_pos) };
+    return Token{ m_text[m_pos] == '`' ? TOKEN_TYPE::FSTRING : TOKEN_TYPE::STRING, value, current_line, (int)start_col_pos, (int)(current_col_pos) };
 }
 
 Token Lexer::make_format_string() // TODO: rewrite to handle {}
@@ -380,24 +382,30 @@ Token Lexer::make_identifier_or_keyword()
         { "var",    TOKEN_TYPE::VAR },
         { "let",    TOKEN_TYPE::LET },
         { "const",  TOKEN_TYPE::CONST },
-        { "return", TOKEN_TYPE::RETURN }
+        { "return", TOKEN_TYPE::RETURN },
+        { "import", TOKEN_TYPE::IMPORT },
+        { "export", TOKEN_TYPE::EXPORT },
+        { "from",   TOKEN_TYPE::FROM },
     };
 
     const auto tk = std::string_view{ m_text.data() + start, m_pos - start + 1 };
     if (const auto it = kKeywordTable.find(tk); it != kKeywordTable.end()) {
-        return { it->second, nullptr, current_line,start_col_pos,current_col_pos };
+        if (it->second == TOKEN_TYPE::IMPORT || it->second == TOKEN_TYPE::EXPORT)
+            inside_import = true;
+
+        return Token{ it->second, nullptr, current_line,start_col_pos,current_col_pos };
     }
     if (tk == "true" || tk == "false")
     {
         char* value = new char[m_pos - start + 2];
         memcpy(value, m_text.data()+start, m_pos-start+1);
         value[m_pos - start + 1] = '\0';
-        return { TOKEN_TYPE::BOOL, value, current_line, (int)start_col_pos, (int)current_col_pos };
+        return Token{ TOKEN_TYPE::BOOL, value, current_line, (int)start_col_pos, (int)current_col_pos };
     }
     char* value = new char[m_pos - start + 2];
     memcpy(value, m_text.data()+start, m_pos-start+1);
     value[m_pos - start + 1] = '\0';
-    return { TOKEN_TYPE::IDENTIFIER, value, current_line, (int)start_col_pos, (int)current_col_pos };
+    return Token{ TOKEN_TYPE::IDENTIFIER, value, current_line, (int)start_col_pos, (int)current_col_pos };
 }
 
 

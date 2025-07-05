@@ -152,6 +152,7 @@ class Value : public std::enable_shared_from_this<Value>
 {
 public:
   std::unordered_map<std::string, VPtr> fields;
+  std::string module;
 
   TypeObject* tp = nullptr;
 	VALUE_TYPE type;

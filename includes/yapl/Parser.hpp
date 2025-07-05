@@ -63,6 +63,8 @@ public:
   // statement :: identifier()
   // statement :: identifier(args...)
   std::unique_ptr<BaseASTNode> parse_statement_or_ident();
+  std::unique_ptr<BaseASTNode> parse_import();
+  std::unique_ptr<BaseASTNode> parse_export();
   std::unique_ptr<BaseASTNode> parse_function_arguments();
   std::unique_ptr<BaseASTNode> parse_function_declaration();
   std::unique_ptr<BaseASTNode> parse_ifelse_statement();

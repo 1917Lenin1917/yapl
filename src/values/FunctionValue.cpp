@@ -47,12 +47,12 @@ void init_function_methods(TypeObject* tp)
             list.push_back(arg->visit(visitor));
         }
         auto VPtrList = std::make_unique<ArrayValue>(list);
-        auto func = visitor.interpreter.push_function(std::format("{}::operator()", self->print()));
+        auto func = visitor.interpreter.PushFunction(std::format("{}::operator()", self->print()));
         func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
 
         func_def->body->visit(visitor);
         auto ret_value = func->return_value;
-        visitor.interpreter.pop_scope();
+        visitor.interpreter.PopScope();
         visitor.interpreter.pop_function();
 
         return ret_value;
@@ -72,7 +72,14 @@ void init_function_methods(TypeObject* tp)
         auto value = arg->visit(visitor);
         values.push_back(value);
     }
-    auto func = visitor.interpreter.push_function(self->print());
+
+
+    auto prev_module = visitor.interpreter.current_module;
+    if (!self->module.empty())
+    {
+        visitor.interpreter.current_module = visitor.interpreter.GetModule(self->module);
+    }
+    auto func = visitor.interpreter.PushFunction(self->print());
     for (int i = 0; i < values.size(); i++)
     {
         auto value = values[i];
@@ -80,8 +87,12 @@ void init_function_methods(TypeObject* tp)
     }
     func_def->body->visit(visitor);
     auto ret_value = func->return_value;
-    visitor.interpreter.pop_scope();
+    visitor.interpreter.PopScope();
     visitor.interpreter.pop_function();
+    if (!self->module.empty())
+    {
+        visitor.interpreter.current_module = prev_module;
+    }
 
     return ret_value;
 

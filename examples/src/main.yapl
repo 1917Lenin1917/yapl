@@ -273,11 +273,15 @@
 //penis.x = 5
 //print(penis.x)
 
-import { pad_left, pad_right } from 'utils.yapl'
+import { pad_left, pad_right, join } from 'utils.yapl'
 
-const strng = '12345'
-const pad_len = 10
-const pad_char = '#'
+const string = '12345'
+const _pad_len = 10
+const _pad_char = '#'
 
-print(pad_left(strng, pad_char, pad_len))
-print(pad_right(strng, pad_char, pad_len))
+print(pad_left(string, _pad_char, _pad_len))
+print(pad_right(string, _pad_char, _pad_len))
+
+print(pad_left, pad_right)
+//print(generate_padding)
+print(join([1, 2, 3]))

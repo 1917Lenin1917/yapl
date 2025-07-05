@@ -58,6 +58,10 @@ std::shared_ptr<Value> Visitor::visit_BooleanASTNode(const BooleanASTNode &node)
 
 std::shared_ptr<Value> Visitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
 {
+    if (node.token.value == std::string("debug"))
+    {
+        DEBUG;
+    }
     if (const auto var = interpreter.GetVariable(node.token.value))
     {
         return var->value;
@@ -225,6 +229,51 @@ std::shared_ptr<Value> Visitor::visit_StatementASTNode(const StatementASTNode &n
     // return nullptr;
 }
 
+std::shared_ptr<Value> Visitor::visit_ImportASTNode(const ImportASTNode &node)
+{
+    auto module_name = dynamic_cast<StringASTNode*>(node.module.get());
+    auto module = interpreter.LoadModule(module_name->value);
+
+    auto prev_current = interpreter.current_module;
+    interpreter.current_module = module;
+    module->ast->visit(*this);
+    interpreter.current_module = prev_current;
+
+    // then push all exported variables to global scope
+    for (const auto& id : node.identifiers)
+    {
+        if (!module->exported.contains(id.value))
+            throw RuntimeError(std::format("Module {} doesn't export {}", module_name->value, id.value));
+
+        interpreter.GetCurrentScope()->vars[id.value] = module->exported[id.value];
+    }
+
+    // for (const auto& [name, var] : module->exported)
+    // {
+    //     interpreter.scope_stack[0]->vars[name] = var;
+    // }
+
+
+    return nullptr;
+}
+
+std::shared_ptr<Value> Visitor::visit_ExportASTNode(const ExportASTNode &node)
+{
+    // for now just assume its an identifier
+    for (const auto& i : node.variables)
+    {
+        if (auto id = dynamic_cast<IdentifierASTNode*>(i.get()))
+        {
+            auto var = interpreter.GetVariable(id->token.value);
+            var->module_name = interpreter.current_module->name;
+            var->value->module = interpreter.current_module->name;
+            interpreter.Export(id->token.value, var);
+        }
+    }
+
+    return nullptr;
+}
+
 std::shared_ptr<Value> Visitor::visit_StatementIndexASTNode(const StatementIndexASTNode &node)
 {
     auto id = dynamic_cast<IndexASTNode*>(node.identifier.get());
@@ -238,21 +287,23 @@ std::shared_ptr<Value> Visitor::visit_StatementIndexASTNode(const StatementIndex
 
 std::shared_ptr<Value> Visitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node)
 {
-    auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    // auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    auto parent_scope = interpreter.GetCurrentScope();
     if (node.condition->visit(*this)->IsTruthy())
     {
-        interpreter.push_scope();
-        interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
+        interpreter.PushScope();
+        interpreter.GetCurrentScope()->parent_scope = parent_scope;
         auto res = node.true_scope->visit(*this);
-        interpreter.pop_scope();
+        interpreter.PopScope();
         return res;
     }
     if (node.false_scope)
     {
-        interpreter.push_scope();
-        interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
+        interpreter.PushScope();
+        interpreter.GetCurrentScope()->parent_scope = parent_scope;
+        // interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
         auto res = node.false_scope->visit(*this);
-        interpreter.pop_scope();
+        interpreter.PopScope();
         return res;
     }
     return nullptr;
@@ -260,42 +311,46 @@ std::shared_ptr<Value> Visitor::visit_IfElseExpressionASTNode(const IfElseExpres
 
 std::shared_ptr<Value> Visitor::visit_WhileLoopASTNode(const WhileLoopASTNode &node)
 {
-    auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    // auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    auto parent_scope = interpreter.GetCurrentScope();
     while(node.condition->visit(*this)->IsTruthy())
     {
-        interpreter.push_scope();
-        interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
+        interpreter.PushScope();
+        interpreter.GetCurrentScope()->parent_scope = parent_scope;
+        // interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
         node.scope->visit(*this);
-        interpreter.pop_scope();
+        interpreter.PopScope();
     }
     return nullptr;
 }
 
 std::shared_ptr<Value> Visitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
 {
-    auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
-    interpreter.push_scope();
-    interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
-    auto for_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    // auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    auto parent_scope = interpreter.GetCurrentScope();
+    interpreter.PushScope();
+    auto for_scope = interpreter.GetCurrentScope();
+    for_scope->parent_scope = parent_scope;
     node.declaration->visit(*this);
     while (node.condition->visit(*this)->IsTruthy())
     {
-        interpreter.push_scope();
-        interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = for_scope;
+        interpreter.PushScope();
+        interpreter.GetCurrentScope()->parent_scope = for_scope;
+        // interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = for_scope;
         node.scope->visit(*this);
-        interpreter.pop_scope();
+        interpreter.PopScope();
         node.increment->visit(*this);
     }
-    interpreter.pop_scope();
+    interpreter.PopScope();
     return nullptr;
 }
 
 std::shared_ptr<Value> Visitor::visit_ForEachLoopASTNode(const ForEachLoopASTNode &node)
 {
-    auto parent_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
-    interpreter.push_scope();
-    interpreter.scope_stack[interpreter.scope_stack.size() - 1]->parent_scope = parent_scope;
-    auto for_scope = interpreter.scope_stack[interpreter.scope_stack.size() - 1];
+    auto parent_scope = interpreter.GetCurrentScope();
+    interpreter.PushScope();
+    auto for_scope = interpreter.GetCurrentScope();
+    for_scope->parent_scope = parent_scope;
 
     // TODO: replace with iterators
     auto iterable = node.iterable_expr->visit(*this);
@@ -311,19 +366,19 @@ std::shared_ptr<Value> Visitor::visit_ForEachLoopASTNode(const ForEachLoopASTNod
     {
         while (true)
         {
-            interpreter.push_scope();
-            auto scope = interpreter.scope_stack[interpreter.scope_stack.size()-1];
+            interpreter.PushScope();
+            auto scope = interpreter.GetCurrentScope();
             var->value = iter->Next();
             scope->vars[node.identifier.value] = var;
 
             node.scope->visit(*this);
 
-            interpreter.pop_scope();
+            interpreter.PopScope();
         }
     }
     catch (StopIteration& e)
     {
-        interpreter.pop_scope();
+        interpreter.PopScope();
         return nullptr;
     }
 
@@ -332,7 +387,8 @@ std::shared_ptr<Value> Visitor::visit_ForEachLoopASTNode(const ForEachLoopASTNod
 
 std::shared_ptr<Value> Visitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode &node)
 {
-    auto func = interpreter.function_stack[interpreter.function_stack.size() - 1];
+    // auto func = interpreter.function_stack[interpreter.function_stack.size() - 1];
+    auto func = interpreter.GetCurrentFunction();
     auto rhs = node.expr->visit(*this);
     func->return_value = rhs;
     return nullptr;
@@ -340,7 +396,8 @@ std::shared_ptr<Value> Visitor::visit_ReturnStatementASTNode(const ReturnStateme
 
 std::shared_ptr<Value> Visitor::visit_ScopeASTNode(const ScopeASTNode &node)
 {
-    const auto current_func = interpreter.function_stack.empty() ? nullptr : interpreter.function_stack[interpreter.function_stack.size() - 1];
+    // const auto current_func = interpreter.function_stack.empty() ? nullptr : interpreter.function_stack[interpreter.function_stack.size() - 1];
+    const auto current_func = interpreter.GetCurrentFunction();
     for (const auto& i : node.nodes)
     {
         i->visit(*this);
@@ -374,14 +431,20 @@ std::shared_ptr<Value> Visitor::visit_FunctionDeclASTNode(const FunctionDeclASTN
 
 std::shared_ptr<Value> Visitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
 {
-    // if (!interpreter.function_exists(node.name.value))
-    // {
-    //     std::cout << "Function doesn't exist\n";
-    //     return nullptr;
-    // }
+    // TODO: optimize
     auto base = node.base->visit(*this);
+    // for (const auto& module : interpreter.modules)
+    // {
+    //     for (const auto& [name, value] : module->exported)
+    //     {
+    //         if (base == value->value)
+    //         {
+    //             interpreter.current_module = module;
+    //             return base->tp->nb_call(*this, base, node.args);
+    //         }
+    //     }
+    // }
     return base->tp->nb_call(*this, base, node.args);
-
 }
 
 std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
@@ -412,13 +475,13 @@ std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode 
         }
         auto VPtrList = std::make_unique<ArrayValue>(list);
 
-        auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
+        auto func = interpreter.PushFunction(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
         // pass object reference to the method as the first argument
         func->set_argument(std::make_unique<Variable>(false, object->type, object), "this");
         func->set_argument(std::make_unique<Variable>(false, VPtrList->type, std::move(VPtrList)), arg_list->args_arg->name.value);
         func_def->body->visit(*this);
         auto ret_value = func->return_value;
-        interpreter.pop_scope();
+        interpreter.PopScope();
         interpreter.pop_function();
 
         return ret_value;
@@ -437,7 +500,7 @@ std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode 
         auto value = arg->visit(*this);
         values.push_back(value);
     }
-    auto func = interpreter.push_function(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
+    auto func = interpreter.PushFunction(std::format("[{}].{}", static_cast<const void*>(object.get()), node.name.value)); // maybe get this from value ?
     // pass object reference to the method as the first argument
     func->set_argument(std::make_unique<Variable>(false, object->type, object), "this");
     for (int i = 0; i < values.size(); i++)
@@ -447,7 +510,7 @@ std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode 
     }
     func_def->body->visit(*this);
     auto ret_value = func->return_value;
-    interpreter.pop_scope();
+    interpreter.PopScope();
     interpreter.pop_function();
 
     return ret_value;
@@ -476,10 +539,9 @@ std::shared_ptr<Value> Visitor::visit_FunctionASTNode(const FunctionASTNode &nod
     }
 
     // FIXME: create a copy of FunctionASTNode maybe?
-    auto fn = interpreter.add_function_definition(f_decl->name.value, const_cast<FunctionASTNode *>(&node));
-    interpreter.scope_stack[0]->vars[f_decl->name.value] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, fn);
+    auto fn = interpreter.AddFunctionDefinition(f_decl->name.value, const_cast<FunctionASTNode *>(&node));
 
-    // TODO: maybe add a function type, so functions can be passed like objects or lambdas
+    interpreter.AddVariable(f_decl->name.value, true, fn);
     return fn;
 }
 

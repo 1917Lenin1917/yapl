@@ -4,11 +4,15 @@
 
 #include <memory>
 #include <sstream>
+#include <filesystem>
+#include <fstream>
 
 #include "yapl/Interpreter.hpp"
 
 #include <cmath>
+#include <yapl/Parser.hpp>
 
+#include "yapl/Lexer.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/values/StringValue.hpp"
 #include "yapl/values/FloatValue.hpp"
@@ -20,6 +24,19 @@
 
 
 namespace yapl {
+
+std::vector<std::string> get_lines_from_text(const std::string& text)
+{
+    std::vector<std::string> res;
+    std::stringstream ss { text };
+    while (!ss.eof())
+    {
+        std::string line;
+        std::getline(ss, line);
+        res.push_back(line);
+    }
+    return res;
+}
 
 #define MAKE_TOKEN(token_name) Token{ TOKEN_TYPE::IDENTIFIER, new char[](token_name)  }
 #define MAKE_BODY(body_fn) std::make_unique<BuiltinCustomVisitFunctionASTNode>([&](std::shared_ptr<Function> f_obj) body_fn )
@@ -100,26 +117,33 @@ Interpreter::Interpreter()
 
 bool Interpreter::function_exists(const std::string &name) const
 {
-  return function_definitions.contains(name);
+    if (current_module)
+        return current_module->function_definitions.contains(name);
+    return function_definitions.contains(name);
 }
 
-std::shared_ptr<Variable> Interpreter::get_variable(const std::string &name) const
+std::shared_ptr<Value> Interpreter::AddFunctionDefinition(const std::string &name, FunctionASTNode *fn)
 {
-  for (size_t i = scope_stack.size(); i --> 0 ;)
-      if (const auto scope = scope_stack[i]; scope->vars.contains(name))
-          return scope->vars[name];
-  return nullptr;
-}
-std::shared_ptr<Value> Interpreter::add_function_definition(const std::string &name, FunctionASTNode *fn)
-{
+    if (current_module)
+    {
+        current_module->function_definitions[name] = fn;
+        return mk_func(name, fn);
+    }
     function_definitions[name] = fn;
-    auto global_scope = scope_stack[0];
-
     return mk_func(name, fn);
 }
 
-std::shared_ptr<Function> Interpreter::push_function(const std::string& name)
+std::shared_ptr<Function> Interpreter::PushFunction(const std::string& name)
 {
+    if (current_module)
+    {
+        auto func = std::make_shared<Function>();
+        func->name = name;
+        current_module->function_stack.push_back(func);
+        current_module->scope_stack.push_back(func->function_scope);
+
+        return func;
+    }
     auto func = std::make_shared<Function>();
     func->name = name;
     function_stack.push_back(func);
@@ -130,6 +154,12 @@ std::shared_ptr<Function> Interpreter::push_function(const std::string& name)
 
 std::shared_ptr<Variable> Interpreter::AddVariable(const std::string &name, bool is_const, VPtr value)
 {
+    if (current_module)
+    {
+        auto scope = current_module->scope_stack[current_module->scope_stack.size() - 1];
+        scope->vars[name] = std::make_shared<Variable>(is_const, value->type, value);
+        return scope->vars[name];
+    }
     auto scope = scope_stack[scope_stack.size() - 1];
     scope->vars[name] = std::make_shared<Variable>(is_const, value->type, value);
     return scope->vars[name];
@@ -140,6 +170,29 @@ std::shared_ptr<Variable> Interpreter::AddVariable(const std::string &name, bool
  */
 std::shared_ptr<Variable> Interpreter::GetVariable(const std::string &name)
 {
+    // for module
+    if (current_module)
+    {
+        // look through newest scope and its parents
+        auto scope = current_module->scope_stack[current_module->scope_stack.size() - 1];
+        while (scope)
+        {
+            if (scope->vars.contains(name))
+            {
+                return scope->vars.at(name);
+            }
+            scope = scope->parent_scope;
+        }
+
+        // look in globals
+        if (const auto global_stack = current_module->scope_stack[0]; global_stack->vars.contains(name))
+        {
+            return global_stack->vars.at(name);
+        }
+
+        return nullptr;
+    }
+
     // look through newest scope and its parents
     auto scope = scope_stack[scope_stack.size() - 1];
     while (scope)
@@ -161,27 +214,87 @@ std::shared_ptr<Variable> Interpreter::GetVariable(const std::string &name)
 
 }
 
+void Interpreter::Export(const std::string& name, const std::shared_ptr<Variable>& var)
+{
+    current_module->exported[name] = var;
+}
+
 std::shared_ptr<Function> Interpreter::GetCurrentFunction()
 {
-    return function_stack[function_stack.size() - 1];
+    if (current_module)
+        return current_module->function_stack.empty() ? nullptr : current_module->function_stack[current_module->function_stack.size() - 1];
+    return function_stack.empty() ? nullptr : function_stack[function_stack.size() - 1];
+}
+
+std::shared_ptr<Scope> Interpreter::GetCurrentScope()
+{
+    if (current_module)
+    {
+        return current_module->scope_stack[current_module->scope_stack.size() - 1];
+    }
+    return scope_stack[scope_stack.size() - 1];
 }
 
 void Interpreter::pop_function()
 {
+    if (current_module)
+    {
+        current_module->function_stack.pop_back();
+        return;
+    }
     function_stack.pop_back();
 }
-void Interpreter::push_scope()
+void Interpreter::PushScope()
 {
+    if (current_module)
+    {
+        current_module->scope_stack.push_back(std::make_shared<Scope>());
+        return;
+    }
     scope_stack.push_back(std::make_shared<Scope>());
 }
-void Interpreter::pop_scope()
+void Interpreter::PopScope()
 {
+    if (current_module)
+    {
+        current_module->scope_stack.pop_back();
+        return;
+    }
     scope_stack.pop_back();
 }
-FunctionASTNode *Interpreter::get_function_def(const std::string &name)
+
+std::shared_ptr<Module> Interpreter::LoadModule(const std::string &name)
 {
-    return function_definitions[name];
+    if (auto mod = std::find_if(modules.begin(), modules.end(), [&name](const auto& module) { return module->name == name; }); mod != modules.end())
+    {
+        return *mod;
+    }
+    auto mod_path = base_path / name;
+
+    std::ifstream t(mod_path.string());
+    std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+    Lexer lexer {text};
+
+    auto tokens = lexer.make_tokens();
+
+    auto lines = get_lines_from_text(text);
+    Parser parser{ tokens, name, lines };
+
+    auto module_root = parser.parse_root();
+
+    auto module = std::make_shared<Module>(std::move(module_root), name);
+    modules.push_back(module);
+
+    module->scope_stack.push_back(std::make_unique<Scope>()); // make module scope
+    return module;
 }
 
+std::shared_ptr<Module> Interpreter::GetModule(const std::string &name)
+{
+    for (auto md : modules)
+        if (md->name == name)
+            return md;
 
+    return nullptr;
+}
 }

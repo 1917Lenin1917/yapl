@@ -69,6 +69,7 @@ int main(int argc, char** argv)
   std::cout << ast->print(0) << "\n";
 
   Interpreter intp;
+  intp.base_path = std::filesystem::path(R"(C:\_projects\yapl\examples\src\)");
   Visitor v{intp};
 
   auto vtime1 = std::chrono::system_clock::now();

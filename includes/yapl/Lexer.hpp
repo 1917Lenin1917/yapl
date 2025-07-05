@@ -23,6 +23,7 @@ private:
     int paren_depth = 0;
     int brace_depth = 0;
     int sq_br_depth = 0;
+    bool inside_import = false;
 public:
     explicit Lexer(const std::string_view text)
         : m_text(text), m_pos(-1) {}

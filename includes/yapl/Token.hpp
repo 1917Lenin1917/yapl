@@ -13,77 +13,80 @@ namespace yapl {
 
 enum class TOKEN_TYPE
 {
-    DEFAULT = -1,
-    // LITERALS
-    INTEGER,
-    FLOAT,
-    STRING,
-    FSTRING,
-    BOOL,
+  DEFAULT = -1,
+  // LITERALS
+  INTEGER,
+  FLOAT,
+  STRING,
+  FSTRING,
+  BOOL,
 
-    // OPERATORS
-    PLUS,   // +
-    PLUSEQ, // +=
-    MINUS,  // -
-    MINUSEQ,// -=
-    TIMES,  // *
-    TIMESEQ,// *=
-    MOD,    // %
-    MODEQ,  // %=
-    SLASH,  // /
-    SLASHEQ,// /=
-    PERIOD, // .
-    NOT,    // !
-    ASSIGN, // =
-    EQ,     // ==
-    NEQ,    // !=
-    LT,     // <
-    LQ,     // <=
-    GT,     // >
-    GQ,     // >=
-    ARROW,  // =>
-    OR,     // or
-    AND,    // and
+  // OPERATORS
+  PLUS,   // +
+  PLUSEQ, // +=
+  MINUS,  // -
+  MINUSEQ,// -=
+  TIMES,  // *
+  TIMESEQ,// *=
+  MOD,    // %
+  MODEQ,  // %=
+  SLASH,  // /
+  SLASHEQ,// /=
+  PERIOD, // .
+  NOT,    // !
+  ASSIGN, // =
+  EQ,     // ==
+  NEQ,    // !=
+  LT,     // <
+  LQ,     // <=
+  GT,     // >
+  GQ,     // >=
+  ARROW,  // =>
+  OR,     // or
+  AND,    // and
 
-    // SEPARATORS
-    LPAREN,
-    RPAREN,
-    LBRACK,
-    RBRACK,
-    LSQBRACK,
-    RSQBRACK,
-    SEMICOLON,
-    COLON,
-    COMMA,
+  // SEPARATORS
+  LPAREN,
+  RPAREN,
+  LBRACK,
+  RBRACK,
+  LSQBRACK,
+  RSQBRACK,
+  SEMICOLON,
+  COLON,
+  COMMA,
 
-    // KEYWORDS
-    IF,
-    ELSE,
-    FOR,
-    FN,
-    VAR,
-    LET,
-    CONST,
-    RETURN,
-    WHILE,
-    CLASS,
+  // KEYWORDS
+  IF,
+  ELSE,
+  FOR,
+  FN,
+  VAR,
+  LET,
+  CONST,
+  RETURN,
+  WHILE,
+  CLASS,
+  IMPORT,
+  EXPORT,
+  FROM,
 
-    // UNIQUE
-    IDENTIFIER,
-    TT_EOF,
+  // UNIQUE
+  IDENTIFIER,
+  TT_EOF,
 };
 
 struct Token
 {
-    char* value = nullptr;
-    TOKEN_TYPE type = TOKEN_TYPE::DEFAULT;
+  char* value = nullptr;
+  TOKEN_TYPE type = TOKEN_TYPE::DEFAULT;
 
-    int line = -1;
-    int col_start = -1;
-    int col_end = -1;
+  int line = -1;
+  int col_start = -1;
+  int col_end = -1;
 
-    Token(TOKEN_TYPE t, char* val = nullptr, int l = -1, int cstart = -1, int cend = -1)
-            : type(t), value(val), line(l), col_start(cstart), col_end(cend) {}
+  explicit Token(TOKEN_TYPE t, char* val = nullptr, int l = -1, int cstart = -1, int cend = -1)
+          :value(val), type(t), line(l), col_start(cstart), col_end(cend) {}
 };
 
 std::string ttype_to_string(TOKEN_TYPE tt);

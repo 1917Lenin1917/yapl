@@ -264,8 +264,28 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return visitor.visit_StatementASTNode(*this);
     }
 
+    std::string ImportASTNode::print(size_t indent_size)
+    {
+        return "import";
+    }
 
-//
+    std::shared_ptr<Value> ImportASTNode::visit(Visitor &visitor)
+    {
+        return visitor.visit_ImportASTNode(*this);
+    }
+
+    std::string ExportASTNode::print(size_t indent_size)
+    {
+        return "export";
+    }
+
+    std::shared_ptr<Value> ExportASTNode::visit(Visitor &visitor)
+    {
+        return visitor.visit_ExportASTNode(*this);
+    }
+
+
+    //
 // StatementIndexASTNode
 //
     std::string StatementIndexASTNode::print(size_t indent_size)

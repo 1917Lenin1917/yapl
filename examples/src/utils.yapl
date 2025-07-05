@@ -1,6 +1,7 @@
-fn generate_padding(char, len) {
-  if char.size() != 1 { return string } // TODO: add null
-  const pad_len = len - string.size()
+import { get_separator } from 'constants.yapl'
+
+fn generate_padding(size, char, len) {
+  const pad_len = len - size
   let padding = ""
   for let i; i < pad_len; i += 1; {
     padding += char
@@ -9,12 +10,27 @@ fn generate_padding(char, len) {
   return padding
 }
 
-export fn pad_left(string, char, len) {
-  const padding = generate_padding(char, len)
+fn pad_left(string, char, len) {
+  if char.size() != 1 { return string } // TODO: add null
+//  debug;
+  const padding = generate_padding(string.size(), char, len)
   return padding + string;
 }
 
-export fn pad_right(string, char, len) {
-  const padding = generate_padding(char, len)
+fn pad_right(string, char, len) {
+  if char.size() != 1 { return string } // TODO: add null
+  const padding = generate_padding(string.size(), char, len)
   return string + padding;
 }
+
+fn join(arr) {
+  let result = ""
+
+  for let i = 0; i < arr.size(); i += 1; {
+    result += arr[i]
+    if i != arr.size() - 1 { result += get_separator() }
+  }
+  return result
+}
+
+export { pad_left, pad_right, join }
