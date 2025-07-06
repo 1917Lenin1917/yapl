@@ -379,7 +379,6 @@ Token Lexer::make_identifier_or_keyword()
         { "while",  TOKEN_TYPE::WHILE },
         { "class",  TOKEN_TYPE::CLASS },
         { "fn",     TOKEN_TYPE::FN },
-        { "var",    TOKEN_TYPE::VAR },
         { "let",    TOKEN_TYPE::LET },
         { "const",  TOKEN_TYPE::CONST },
         { "return", TOKEN_TYPE::RETURN },

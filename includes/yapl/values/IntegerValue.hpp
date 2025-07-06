@@ -139,6 +139,20 @@ static void init_int_tp()
             return mk_bool(as_int(self.get())->value != as_int(other.get())->value);
         return NotImplemented;
     };
+
+    IntegerTypeObject->nb_lt = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_bool(as_int(self.get())->value < as_int(other.get())->value);
+        return NotImplemented;
+    };
+
+    IntegerTypeObject->nb_le = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp == IntegerTypeObject)
+            return mk_bool(as_int(self.get())->value <= as_int(other.get())->value);
+        return NotImplemented;
+    };
 }
 
 }

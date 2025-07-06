@@ -214,6 +214,51 @@ std::shared_ptr<Variable> Interpreter::GetVariable(const std::string &name)
 
 }
 
+std::tuple<bool, bool> Interpreter::VariableExists(const std::string &name)
+{    // for module
+    if (current_module)
+    {
+        // look through newest scope and its parents
+        auto scope = current_module->scope_stack[current_module->scope_stack.size() - 1];
+        while (scope)
+        {
+            if (scope->vars.contains(name))
+            {
+                return { true, false };
+            }
+            scope = scope->parent_scope;
+        }
+
+        // look in globals
+        if (const auto global_stack = current_module->scope_stack[0]; global_stack->vars.contains(name))
+        {
+            return { true, true };
+        }
+
+        return { false, false };
+    }
+
+    // look through newest scope and its parents
+    auto scope = scope_stack[scope_stack.size() - 1];
+    while (scope)
+    {
+        if (scope->vars.contains(name))
+        {
+            return { true, false };
+        }
+        scope = scope->parent_scope;
+    }
+
+    // look in globals
+    if (const auto global_stack = scope_stack[0]; global_stack->vars.contains(name))
+    {
+        return { true, true };
+    }
+
+    return { false, false };
+
+}
+
 void Interpreter::Export(const std::string& name, const std::shared_ptr<Variable>& var)
 {
     current_module->exported[name] = var;

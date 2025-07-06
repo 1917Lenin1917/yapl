@@ -52,7 +52,6 @@ switch (tt)
     case TOKEN_TYPE::ELSE:      { return "ELSE"; }
     case TOKEN_TYPE::FOR:       { return "FOR"; }
     case TOKEN_TYPE::FN:        { return "FN"; }
-    case TOKEN_TYPE::VAR:       { return "VAR"; }
     case TOKEN_TYPE::LET:       { return "LET"; }
     case TOKEN_TYPE::CONST:     { return "CONST"; }
     case TOKEN_TYPE::RETURN:    { return "RETURN"; }

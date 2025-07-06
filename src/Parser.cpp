@@ -346,7 +346,7 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
 {
 	std::vector<std::unique_ptr<BaseASTNode>> ret_val;
 	auto decl_token = m_tokens[m_pos];
-	advance(); // eat var/let/const
+	advance(); // eat let/const
 	while (true)
 	{
         if (m_tokens[m_pos].type != TOKEN_TYPE::IDENTIFIER)
@@ -363,6 +363,9 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
         }
 		auto name_identifier = m_tokens[m_pos];
         advance(); // eat identifier
+
+		if (decl_token.type == TOKEN_TYPE::CONST)
+			check(TOKEN_TYPE::ASSIGN);
 
 		if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
 		{
@@ -879,7 +882,6 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 		{
 			case TOKEN_TYPE::RBRACK: { advance(); return scope; }
 			case TOKEN_TYPE::RETURN: { scope->nodes.push_back(std::move(parse_return())); break; }
-			case TOKEN_TYPE::VAR:
 			case TOKEN_TYPE::CONST:
 			case TOKEN_TYPE::LET:
 			{
@@ -925,7 +927,6 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
             switch (m_tokens[m_pos].type)
             {
                 case TOKEN_TYPE::TT_EOF: { return root; }
-                case TOKEN_TYPE::VAR:
                 case TOKEN_TYPE::CONST:
                 case TOKEN_TYPE::LET:
                 {

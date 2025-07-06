@@ -36,6 +36,27 @@ static void init_bool_tp()
 			return mk_str(str);
 		};
 
+    BooleanTypeObject->nb_eq = [](const VPtr& self, const VPtr& other) -> VPtr
+		{
+        if (other->tp == BooleanTypeObject)
+            return mk_bool(as_bool(self.get())->value == as_bool(other.get())->value);
+        return NotImplemented;
+		};
+
+    BooleanTypeObject->nb_and = [](const VPtr& self, const VPtr& other) -> VPtr
+		{
+        if (other->tp == BooleanTypeObject)
+            return mk_bool(as_bool(self.get())->value && as_bool(other.get())->value);
+        return NotImplemented;
+		};
+
+    BooleanTypeObject->nb_or = [](const VPtr& self, const VPtr& other) -> VPtr
+		{
+        if (other->tp == BooleanTypeObject)
+            return mk_bool(as_bool(self.get())->value || as_bool(other.get())->value);
+        return NotImplemented;
+		};
+
     init_base_methods(BooleanTypeObject);
     init_bool_methods(BooleanTypeObject);
 }

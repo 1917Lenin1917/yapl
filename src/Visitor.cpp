@@ -104,7 +104,7 @@ std::shared_ptr<Value> Visitor::visit_IndexASTNode(const IndexASTNode &node)
 
 std::shared_ptr<Value> Visitor::visit_VariableASTNode(const VariableASTNode &node)
 {
-    if (auto var = interpreter.GetVariable(node.name.value))
+    if (auto [ var, is_global ] = interpreter.VariableExists(node.name.value); var && !is_global)
     {
        throw RuntimeError(std::format("Variable {} is already defined.", node.name.value));
     }
@@ -192,6 +192,16 @@ std::shared_ptr<Value> Visitor::visit_BinaryOpASTNode(const BinaryOpASTNode &nod
     {
         op  = lhs->tp->nb_nq;
         rop = rhs->tp->nb_nq;
+    }
+    if (node.op.type == TOKEN_TYPE::AND)
+    {
+        op  = lhs->tp->nb_and;
+        rop = rhs->tp->nb_and;
+    }
+    if (node.op.type == TOKEN_TYPE::OR)
+    {
+        op  = lhs->tp->nb_or;
+        rop = rhs->tp->nb_or;
     }
 
     if (op) {
@@ -368,6 +378,7 @@ std::shared_ptr<Value> Visitor::visit_ForEachLoopASTNode(const ForEachLoopASTNod
         {
             interpreter.PushScope();
             auto scope = interpreter.GetCurrentScope();
+            scope->parent_scope = for_scope;
             var->value = iter->Next();
             scope->vars[node.identifier.value] = var;
 

@@ -58,6 +58,7 @@ public:
     std::shared_ptr<Function> PushFunction(const std::string& name);
     std::shared_ptr<Variable> AddVariable(const std::string& name, bool is_const, std::shared_ptr<Value> value);
     std::shared_ptr<Variable> GetVariable(const std::string& name);
+    std::tuple<bool, bool> VariableExists(const std::string& name);
     void Export(const std::string& name, const std::shared_ptr<Variable>& var);
     void AddFunction();
     std::shared_ptr<Function> GetCurrentFunction();

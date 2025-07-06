@@ -102,7 +102,7 @@ TEST_CASE("Test identifiers", "[lexer]")
 
 TEST_CASE("Test keywords", "[lexer]")
 {
-    yapl::Lexer lexer{ "if else for while fn var let const return" };
+    yapl::Lexer lexer{ "if else for while fn let const return" };
     auto tokens = lexer.make_tokens();
 
     REQUIRE(tokens[0].type == yapl::TOKEN_TYPE::IF);
@@ -110,7 +110,6 @@ TEST_CASE("Test keywords", "[lexer]")
     REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::FOR);
     REQUIRE(tokens[3].type == yapl::TOKEN_TYPE::WHILE);
     REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::FN);
-    REQUIRE(tokens[5].type == yapl::TOKEN_TYPE::VAR);
     REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::LET);
     REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::CONST);
     REQUIRE(tokens[8].type == yapl::TOKEN_TYPE::RETURN);
