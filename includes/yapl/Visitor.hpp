@@ -14,6 +14,7 @@
 #define DEBUG std::raise(SIGINT);
 #endif
 #ifdef __APPLE__
+#include <csignal>
 #define DEBUG std::raise(SIGINT);
 #endif
 #ifdef __MINGW32__

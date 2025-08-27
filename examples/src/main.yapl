@@ -372,13 +372,24 @@
 //print(add1(1, 2))
 
 
-fn sum(*args) {
-   let s = 0
-   for arg : args {
-      s += arg
-   }
+//fn sum(*args) {
+//   let s = 0
+//   for arg : args {
+//      s += arg
+//   }
+//   return s
+//}
+//const s = sum(1, 2, 3, 4, 5, 6, 7, 8)
+//print(s)
 
-   return s
-}
-const s = sum(1, 2, 3, 4, 5, 6, 7, 8)
-print(s)
+//const end = 1000000000;
+//const end = 1000000;
+//const a = 34;
+//const b = 35;
+//
+//for let i = 0; i < end; i += 1; {
+//    const c = a + b;
+//}
+
+1 + 2 + 3 * (4 - 2) + (28 / 2 - 4)
+//1 - 2

@@ -43,6 +43,7 @@ public:
 
     std::unordered_map<std::string, std::shared_ptr<Value>> types;
     std::unordered_map<std::string, FunctionASTNode*> function_definitions;
+    std::vector<std::shared_ptr<Module>> module_stack;
     std::vector<std::shared_ptr<Function>> function_stack;
     std::vector<std::shared_ptr<Scope>> scope_stack;
     std::vector<std::unique_ptr<FunctionASTNode>> builtin_functions;

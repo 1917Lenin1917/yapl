@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.29)
 project(yapl LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+#set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g -march=native -fno-signed-zeros -fno-trapping-math -frename-registers -funroll-loops")
 include_directories(${CMAKE_SOURCE_DIR}/includes)
 #set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 #set(CMAKE_CXX_FLAGS "-g -O0 -fno-omit-frame-pointer -gdwarf-2")
@@ -31,6 +32,12 @@ add_executable(yapl src/main.cpp
         src/values/UserDefinedValue.cpp
         src/values/FunctionValue.cpp
         src/values/SizeIterator.cpp
+        includes/yapl/ByteCode.hpp
+        includes/yapl/ByteCodeVM.hpp
+        src/ByteCodeVM.cpp
+        includes/yapl/ByteCodeVisitor.hpp
+        includes/yapl/CodeObject.hpp
+        src/ByteCodeVisitor.cpp
 )
 
 add_subdirectory(externals/Catch2)
@@ -59,3 +66,5 @@ add_executable(tests
         includes/yapl/values/SizeIterator.hpp
 )
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+
+#set_target_properties(yapl PROPERTIES UNITY_BUILD ON)
