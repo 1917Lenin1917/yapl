@@ -494,47 +494,6 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 		check(TOKEN_TYPE::SEMICOLON);
 		advance();
 		return chain;
-		advance(); // eat .
-    auto name = m_tokens[m_pos];
-    advance(); // eat name
-
-		if (m_tokens[m_pos].type != TOKEN_TYPE::LPAREN)
-		{
-			if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
-			{
-				advance(); // eat eq
-				auto expr = parse_semic_expr();
-				return std::make_unique<SetPropertyASTNode>(std::make_unique<IdentifierASTNode>(identifier), name, std::move(expr));
-			}
-			check(TOKEN_TYPE::SEMICOLON);
-			advance(); // eat ;
-			return std::make_unique<GetPropertyASTNode>(std::make_unique<IdentifierASTNode>(identifier), name);
-		}
-
-    std::vector<std::unique_ptr<BaseASTNode>> args;
-    // function call;
-    advance(); // eat (
-    while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
-    {
-        args.push_back(std::move(parse_expr()));
-        if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
-        {
-            advance();
-        }
-    }
-    advance(); // eat )
-    auto method = std::make_unique<MethodCallASTNode>(std::make_unique<IdentifierASTNode>(identifier), name, args);
-		if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
-		{
-			advance(); // eat eq
-			auto expr = parse_semic_expr();
-
-			auto stmnt = std::make_unique<StatementASTNode>(std::move(method), std::move(expr));
-			return std::move(stmnt);
-		}
-		check(TOKEN_TYPE::SEMICOLON);
-		advance(); // eat ;
-		return std::move(method);
 	}
 	if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
 	{

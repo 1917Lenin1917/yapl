@@ -6,6 +6,12 @@
 #include "CodeObject.hpp"
 
 namespace yapl {
+class WhileLoopASTNode;
+class StatementASTNode;
+class ForLoopASTNode;
+class ScopeASTNode;
+class IfElseExpressionASTNode;
+class IdentifierASTNode;
 class StringASTNode;
 class BooleanASTNode;
 class IntegerASTNode;
@@ -24,10 +30,17 @@ public:
   CodeObject visit_RootASTNode(const RootASTNode &node);
   void visit_VariableASTNode(const VariableASTNode &node);
   void visit_BinaryOpASTNode(const BinaryOpASTNode &node);
+  void visit_IdentifierASTNode(const IdentifierASTNode &node);
   std::size_t visit_IntegerASTNode(const IntegerASTNode &node);
   void visit_FloatASTNode(const FloatASTNode &node);
   void visit_BooleanASTNode(const BooleanASTNode &node);
   void visit_StringASTNode(const StringASTNode &node);
+  void visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node);
+  void visit_ScopeASTNode(const ScopeASTNode &node);
+  void visit_ForLoopASTNode(const ForLoopASTNode &node);
+  void visit_WhileLoopASTNode(const WhileLoopASTNode &node);
+  void visit_StatementASTNode(const StatementASTNode &node);
+
   /*
   Objec visit_LiteralASTNode(const LiteralASTNode &node) override;
   Objec visit_IntegerASTNode(const IntegerASTNode &node) override;
@@ -40,13 +53,10 @@ public:
   Objec visit_IndexASTNode(const IndexASTNode &node) override;
   Objec visit_UnaryOpASTNode(const UnaryOpASTNode &node) override;
   Objec visit_BinaryOpASTNode(const BinaryOpASTNode &node) override;
-  Objec visit_StatementASTNode(const StatementASTNode &node) override;
   Objec visit_ImportASTNode(const ImportASTNode &node) override;
   Objec visit_ExportASTNode(const ExportASTNode &node) override;
   Objec visit_StatementIndexASTNode(const StatementIndexASTNode &node) override;
   Objec visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node) override;
-  Objec visit_WhileLoopASTNode(const WhileLoopASTNode &node) override;
-  Objec visit_ForLoopASTNode(const ForLoopASTNode &node) override;
   Objec visit_ForEachLoopASTNode(const ForEachLoopASTNode &node) override;
   Objec visit_ReturnStatementASTNode(const ReturnStatementASTNode &node) override;
   Objec visit_ScopeASTNode(const ScopeASTNode &node) override;
@@ -65,6 +75,8 @@ public:
 
 private:
   std::vector<CodeObject> m_ObjectStack;
+
+  bool next_identifier_as_store_name = false;
 };
 
 }

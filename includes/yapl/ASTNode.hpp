@@ -35,7 +35,7 @@ public:
   virtual std::string print(size_t indent_size) = 0;
   virtual std::shared_ptr<Value> visit(Visitor &visitor) = 0;
 
-  virtual std::size_t visit(ByteCodeVisitor &visitor) { return -1; }
+  virtual void visit(ByteCodeVisitor &visitor) {}
 };
 
 class InternalGetValueASTNode final : public BaseASTNode
@@ -74,7 +74,7 @@ public:
     std::string print(size_t indent_size) override;
 
     std::shared_ptr<Value> visit(Visitor &visitor) override;
-    std::size_t visit(ByteCodeVisitor &visitor) override { return visitor.visit_IntegerASTNode(*this); }
+    void visit(ByteCodeVisitor &visitor) override { visitor.visit_IntegerASTNode(*this); }
 };
 
 class FloatASTNode final : public BaseASTNode
@@ -128,6 +128,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_IdentifierASTNode(*this); }
 };
 
 class IndexASTNode final : public BaseASTNode
@@ -196,6 +197,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_VariableASTNode(*this); }
 };
 
 class UnaryOpASTNode final : public BaseASTNode
@@ -222,7 +224,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
-  std::size_t visit(ByteCodeVisitor &visitor) override { visitor.visit_BinaryOpASTNode(*this); return -1; }
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_BinaryOpASTNode(*this); }
 };
 
 class StatementASTNode final : public BaseASTNode
@@ -236,6 +238,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_StatementASTNode(*this); }
 };
 
 class ImportASTNode final : public BaseASTNode
@@ -410,6 +413,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ScopeASTNode(*this); }
 };
 
 class FunctionASTNode final : public BaseASTNode
@@ -451,6 +455,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_IfElseExpressionASTNode(*this); };
 };
 
 class WhileLoopASTNode final : public BaseASTNode
@@ -465,6 +470,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_WhileLoopASTNode(*this); }
 };
 class ForLoopASTNode final : public BaseASTNode
 {
@@ -481,6 +487,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ForLoopASTNode(*this); }
 };
 
 class ForEachLoopASTNode final : public BaseASTNode
@@ -519,7 +526,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
-  virtual std::size_t visit(ByteCodeVisitor &visitor) { visitor.visit_RootASTNode(*this); return -1; }
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_RootASTNode(*this); }
 };
 }
 

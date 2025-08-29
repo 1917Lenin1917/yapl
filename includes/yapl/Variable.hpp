@@ -18,5 +18,8 @@ public:
   VALUE_TYPE type;
   std::shared_ptr<Value> value;
   std::string module_name;
+  std::string name;
+
+  bool is_tdz = true;
 };
 }

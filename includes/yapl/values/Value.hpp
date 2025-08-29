@@ -44,6 +44,9 @@ namespace yapl {
 #define mk_size_iter(iterable, len) std::make_shared<SizeIteratorValue>(iterable, len)
 #define as_size_iter(v) static_cast<SizeIteratorValue*>(v)
 
+#define mk_undefined() std::make_shared<UndefinedValue>()
+#define as_undefined(v) static_cast<UndefinedValue*>(v)
+
 struct TypeObject;
 
 class FunctionASTNode;
@@ -68,6 +71,7 @@ enum class VALUE_TYPE
   USER_DEFINED,
   FUNCTION,
   ITERATOR,
+  UNDEFINED,
 };
 
 std::string value_type_to_string(VALUE_TYPE vt);

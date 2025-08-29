@@ -391,5 +391,34 @@
 //    const c = a + b;
 //}
 
-1 + 2 + 3 * (4 - 2) + (28 / 2 - 4)
+//1 + 2 + 3 * (4 - 2) + (28 / 2 - 4)
 //1 - 2
+
+//const a = 1
+//const b = 2
+
+//const c = a + b * 2
+
+//if 2 < 1 {
+//    const d = 8
+//} else {
+//    const d = 10
+//}
+//
+
+
+//let sum = 0;
+//const end = 10000000
+
+//for let i = 0; i < end; i += 1; {
+//    sum += i;
+//}
+
+//let i = 0;
+//while i < end {
+//    sum += 1
+//
+//    i += 1
+//}
+
+

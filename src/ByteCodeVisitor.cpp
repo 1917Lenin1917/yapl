@@ -3,6 +3,7 @@
 //
 
 #include "yapl/ByteCodeVisitor.hpp"
+#include "yapl/values/UndefinedValue.hpp"
 #include "yapl/values/IntegerValue.hpp"
 
 #include "yapl/ASTNode.hpp"
@@ -39,17 +40,43 @@ CodeObject ByteCodeVisitor::visit_RootASTNode(const RootASTNode &node)
 
 void ByteCodeVisitor::visit_VariableASTNode(const VariableASTNode &node)
 {
+  // TODO: handle TDZ (is_tdz)
   auto& current_object = m_ObjectStack.back();
 
+  auto var_name = std::string(node.name.value);
+  if (current_object.LocalsMap.contains(var_name))
+  {
+    auto slot_idx = current_object.LocalsMap.at(var_name);
+
+    if (node.value)
+    {
+      node.value->visit(*this);
+      current_object.OpCodes.push_back(STORE_NAME);
+      current_object.OpCodes.push_back(static_cast<OpCode>(slot_idx));
+    }
+    return;
+  }
+
+  auto is_const = node.type.type == TOKEN_TYPE::CONST;
+  const auto var = std::make_shared<Variable>(is_const, VALUE_TYPE::UNDEFINED, mk_undefined(), "__global__", node.name.value);
+  current_object.Locals.push_back(var);
+  auto idx = current_object.Locals.size() - 1;
+  current_object.LocalsMap[node.name.value] = idx;
+
+  if (node.value)
+  {
+    node.value->visit(*this);
+    current_object.OpCodes.push_back(STORE_NAME);
+    current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+  }
 }
 
 void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
-  // why do i return the index???
-  const auto idx1 = node.LHS->visit(*this);
-  const auto idx2 = node.RHS->visit(*this);
+  node.LHS->visit(*this);
+  node.RHS->visit(*this);
 
   current_object.OpCodes.push_back(BINARY_OP);
 
@@ -111,6 +138,27 @@ void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
 
 }
 
+void ByteCodeVisitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
+{
+  // TODO: throw compilation error if variable doesnt exist
+
+
+  auto& current_object = m_ObjectStack.back();
+
+  const auto idx = current_object.LocalsMap.at(node.token.value);
+
+  if (next_identifier_as_store_name)
+  {
+    current_object.OpCodes.push_back(STORE_NAME);
+    current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+    next_identifier_as_store_name = false;
+    return;
+  }
+
+  current_object.OpCodes.push_back(LOAD_NAME);
+  current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+}
+
 std::size_t ByteCodeVisitor::visit_IntegerASTNode(const IntegerASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
@@ -145,6 +193,146 @@ void ByteCodeVisitor::visit_BooleanASTNode(const BooleanASTNode &node)
 
 void ByteCodeVisitor::visit_StringASTNode(const StringASTNode &node)
 {
+}
+
+void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  node.condition->visit(*this);
+  current_object.OpCodes.push_back(JMP_IF_FALSE);
+  // temp push 0, and save index. after we compute if branch, we go back and update jump amount
+  current_object.OpCodes.push_back(static_cast<OpCode>(0));
+  auto jmp_len_idx = current_object.OpCodes.size() - 1;
+
+  node.true_scope->visit(*this);
+  // if there is an else branch, we should jump over it
+
+  if (node.false_scope)
+  {
+    // temp push 0, and save index. after we compute else branch, we go back and update jump amount
+    current_object.OpCodes.push_back(JMP);
+    current_object.OpCodes.push_back(static_cast<OpCode>(0));
+    auto jmp_len_idx_2 = current_object.OpCodes.size() - 1;
+    current_object.OpCodes[jmp_len_idx] = static_cast<OpCode>(current_object.OpCodes.size() - jmp_len_idx - 1);
+
+    node.false_scope->visit(*this);
+    current_object.OpCodes[jmp_len_idx_2] = static_cast<OpCode>(current_object.OpCodes.size() - jmp_len_idx_2 - 1);
+  }
+}
+
+void ByteCodeVisitor::visit_ScopeASTNode(const ScopeASTNode &node)
+{
+  // TODO: do some initialization? like setting in_tdz to false
+  for (const auto& child_node : node.nodes)
+  {
+    child_node->visit(*this);
+  }
+}
+
+void ByteCodeVisitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  // 1) init: runs once
+  if (node.declaration) {
+    node.declaration->visit(*this);
+  }
+
+  // 2) mark the start of the condition
+  const size_t cond_start = current_object.OpCodes.size();
+
+  // 3) condition
+  if (node.condition) {
+    node.condition->visit(*this);
+  }
+  current_object.OpCodes.push_back(JMP_IF_FALSE);
+  current_object.OpCodes.push_back(static_cast<OpCode>(0)); // placeholder
+  const size_t jmp_out_len_idx = current_object.OpCodes.size() - 1; // index of placeholder
+
+  // 4) body
+  if (node.scope) {
+    node.scope->visit(*this);
+  }
+
+  // 5) increment (runs after body each iteration)
+  if (node.increment) {
+    node.increment->visit(*this);
+  }
+
+  // 6) jump back to condition start (backward jump)
+  current_object.OpCodes.push_back(JMP);
+  current_object.OpCodes.push_back(static_cast<OpCode>(0)); // placeholder
+  const size_t jmp_back_len_idx = current_object.OpCodes.size() - 1;
+
+  // Patch backward jump:
+  // immediate = target_index - (len_idx + 1)  ==> jump from after-immediate to cond_start
+  {
+    const int back = static_cast<int>(cond_start) - static_cast<int>(jmp_back_len_idx + 1);
+    current_object.OpCodes[jmp_back_len_idx] = static_cast<OpCode>(back);
+  }
+
+  // Patch "exit the loop" forward jump:
+  // immediate = end_index - (len_idx + 1)  ==> jump from after-immediate to after-loop
+  {
+    const int out = static_cast<int>(current_object.OpCodes.size()) - static_cast<int>(jmp_out_len_idx + 1);
+    current_object.OpCodes[jmp_out_len_idx] = static_cast<OpCode>(out);
+  }
+}
+
+void ByteCodeVisitor::visit_WhileLoopASTNode(const WhileLoopASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  // 1) mark the start of the condition
+  const size_t cond_start = current_object.OpCodes.size();
+
+  // 2) condition
+  if (node.condition) {
+    node.condition->visit(*this); // leaves truthy/falsy on stack
+  }
+  // If false -> jump to end (placeholder now, patch later)
+  current_object.OpCodes.push_back(JMP_IF_FALSE);
+  current_object.OpCodes.push_back(static_cast<OpCode>(0));
+  const size_t jmp_out_len_idx = current_object.OpCodes.size() - 1;
+
+  // 3) body
+  if (node.scope) {
+    node.scope->visit(*this);
+  }
+
+  // 4) jump back to condition start
+  current_object.OpCodes.push_back(JMP);
+  current_object.OpCodes.push_back(static_cast<OpCode>(0)); // placeholder
+  const size_t jmp_back_len_idx = current_object.OpCodes.size() - 1;
+
+  // --- patching ---
+
+  // Backward jump: from after-immediate to cond_start
+  {
+    const int back = static_cast<int>(cond_start) - static_cast<int>(jmp_back_len_idx + 1);
+    current_object.OpCodes[jmp_back_len_idx] = static_cast<OpCode>(back);
+  }
+
+  // Exit jump: from after-immediate to after-loop (current end)
+  {
+    const int out = static_cast<int>(current_object.OpCodes.size()) - static_cast<int>(jmp_out_len_idx + 1);
+    current_object.OpCodes[jmp_out_len_idx] = static_cast<OpCode>(out);
+  }
+}
+
+void ByteCodeVisitor::visit_StatementASTNode(const StatementASTNode &node)
+{
+  // for now just handle assignment to variable statement
+  // TODO: handle method and property assignment
+
+  // push rhs to stack
+  node.RHS->visit(*this);
+
+  next_identifier_as_store_name = true;
+
+  node.base->visit(*this);
+
 }
 
 }

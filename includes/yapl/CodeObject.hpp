@@ -20,6 +20,7 @@ struct CodeObject
 
   // maybe move this to visitor?
   std::unordered_map<std::string, std::size_t> ConstantsMap;
+  std::unordered_map<std::string, std::size_t> LocalsMap;
 };
 
 }

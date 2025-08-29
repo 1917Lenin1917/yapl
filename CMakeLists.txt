@@ -38,6 +38,8 @@ add_executable(yapl src/main.cpp
         includes/yapl/ByteCodeVisitor.hpp
         includes/yapl/CodeObject.hpp
         src/ByteCodeVisitor.cpp
+        src/values/UndefinedValue.cpp
+        includes/yapl/values/UndefinedValue.hpp
 )
 
 add_subdirectory(externals/Catch2)

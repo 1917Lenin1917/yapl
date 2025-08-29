@@ -9,6 +9,7 @@
 #include "yapl/Parser.hpp"
 #include "yapl/Interpreter.hpp"
 #include "yapl/Visitor.hpp"
+#include "yapl/values/UndefinedValue.hpp"
 
 using namespace yapl;
 
@@ -94,22 +95,27 @@ int main(int argc, char** argv)
   init_dict_tp();
   init_function_tp();
   init_size_iterator_type();
+  init_undefined_tp();
 
   ByteCodeVisitor v;
 
+  auto vmtime1 = std::chrono::system_clock::now();
   auto obj = v.visit_RootASTNode(*ast_as_root);
   ByteCodeVM vm { obj };
   vm.Run();
+  auto vmtime2 = std::chrono::system_clock::now();
+  std::cout << "Virtual Byting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vmtime2-vmtime1) << "\n";
+  std::cout << std::endl;
 
-  // Interpreter intp;
-  // intp.base_path = std::filesystem::path(R"(C:\_projects\yapl\examples\src\)");
-  // Visitor v{intp};
-  //
-  // auto vtime1 = std::chrono::system_clock::now();
-  // ast->visit(v);
-  // auto vtime2 = std::chrono::system_clock::now();
-  // std::cout << "Interpreting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vtime2-vtime1) << "\n";
-  // std::cout << std::endl;
+  Interpreter intp;
+  intp.base_path = std::filesystem::path(R"(C:\_projects\yapl\examples\src\)");
+  Visitor vi{intp};
+
+  auto vtime1 = std::chrono::system_clock::now();
+  ast->visit(vi);
+  auto vtime2 = std::chrono::system_clock::now();
+  std::cout << "Interpreting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vtime2-vtime1) << "\n";
+  std::cout << std::endl;
   return 0;
 
 // //    run();
