@@ -3,6 +3,7 @@
 //
 
 #include "yapl/ByteCodeVM.hpp"
+#include "yapl/values/UndefinedValue.hpp"
 
 namespace yapl {
 
@@ -35,6 +36,33 @@ void ByteCodeVM::Run()
       {
         const auto idx = m_CodeObject.OpCodes[m_Idx++];
         m_Stack.push(m_CodeObject.Constants[idx]);
+        break;
+      }
+      case LOAD_UNDEF:
+      {
+        // TODO: change to load from globals !
+        m_Stack.push(mk_undefined());
+        break;
+      }
+      case INIT_VAR:
+      {
+        const auto idx = m_CodeObject.OpCodes[m_Idx++];
+        auto& var = m_CodeObject.Locals[idx];
+        auto value = m_Stack.top();
+        m_Stack.pop();
+
+        var->is_tdz = false;
+        var->value = value;
+
+        break;
+      }
+      case DEINIT_VAR:
+      {
+        const auto idx = m_CodeObject.OpCodes[m_Idx++];
+        auto& var = m_CodeObject.Locals[idx];
+
+        var->is_tdz = true;
+        var->value = nullptr;
         break;
       }
       case BINARY_OP:

@@ -6,6 +6,8 @@
 #include "CodeObject.hpp"
 
 namespace yapl {
+class FunctionASTNode;
+class FunctionDeclASTNode;
 class WhileLoopASTNode;
 class StatementASTNode;
 class ForLoopASTNode;
@@ -40,6 +42,7 @@ public:
   void visit_ForLoopASTNode(const ForLoopASTNode &node);
   void visit_WhileLoopASTNode(const WhileLoopASTNode &node);
   void visit_StatementASTNode(const StatementASTNode &node);
+  void visit_FunctionASTNode(const FunctionASTNode &node);
 
   /*
   Objec visit_LiteralASTNode(const LiteralASTNode &node) override;
@@ -77,6 +80,8 @@ private:
   std::vector<CodeObject> m_ObjectStack;
 
   bool next_identifier_as_store_name = false;
+  // TODO: change?
+  std::vector<std::vector<std::size_t>> m_ScopeVars;
 };
 
 }

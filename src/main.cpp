@@ -3,6 +3,9 @@
 #include <iostream>
 #include <filesystem>
 #include <sstream>
+#include <yapl/values/ArrayValue.hpp>
+#include <yapl/values/FunctionValue.hpp>
+#include <yapl/values/TypeObjectValue.hpp>
 
 #include "yapl/ByteCodeVM.hpp"
 #include "yapl/Lexer.hpp"
@@ -10,6 +13,9 @@
 #include "yapl/Interpreter.hpp"
 #include "yapl/Visitor.hpp"
 #include "yapl/values/UndefinedValue.hpp"
+#include "yapl/values/IntegerValue.hpp"
+#include "yapl/values/FloatValue.hpp"
+#include "yapl/values/BooleanValue.hpp"
 
 using namespace yapl;
 

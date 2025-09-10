@@ -40,35 +40,26 @@ CodeObject ByteCodeVisitor::visit_RootASTNode(const RootASTNode &node)
 
 void ByteCodeVisitor::visit_VariableASTNode(const VariableASTNode &node)
 {
-  // TODO: handle TDZ (is_tdz)
   auto& current_object = m_ObjectStack.back();
 
-  auto var_name = std::string(node.name.value);
-  if (current_object.LocalsMap.contains(var_name))
+  const auto var_name = std::string(node.name.value);
+  std::size_t idx = current_object.LocalsMap.contains(var_name) ? current_object.LocalsMap.at(var_name) : -1;
+  if (idx == -1)
   {
-    auto slot_idx = current_object.LocalsMap.at(var_name);
-
-    if (node.value)
-    {
-      node.value->visit(*this);
-      current_object.OpCodes.push_back(STORE_NAME);
-      current_object.OpCodes.push_back(static_cast<OpCode>(slot_idx));
-    }
-    return;
+    auto is_const = node.type.type == TOKEN_TYPE::CONST;
+    const auto var = std::make_shared<Variable>(is_const, VALUE_TYPE::UNDEFINED, nullptr, "TODO", node.name.value);
+    current_object.Locals.push_back(var);
+    idx = current_object.Locals.size() - 1;
+    current_object.LocalsMap[var_name] = idx;
   }
 
-  auto is_const = node.type.type == TOKEN_TYPE::CONST;
-  const auto var = std::make_shared<Variable>(is_const, VALUE_TYPE::UNDEFINED, mk_undefined(), "__global__", node.name.value);
-  current_object.Locals.push_back(var);
-  auto idx = current_object.Locals.size() - 1;
-  current_object.LocalsMap[node.name.value] = idx;
+  if (node.value) { node.value->visit(*this); }
+  else { current_object.OpCodes.push_back(LOAD_UNDEF); }
 
-  if (node.value)
-  {
-    node.value->visit(*this);
-    current_object.OpCodes.push_back(STORE_NAME);
-    current_object.OpCodes.push_back(static_cast<OpCode>(idx));
-  }
+  current_object.OpCodes.push_back(INIT_VAR);
+  current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+
+  m_ScopeVars.back().push_back(idx);
 }
 
 void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
@@ -223,11 +214,19 @@ void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNod
 
 void ByteCodeVisitor::visit_ScopeASTNode(const ScopeASTNode &node)
 {
-  // TODO: do some initialization? like setting in_tdz to false
+  auto& current_object = m_ObjectStack.back();
+
+  m_ScopeVars.emplace_back();
   for (const auto& child_node : node.nodes)
   {
     child_node->visit(*this);
   }
+  for (std::size_t idx : m_ScopeVars.back())
+  {
+    current_object.OpCodes.push_back(DEINIT_VAR);
+    current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+  }
+  m_ScopeVars.pop_back();
 }
 
 void ByteCodeVisitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
@@ -333,6 +332,19 @@ void ByteCodeVisitor::visit_StatementASTNode(const StatementASTNode &node)
 
   node.base->visit(*this);
 
+}
+
+void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
+{
+  // 1. generate a new code object for the function and push it in constants pool
+  // 2. generate opcode to load the code object from constants and generate a function object
+
+  m_ObjectStack.emplace_back();
+
+  node.body->visit(*this);
+
+  auto& f_code_object = m_ObjectStack.back();
+  m_ObjectStack.pop_back();
 }
 
 }

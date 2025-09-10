@@ -8,12 +8,8 @@
 #include <vector>
 
 #include "ByteCode.hpp"
-#include "values/ArrayValue.hpp"
 #include "values/DictValue.hpp"
-#include "values/FunctionValue.hpp"
 #include "values/Value.hpp"
-#include "values/IntegerValue.hpp"
-#include "values/TypeObjectValue.hpp"
 
 namespace yapl {
 
