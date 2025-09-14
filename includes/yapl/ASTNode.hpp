@@ -389,6 +389,7 @@ public:
 	std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_FunctionCallASTNode(*this); }
 };
 
 class ReturnStatementASTNode final : public BaseASTNode
@@ -401,6 +402,7 @@ public:
 	std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ReturnStatementASTNode(*this); }
 };
 
 class ScopeASTNode final : public BaseASTNode
@@ -428,6 +430,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_FunctionASTNode(*this); }
 };
 
 class BuiltinCustomVisitFunctionASTNode final : public BaseASTNode

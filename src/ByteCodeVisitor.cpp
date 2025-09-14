@@ -3,7 +3,7 @@
 //
 
 #include "yapl/ByteCodeVisitor.hpp"
-#include "yapl/values/UndefinedValue.hpp"
+#include "yapl/values/CodeObjectValue.hpp"
 #include "yapl/values/IntegerValue.hpp"
 
 #include "yapl/ASTNode.hpp"
@@ -27,12 +27,14 @@ namespace yapl {
 CodeObject ByteCodeVisitor::visit_RootASTNode(const RootASTNode &node)
 {
   m_ObjectStack.push_back({});
+  m_ScopeVars.push_back({});
 
   for (const auto& child_node : node.nodes)
   {
     child_node->visit(*this);
   }
   m_ObjectStack.back().OpCodes.push_back(HALT);
+  m_ScopeVars.pop_back();
 
   return m_ObjectStack.back();
 
@@ -49,6 +51,7 @@ void ByteCodeVisitor::visit_VariableASTNode(const VariableASTNode &node)
     auto is_const = node.type.type == TOKEN_TYPE::CONST;
     const auto var = std::make_shared<Variable>(is_const, VALUE_TYPE::UNDEFINED, nullptr, "TODO", node.name.value);
     current_object.Locals.push_back(var);
+    current_object.Names.emplace_back(node.name.value);
     idx = current_object.Locals.size() - 1;
     current_object.LocalsMap[var_name] = idx;
   }
@@ -136,7 +139,15 @@ void ByteCodeVisitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
 
   auto& current_object = m_ObjectStack.back();
 
-  const auto idx = current_object.LocalsMap.at(node.token.value);
+  std::string name = node.token.value;
+  auto idx = current_object.NamesMap.contains(name) ? current_object.NamesMap.at(name) : -1;
+
+  if (idx == -1)
+  {
+    current_object.Names.push_back(name);
+    idx = current_object.Names.size() - 1;
+    current_object.NamesMap[name] = idx;
+  }
 
   if (next_identifier_as_store_name)
   {
@@ -337,14 +348,53 @@ void ByteCodeVisitor::visit_StatementASTNode(const StatementASTNode &node)
 void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
 {
   // 1. generate a new code object for the function and push it in constants pool
-  // 2. generate opcode to load the code object from constants and generate a function object
 
   m_ObjectStack.emplace_back();
 
   node.body->visit(*this);
 
-  auto& f_code_object = m_ObjectStack.back();
+  auto f_code_object = std::move(m_ObjectStack.back());
   m_ObjectStack.pop_back();
+
+  auto& current_object = m_ObjectStack.back();
+
+  const auto decl = static_cast<FunctionDeclASTNode*>(node.decl.get());
+  const std::string name = decl->name.value;
+
+  auto ptr = std::make_shared<CodeObject>(std::move(f_code_object));
+  current_object.Constants.push_back(std::make_shared<CodeObjectValue>(ptr));
+  auto idx = current_object.Constants.size() - 1;
+
+  current_object.ConstantsMap[name] = idx;
+
+  const auto var = std::make_shared<Variable>(true, VALUE_TYPE::UNDEFINED, nullptr, "TODO", name);
+  current_object.Locals.push_back(var);
+  auto locals_idx = current_object.Locals.size() - 1;
+  current_object.LocalsMap[name] = locals_idx;
+
+  // 2. generate opcode to load the code object from constants and generate a function object
+  current_object.OpCodes.push_back(LOAD_CONST);
+  current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+
+  current_object.OpCodes.push_back(MAKE_FUNC);
+
+  current_object.OpCodes.push_back(STORE_NAME);
+  current_object.OpCodes.push_back(static_cast<OpCode>(locals_idx));
 }
 
+void ByteCodeVisitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode &node)
+{
+  node.expr->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+  current_object.OpCodes.push_back(RETURN);
+}
+
+void ByteCodeVisitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
+{
+  node.base->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+  current_object.OpCodes.push_back(CALL);
+}
 }

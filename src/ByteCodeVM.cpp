@@ -3,95 +3,159 @@
 //
 
 #include "yapl/ByteCodeVM.hpp"
+
+#include "yapl/values/CodeObjectValue.hpp"
 #include "yapl/values/UndefinedValue.hpp"
+#include "yapl/values/FunctionValue.hpp"
 
 namespace yapl {
 
-void ByteCodeVM::Run()
+void ByteCodeVM::Run(CodeObject &code)
 {
+  std::size_t idx = 0;
+
   while (true)
   {
-    switch (m_CodeObject.OpCodes[m_Idx++])
+    const auto op = code.OpCodes[idx++];
+
+    switch (op)
     {
       case JMP:
       {
-        const auto idx = static_cast<int>(m_CodeObject.OpCodes[m_Idx++]);
-        m_Idx += idx;
+        const auto rel = static_cast<int>(code.OpCodes[idx++]);
+        idx += rel;
         break;
       }
+
       case JMP_IF_FALSE:
       {
         const auto val = m_Stack.top();
         m_Stack.pop();
 
-        const auto idx = m_CodeObject.OpCodes[m_Idx++];
+        const auto rel = code.OpCodes[idx++];
         if (!val->IsTruthy())
         {
-          m_Idx += idx;
+          idx += rel;
         }
-
         break;
       }
+
       case LOAD_CONST:
       {
-        const auto idx = m_CodeObject.OpCodes[m_Idx++];
-        m_Stack.push(m_CodeObject.Constants[idx]);
+        const auto const_idx = code.OpCodes[idx++];
+        m_Stack.push(code.Constants[const_idx]);
         break;
       }
+
       case LOAD_UNDEF:
       {
         // TODO: change to load from globals !
         m_Stack.push(mk_undefined());
         break;
       }
+
       case INIT_VAR:
       {
-        const auto idx = m_CodeObject.OpCodes[m_Idx++];
-        auto& var = m_CodeObject.Locals[idx];
+        const auto local_idx = code.OpCodes[idx++];
+        auto& var = code.Locals[local_idx];
         auto value = m_Stack.top();
         m_Stack.pop();
 
         var->is_tdz = false;
         var->value = value;
-
         break;
       }
+
       case DEINIT_VAR:
       {
-        const auto idx = m_CodeObject.OpCodes[m_Idx++];
-        auto& var = m_CodeObject.Locals[idx];
+        const auto local_idx = code.OpCodes[idx++];
+        auto& var = code.Locals[local_idx];
 
         var->is_tdz = true;
         var->value = nullptr;
         break;
       }
+
       case BINARY_OP:
       {
-        HandleBinaryOp(static_cast<BinaryOp>(m_CodeObject.OpCodes[m_Idx++]));
+        HandleBinaryOp(static_cast<BinaryOp>(code.OpCodes[idx++]));
         break;
       }
-      case LOAD_NAME: {
-        const auto idx = m_CodeObject.OpCodes[m_Idx++];
-        m_Stack.push(m_CodeObject.Locals[idx]->value);
+
+      case LOAD_NAME:
+      {
+        // const auto local_idx = code.OpCodes[idx++];
+        // m_Stack.push(code.Locals[local_idx]->value);
+        const auto name_idx = code.OpCodes[idx++];
+        const auto& name = code.Names[name_idx];
+        bool found = false;
+        for (const auto& local : code.Locals)
+        {
+          if (name == local->name)
+          {
+            m_Stack.push(local->value);
+            found = true;
+            break;
+          }
+        }
+        if (!found) m_Stack.push(mk_undefined());
+
         break;
       }
-      case STORE_NAME: {
-        const auto idx = m_CodeObject.OpCodes[m_Idx++];
-        const auto var = m_CodeObject.Locals[idx];
+
+      case STORE_NAME:
+      {
+        const auto local_idx = code.OpCodes[idx++];
+        const auto var = code.Locals[local_idx];
         const auto value = m_Stack.top();
         m_Stack.pop();
 
         var->value = value;
         break;
       }
-      case HALT: {
+
+      case MAKE_FUNC:
+      {
+        const auto code_object_value = m_Stack.top();
+        m_Stack.pop();
+
+        auto fn = mk_func("TODO", static_cast<CodeObjectValue*>(code_object_value.get())->code_object);
+        m_Stack.push(fn);
+        break;
+      }
+
+      case CALL:
+      {
+        // todo: pop args
+        const auto fn_obj = m_Stack.top();
+        m_Stack.pop();
+
+        fn_obj->tp->nb_call(*this, fn_obj);
+
+        break;
+      }
+      case RETURN:
+      {
+        // todo: maybe do something else? :)
         return;
       }
-      default: throw std::runtime_error("Unhandled Op");
-    }
-  }
+
+      case HALT:
+      {
+        return;
+      }
+
+      default:
+        throw std::runtime_error("Unhandled Op");
+    } // switch
+  } // while
 }
 
+// Keep the old Run() for running the VM's current m_CodeObject
+void ByteCodeVM::Run()
+{
+  Run(m_CodeObject);
+}
 
 void ByteCodeVM::HandleBinaryOp(const BinaryOp compare_type)
 {

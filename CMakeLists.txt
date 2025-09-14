@@ -40,6 +40,9 @@ add_executable(yapl src/main.cpp
         src/ByteCodeVisitor.cpp
         src/values/UndefinedValue.cpp
         includes/yapl/values/UndefinedValue.hpp
+        src/values/CodeObjectValue.cpp
+        includes/yapl/values/CodeObjectValue.hpp
+        src/values/BuiltinFunctionValue.cpp
 )
 
 add_subdirectory(externals/Catch2)
@@ -66,6 +69,7 @@ add_executable(tests
         src/exceptions/RuntimeError.cpp
         src/exceptions/StopIteration.cpp
         includes/yapl/values/SizeIterator.hpp
+        includes/yapl/values/BuiltinFunctionValue.hpp
 )
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 

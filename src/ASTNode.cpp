@@ -505,6 +505,7 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
     }
 
 
+
 //
 // BuiltinCustomVisitFunctionASTNode
 //

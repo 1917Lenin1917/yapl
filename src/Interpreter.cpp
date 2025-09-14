@@ -111,7 +111,7 @@ Interpreter::Interpreter()
     }
     for (const auto& [first, second] : function_definitions)
     {
-        scope->vars[first] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, mk_func(first, second));
+        // scope->vars[first] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, mk_func(first, second));
     }
 }
 
@@ -127,10 +127,12 @@ std::shared_ptr<Value> Interpreter::AddFunctionDefinition(const std::string &nam
     if (current_module)
     {
         current_module->function_definitions[name] = fn;
-        return mk_func(name, fn);
+      return nullptr;
+        // return mk_func(name, fn);
     }
     function_definitions[name] = fn;
-    return mk_func(name, fn);
+  return nullptr;
+    // return mk_func(name, fn);
 }
 
 std::shared_ptr<Function> Interpreter::PushFunction(const std::string& name)

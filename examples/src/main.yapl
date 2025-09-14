@@ -424,9 +424,7 @@
 //}
 
 
-fn foo() { }
-fn bar() { return 1 + 2 }
-fn baz(a, b) { return a + b }
+//fn baz(a, b) { return a + b }
 //fn sum(*args) {
 //   let s = 0
 //   for arg : args {
@@ -435,6 +433,12 @@ fn baz(a, b) { return a + b }
 //   return s
 //}
 
-const a = foo()
-const b = bar()
-const c = baz(1, 2)
+//const a = foo()
+//const b = bar()
+//const c = baz(1, 2)
+
+fn foo() { }
+fn bar() { return 1 + 2 }
+
+const c = bar();
+print(c)

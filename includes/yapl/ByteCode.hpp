@@ -14,6 +14,9 @@ enum OpCode {
   LOAD_CONST,
   LOAD_UNDEF, // pushes undefined to stack
 
+  MAKE_FUNC,
+  CALL,
+
   INIT_VAR,   // sets `is_tdz` to false and assigns value from stack top
   DEINIT_VAR, // sets `is_tdz` to true
 

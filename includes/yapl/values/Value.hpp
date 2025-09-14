@@ -41,11 +41,17 @@ namespace yapl {
 #define mk_func(name, fn) std::make_shared<FunctionValue>(name, fn)
 #define as_func(v) static_cast<FunctionValue*>(v)
 
+#define mk_builtin(name, fn) std::make_shared<BuiltinFunctionValue>(name, fn)
+#define as_builtin(v) static_cast<BuiltinFunctionValue*>(v)
+
 #define mk_size_iter(iterable, len) std::make_shared<SizeIteratorValue>(iterable, len)
 #define as_size_iter(v) static_cast<SizeIteratorValue*>(v)
 
 #define mk_undefined() std::make_shared<UndefinedValue>()
 #define as_undefined(v) static_cast<UndefinedValue*>(v)
+
+#define mk_code_obj() std::make_shared<CodeObjectValue>()
+#define as_code_obj(v) static_cast<CodeObjectValue*>(v)
 
 struct TypeObject;
 
@@ -70,8 +76,10 @@ enum class VALUE_TYPE
   DICT,
   USER_DEFINED,
   FUNCTION,
+  BUILTIN_FUNCTION,
   ITERATOR,
   UNDEFINED,
+  CODE_OBJECT,
 };
 
 std::string value_type_to_string(VALUE_TYPE vt);

@@ -6,6 +6,8 @@
 #include "CodeObject.hpp"
 
 namespace yapl {
+class FunctionCallASTNode;
+class ReturnStatementASTNode;
 class FunctionASTNode;
 class FunctionDeclASTNode;
 class WhileLoopASTNode;
@@ -27,7 +29,7 @@ class RootASTNode;
 class ByteCodeVisitor final
 {
 public:
-  explicit ByteCodeVisitor() {}
+  explicit ByteCodeVisitor() = default;
 
   CodeObject visit_RootASTNode(const RootASTNode &node);
   void visit_VariableASTNode(const VariableASTNode &node);
@@ -43,6 +45,8 @@ public:
   void visit_WhileLoopASTNode(const WhileLoopASTNode &node);
   void visit_StatementASTNode(const StatementASTNode &node);
   void visit_FunctionASTNode(const FunctionASTNode &node);
+  void visit_ReturnStatementASTNode(const ReturnStatementASTNode &node);
+  void visit_FunctionCallASTNode(const FunctionCallASTNode& node);
 
   /*
   Objec visit_LiteralASTNode(const LiteralASTNode &node) override;

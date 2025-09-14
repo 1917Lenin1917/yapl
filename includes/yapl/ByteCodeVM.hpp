@@ -10,6 +10,7 @@
 #include "ByteCode.hpp"
 #include "values/DictValue.hpp"
 #include "values/Value.hpp"
+#include "values/BuiltinFunctionValue.hpp"
 
 namespace yapl {
 
@@ -17,8 +18,13 @@ class ByteCodeVM
 {
 public:
   explicit ByteCodeVM(CodeObject obj)
-    : m_CodeObject(obj)
+    : m_CodeObject(std::move(obj))
   {
+    auto fn = mk_builtin("print", [](ByteCodeVM& VM)
+    {
+      std::cout << "print!";
+    });
+    m_CodeObject.Locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__builtins__", "print", false));
 
 
     // m_Constants.push_back(mk_int(34));
@@ -33,6 +39,7 @@ public:
 
 
   void Run();
+  void Run(CodeObject& co);
 
 
 private:

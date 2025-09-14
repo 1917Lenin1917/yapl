@@ -455,7 +455,8 @@ std::shared_ptr<Value> Visitor::visit_FunctionCallASTNode(const FunctionCallASTN
     //         }
     //     }
     // }
-    return base->tp->nb_call(*this, base, node.args);
+    // return base->tp->nb_call(*this, base, node.args);
+  return nullptr;
 }
 
 std::shared_ptr<Value> Visitor::visit_MethodCallASTNode(const MethodCallASTNode &node)

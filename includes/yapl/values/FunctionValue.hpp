@@ -8,15 +8,13 @@
 
 namespace yapl {
 
-class FunctionASTNode;
-
 class FunctionValue final : public Value
 {
 public:
+  std::shared_ptr<CodeObject>& code_object;
   std::string name;
-  FunctionASTNode* fn;
 
-  explicit FunctionValue(std::string name, FunctionASTNode* fn);
+  explicit FunctionValue(std::string name, std::shared_ptr<CodeObject>& code_object);
 
   std::unique_ptr<Value> Copy() const override;
 };
@@ -31,10 +29,8 @@ static void init_function_tp()
 
   FunctionTypeObject->nb_str = [](const VPtr& self)
   {
-    auto fn = as_func(self.get())->fn;
-
-    auto decl = static_cast<FunctionDeclASTNode*>(fn->decl.get());
-    return mk_str(decl->name.value);
+    auto name = as_func(self.get())->name;
+    return mk_str(name);
   };
 
   init_base_methods(FunctionTypeObject);

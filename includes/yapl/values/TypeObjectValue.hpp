@@ -36,19 +36,19 @@ static void init_tp_tp()
         return mk_str(std::format("<class '{}'>", v->value->name));
     };
 
-    TypeObjectTypeObject->nb_call = [](Visitor& visitor, const VPtr& self, const std::vector<std::unique_ptr<BaseASTNode>>& args )
-    {
-        const auto self_t = as_type(self.get());
-        std::vector<VPtr> walked_args;
-        walked_args.reserve(args.size());
-
-        for (const auto& arg : args)
-        {
-            walked_args.push_back(arg->visit(visitor));
-        }
-
-        return self_t->value->nb_make(walked_args);
-    };
+    // TypeObjectTypeObject->nb_call = [](Visitor& visitor, const VPtr& self, const std::vector<std::unique_ptr<BaseASTNode>>& args )
+    // {
+    //     const auto self_t = as_type(self.get());
+    //     std::vector<VPtr> walked_args;
+    //     walked_args.reserve(args.size());
+    //
+    //     for (const auto& arg : args)
+    //     {
+    //         walked_args.push_back(arg->visit(visitor));
+    //     }
+    //
+    //     return self_t->value->nb_make(walked_args);
+    // };
 
     TypeObjectTypeObject->nb_eq = [](const VPtr& self, const VPtr& other) -> VPtr
     {

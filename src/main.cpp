@@ -16,6 +16,7 @@
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/values/FloatValue.hpp"
 #include "yapl/values/BooleanValue.hpp"
+#include "yapl/values/CodeObjectValue.hpp"
 
 using namespace yapl;
 
@@ -102,6 +103,8 @@ int main(int argc, char** argv)
   init_function_tp();
   init_size_iterator_type();
   init_undefined_tp();
+  init_code_object_type_object();
+  init_builtin_function_tp();
 
   ByteCodeVisitor v;
 
@@ -113,15 +116,15 @@ int main(int argc, char** argv)
   std::cout << "Virtual Byting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vmtime2-vmtime1) << "\n";
   std::cout << std::endl;
 
-  Interpreter intp;
-  intp.base_path = std::filesystem::path(R"(C:\_projects\yapl\examples\src\)");
-  Visitor vi{intp};
-
-  auto vtime1 = std::chrono::system_clock::now();
-  ast->visit(vi);
-  auto vtime2 = std::chrono::system_clock::now();
-  std::cout << "Interpreting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vtime2-vtime1) << "\n";
-  std::cout << std::endl;
+  // Interpreter intp;
+  // intp.base_path = std::filesystem::path(R"(C:\_projects\yapl\examples\src\)");
+  // Visitor vi{intp};
+  //
+  // auto vtime1 = std::chrono::system_clock::now();
+  // ast->visit(vi);
+  // auto vtime2 = std::chrono::system_clock::now();
+  // std::cout << "Interpreting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vtime2-vtime1) << "\n";
+  // std::cout << std::endl;
   return 0;
 
 // //    run();
