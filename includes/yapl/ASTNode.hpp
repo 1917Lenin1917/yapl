@@ -313,6 +313,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_FunctionArgumentListASTNode(*this); }
 
   [[nodiscard]] int get_argument_amount() const { return m_arg_amount; }
   [[nodiscard]] std::string get_argument_name(size_t idx) const

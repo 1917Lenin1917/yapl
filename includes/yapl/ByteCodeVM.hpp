@@ -22,7 +22,9 @@ public:
   {
     auto fn = mk_builtin("print", [](ByteCodeVM& VM)
     {
-      std::cout << "print!";
+      const auto value = VM.m_Stack.top();
+      VM.m_Stack.pop();
+      std::cout << value->print() << "\n";
     });
     m_CodeObject.Locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__builtins__", "print", false));
 

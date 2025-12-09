@@ -126,9 +126,25 @@ void ByteCodeVM::Run(CodeObject &code)
 
       case CALL:
       {
+        const auto arg_amount = code.OpCodes[idx++];
+
         // todo: pop args
         const auto fn_obj = m_Stack.top();
         m_Stack.pop();
+
+        if (fn_obj->tp == BuiltinFunctionTypeObject)
+        {
+          fn_obj->tp->nb_call(*this, fn_obj);
+          break;
+        }
+
+        const auto fv = static_cast<FunctionValue*>(fn_obj.get());
+
+        for (int i = arg_amount - 1; i > -1; i--)
+        {
+          fv->code_object->Locals[i]->value = m_Stack.top();
+          m_Stack.pop();
+        }
 
         fn_obj->tp->nb_call(*this, fn_obj);
 

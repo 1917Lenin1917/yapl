@@ -16,8 +16,7 @@ public:
   bool IsTruthy() const override { return false; }
 
   std::unique_ptr<Value> Copy() const override { return nullptr; }
-
-
+  std::string print() override { return "undefined"; }
 };
 
 

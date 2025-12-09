@@ -6,6 +6,7 @@
 #include "CodeObject.hpp"
 
 namespace yapl {
+class FunctionArgumentListASTNode;
 class FunctionCallASTNode;
 class ReturnStatementASTNode;
 class FunctionASTNode;
@@ -47,6 +48,7 @@ public:
   void visit_FunctionASTNode(const FunctionASTNode &node);
   void visit_ReturnStatementASTNode(const ReturnStatementASTNode &node);
   void visit_FunctionCallASTNode(const FunctionCallASTNode& node);
+  void visit_FunctionArgumentListASTNode(const FunctionArgumentListASTNode &node);
 
   /*
   Objec visit_LiteralASTNode(const LiteralASTNode &node) override;

@@ -347,9 +347,14 @@ void ByteCodeVisitor::visit_StatementASTNode(const StatementASTNode &node)
 
 void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
 {
+  // push arguments to locals
   // 1. generate a new code object for the function and push it in constants pool
 
   m_ObjectStack.emplace_back();
+
+  const auto decl = static_cast<FunctionDeclASTNode*>(node.decl.get());
+  const std::string name = decl->name.value;
+  decl->args->visit(*this);
 
   node.body->visit(*this);
 
@@ -358,8 +363,6 @@ void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
 
   auto& current_object = m_ObjectStack.back();
 
-  const auto decl = static_cast<FunctionDeclASTNode*>(node.decl.get());
-  const std::string name = decl->name.value;
 
   auto ptr = std::make_shared<CodeObject>(std::move(f_code_object));
   current_object.Constants.push_back(std::make_shared<CodeObjectValue>(ptr));
@@ -392,9 +395,32 @@ void ByteCodeVisitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode 
 
 void ByteCodeVisitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
 {
+  for (const auto& arg : node.args) arg->visit(*this);
+
   node.base->visit(*this);
 
   auto& current_object = m_ObjectStack.back();
   current_object.OpCodes.push_back(CALL);
+  current_object.OpCodes.push_back(static_cast<OpCode>(node.args.size()));
+}
+
+void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentListASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  for (const auto& arg : node.args)
+  {
+    const auto var_name = std::string(arg->name.value);
+    std::size_t idx = current_object.LocalsMap.contains(var_name) ? current_object.LocalsMap.at(var_name) : -1;
+    if (idx == -1)
+    {
+      const auto var = std::make_shared<Variable>(false, VALUE_TYPE::UNDEFINED, nullptr, "TODO", var_name);
+      current_object.Locals.push_back(var);
+      current_object.Names.emplace_back(var_name);
+      idx = current_object.Locals.size() - 1;
+      current_object.LocalsMap[var_name] = idx;
+    }
+    m_ScopeVars.back().push_back(idx);
+  }
 }
 }

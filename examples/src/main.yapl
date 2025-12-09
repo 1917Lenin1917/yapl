@@ -437,8 +437,10 @@
 //const b = bar()
 //const c = baz(1, 2)
 
-fn foo() { }
-fn bar() { return 1 + 2 }
+fn test(d, k) {
+  // TODO: we should look for variables in code object and its parents
+  print(d)
+  print(k)
+}
 
-const c = bar();
-print(c)
+ test(1, 2)
