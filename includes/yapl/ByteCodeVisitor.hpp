@@ -26,7 +26,6 @@ class BinaryOpASTNode;
 class VariableASTNode;
 class RootASTNode;
 
-
 class ByteCodeVisitor final
 {
 public:
@@ -89,5 +88,6 @@ private:
   // TODO: change?
   std::vector<std::vector<std::size_t>> m_ScopeVars;
 };
+
 
 }

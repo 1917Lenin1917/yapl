@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -10,22 +11,24 @@
 
 #include "ByteCode.hpp"
 
+
 namespace yapl {
 class Value;
 class Variable;
 
 struct CodeObject
 {
-  std::vector<OpCode> OpCodes;
+  std::vector<OpCode> op_codes;
 
-  std::vector<std::string> Names;
-  std::vector<std::shared_ptr<Variable>> Locals;
-  std::vector<std::shared_ptr<Value>> Constants;
+  std::string name;
+  std::size_t arg_count;
+  std::vector<std::shared_ptr<Value>> constants;
 
-  // maybe move this to visitor?
-  std::unordered_map<std::string, std::size_t> LocalsMap;
-  std::unordered_map<std::string, std::size_t> ConstantsMap;
-  std::unordered_map<std::string, std::size_t> NamesMap;
+  std::vector<std::string> locals;
+  std::vector<std::string> names;
 };
+
+void print_code_object(const CodeObject& code_object, std::ostream& output = std::cout);
+
 
 }

@@ -26,43 +26,45 @@ namespace yapl {
 
 CodeObject ByteCodeVisitor::visit_RootASTNode(const RootASTNode &node)
 {
-  m_ObjectStack.push_back({});
+  m_ObjectStack.push_back({ .name = "__main__" });
   m_ScopeVars.push_back({});
 
   for (const auto& child_node : node.nodes)
   {
     child_node->visit(*this);
   }
-  m_ObjectStack.back().OpCodes.push_back(HALT);
+  m_ObjectStack.back().op_codes.push_back(HALT);
   m_ScopeVars.pop_back();
 
   return m_ObjectStack.back();
 
 }
 
+/* Variable declaration node
+ *
+ * TODO: handle all redeclaration checks, etc.
+ */
 void ByteCodeVisitor::visit_VariableASTNode(const VariableASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
   const auto var_name = std::string(node.name.value);
-  std::size_t idx = current_object.LocalsMap.contains(var_name) ? current_object.LocalsMap.at(var_name) : -1;
-  if (idx == -1)
+  const auto it = std::ranges::find(current_object.locals, var_name);
+
+  std::size_t index = it != current_object.locals.end() ? it - current_object.locals.begin() : -1;
+  if (index == -1)
   {
-    auto is_const = node.type.type == TOKEN_TYPE::CONST;
-    const auto var = std::make_shared<Variable>(is_const, VALUE_TYPE::UNDEFINED, nullptr, "TODO", node.name.value);
-    current_object.Locals.push_back(var);
-    current_object.Names.emplace_back(node.name.value);
-    idx = current_object.Locals.size() - 1;
-    current_object.LocalsMap[var_name] = idx;
+    current_object.locals.push_back(var_name);
+    index = current_object.locals.size() - 1;
   }
 
   if (node.value) { node.value->visit(*this); }
-  else { current_object.OpCodes.push_back(LOAD_UNDEF); }
+  else { current_object.op_codes.push_back(LOAD_UNDEF); }
 
-  current_object.OpCodes.push_back(INIT_VAR);
-  current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+  current_object.op_codes.push_back(INIT_VAR);
+  current_object.op_codes.push_back(static_cast<OpCode>(index));
 
-  m_ScopeVars.back().push_back(idx);
+  m_ScopeVars.back().push_back(index);
 }
 
 void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
@@ -72,62 +74,62 @@ void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
   node.LHS->visit(*this);
   node.RHS->visit(*this);
 
-  current_object.OpCodes.push_back(BINARY_OP);
+  current_object.op_codes.push_back(BINARY_OP);
 
   switch (node.op.type) {
     case TOKEN_TYPE::PLUS:
-      current_object.OpCodes.push_back(static_cast<OpCode>(ADD));
+      current_object.op_codes.push_back(static_cast<OpCode>(ADD));
       break;
 
     case TOKEN_TYPE::TIMES:
-      current_object.OpCodes.push_back(static_cast<OpCode>(MUL));
+      current_object.op_codes.push_back(static_cast<OpCode>(MUL));
       break;
 
     case TOKEN_TYPE::MINUS:
-      current_object.OpCodes.push_back(static_cast<OpCode>(SUB));
+      current_object.op_codes.push_back(static_cast<OpCode>(SUB));
       break;
 
     case TOKEN_TYPE::SLASH:
-      current_object.OpCodes.push_back(static_cast<OpCode>(DIV));
+      current_object.op_codes.push_back(static_cast<OpCode>(DIV));
       break;
 
     case TOKEN_TYPE::MOD:
-      current_object.OpCodes.push_back(static_cast<OpCode>(MOD));
+      current_object.op_codes.push_back(static_cast<OpCode>(MOD));
       break;
 
     case TOKEN_TYPE::LT:
-      current_object.OpCodes.push_back(static_cast<OpCode>(LT));
+      current_object.op_codes.push_back(static_cast<OpCode>(LT));
       break;
 
     case TOKEN_TYPE::GT:
-      current_object.OpCodes.push_back(static_cast<OpCode>(GT));
+      current_object.op_codes.push_back(static_cast<OpCode>(GT));
       break;
 
     case TOKEN_TYPE::LQ:
-      current_object.OpCodes.push_back(static_cast<OpCode>(LQ));
+      current_object.op_codes.push_back(static_cast<OpCode>(LQ));
       break;
 
     case TOKEN_TYPE::GQ:
-      current_object.OpCodes.push_back(static_cast<OpCode>(GQ));
+      current_object.op_codes.push_back(static_cast<OpCode>(GQ));
       break;
 
     case TOKEN_TYPE::EQ:
-      current_object.OpCodes.push_back(static_cast<OpCode>(EQ));
+      current_object.op_codes.push_back(static_cast<OpCode>(EQ));
       break;
 
     case TOKEN_TYPE::NEQ:
-      current_object.OpCodes.push_back(static_cast<OpCode>(NEQ));
+      current_object.op_codes.push_back(static_cast<OpCode>(NEQ));
       break;
 
     case TOKEN_TYPE::AND:
-      current_object.OpCodes.push_back(static_cast<OpCode>(AND));
+      current_object.op_codes.push_back(static_cast<OpCode>(AND));
       break;
 
     case TOKEN_TYPE::OR:
-        current_object.OpCodes.push_back(static_cast<OpCode>(OR));
+        current_object.op_codes.push_back(static_cast<OpCode>(OR));
         break;
 
-    default: throw std::runtime_error("Unhandled dtoken");
+    default: throw std::runtime_error("Unhandled token");
   }
 
 }
@@ -136,53 +138,70 @@ void ByteCodeVisitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
 {
   // TODO: throw compilation error if variable doesnt exist
 
+  // Variable is local if it's declared in current_object.locals,
+  // otherwise it is global and should be put in current_object.names
+  // However, we should TODO: handle access before declaration at compile-time
 
   auto& current_object = m_ObjectStack.back();
 
   std::string name = node.token.value;
-  auto idx = current_object.NamesMap.contains(name) ? current_object.NamesMap.at(name) : -1;
+  const auto var_name = std::string(node.token.value);
 
-  if (idx == -1)
+  // Firstly, check locals, if not found, check globals
+  bool is_local = true;
+  const auto locals_it = std::ranges::find(current_object.locals, var_name);
+  std::size_t index = locals_it != current_object.locals.end() ? locals_it - current_object.locals.begin() : -1;
+
+  if (index == -1)
   {
-    current_object.Names.push_back(name);
-    idx = current_object.Names.size() - 1;
-    current_object.NamesMap[name] = idx;
+    const auto names_it = std::ranges::find(current_object.names, var_name);
+    index = names_it != current_object.names.end() ? names_it - current_object.names.begin() : -1;
+    is_local = false;
+  }
+  // it is not in locals nor names
+  if (index == -1)
+  {
+    current_object.names.push_back(var_name);
+    index = current_object.names.size() - 1;
   }
 
   if (next_identifier_as_store_name)
   {
-    current_object.OpCodes.push_back(STORE_NAME);
-    current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+    if (is_local) current_object.op_codes.push_back(STORE_LOCAL);
+    else current_object.op_codes.push_back(STORE_NAME);
+
+    current_object.op_codes.push_back(static_cast<OpCode>(index));
     next_identifier_as_store_name = false;
     return;
   }
 
-  current_object.OpCodes.push_back(LOAD_NAME);
-  current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+  if (is_local) current_object.op_codes.push_back(LOAD_LOCAL);
+  else current_object.op_codes.push_back(LOAD_NAME);
+
+  current_object.op_codes.push_back(static_cast<OpCode>(index));
 }
 
 std::size_t ByteCodeVisitor::visit_IntegerASTNode(const IntegerASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
-  const auto key = std::to_string(node.value);
-
-  if (!current_object.ConstantsMap.contains(key))
+  int node_value = node.value;
+  auto it = std::ranges::find_if(current_object.constants, [node_value](std::shared_ptr<Value>& value)
   {
-    current_object.Constants.push_back(mk_int(node.value));
-    const auto len = current_object.Constants.size();
-    current_object.ConstantsMap[key] = len - 1;
+    const auto int_value = dynamic_cast<IntegerValue*>(value.get());
+    return int_value && int_value->value == node_value;
+  });
+  std::size_t index = it != current_object.constants.end() ? it - current_object.constants.begin() : -1;
 
-    current_object.OpCodes.push_back(LOAD_CONST);
-    current_object.OpCodes.push_back(static_cast<OpCode>(len - 1));
-
-    return len - 1;
+  if (index == -1)
+  {
+    current_object.constants.push_back(mk_int(node.value));
+    index = current_object.constants.size() - 1;
   }
-  auto idx = current_object.ConstantsMap.at(key);
 
-  current_object.OpCodes.push_back(LOAD_CONST);
-  current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+  current_object.op_codes.push_back(LOAD_CONST);
+  current_object.op_codes.push_back(static_cast<OpCode>(index));
 
-  return idx;
+  return index;
 }
 
 void ByteCodeVisitor::visit_FloatASTNode(const FloatASTNode &node)
@@ -202,10 +221,10 @@ void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNod
   auto& current_object = m_ObjectStack.back();
 
   node.condition->visit(*this);
-  current_object.OpCodes.push_back(JMP_IF_FALSE);
+  current_object.op_codes.push_back(JMP_IF_FALSE);
   // temp push 0, and save index. after we compute if branch, we go back and update jump amount
-  current_object.OpCodes.push_back(static_cast<OpCode>(0));
-  auto jmp_len_idx = current_object.OpCodes.size() - 1;
+  current_object.op_codes.push_back(static_cast<OpCode>(0));
+  auto jmp_len_idx = current_object.op_codes.size() - 1;
 
   node.true_scope->visit(*this);
   // if there is an else branch, we should jump over it
@@ -213,13 +232,13 @@ void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNod
   if (node.false_scope)
   {
     // temp push 0, and save index. after we compute else branch, we go back and update jump amount
-    current_object.OpCodes.push_back(JMP);
-    current_object.OpCodes.push_back(static_cast<OpCode>(0));
-    auto jmp_len_idx_2 = current_object.OpCodes.size() - 1;
-    current_object.OpCodes[jmp_len_idx] = static_cast<OpCode>(current_object.OpCodes.size() - jmp_len_idx - 1);
+    current_object.op_codes.push_back(JMP);
+    current_object.op_codes.push_back(static_cast<OpCode>(0));
+    auto jmp_len_idx_2 = current_object.op_codes.size() - 1;
+    current_object.op_codes[jmp_len_idx] = static_cast<OpCode>(current_object.op_codes.size() - jmp_len_idx - 1);
 
     node.false_scope->visit(*this);
-    current_object.OpCodes[jmp_len_idx_2] = static_cast<OpCode>(current_object.OpCodes.size() - jmp_len_idx_2 - 1);
+    current_object.op_codes[jmp_len_idx_2] = static_cast<OpCode>(current_object.op_codes.size() - jmp_len_idx_2 - 1);
   }
 }
 
@@ -234,8 +253,8 @@ void ByteCodeVisitor::visit_ScopeASTNode(const ScopeASTNode &node)
   }
   for (std::size_t idx : m_ScopeVars.back())
   {
-    current_object.OpCodes.push_back(DEINIT_VAR);
-    current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+    current_object.op_codes.push_back(DEINIT_VAR);
+    current_object.op_codes.push_back(static_cast<OpCode>(idx));
   }
   m_ScopeVars.pop_back();
 }
@@ -250,15 +269,15 @@ void ByteCodeVisitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
   }
 
   // 2) mark the start of the condition
-  const size_t cond_start = current_object.OpCodes.size();
+  const size_t cond_start = current_object.op_codes.size();
 
   // 3) condition
   if (node.condition) {
     node.condition->visit(*this);
   }
-  current_object.OpCodes.push_back(JMP_IF_FALSE);
-  current_object.OpCodes.push_back(static_cast<OpCode>(0)); // placeholder
-  const size_t jmp_out_len_idx = current_object.OpCodes.size() - 1; // index of placeholder
+  current_object.op_codes.push_back(JMP_IF_FALSE);
+  current_object.op_codes.push_back(static_cast<OpCode>(0)); // placeholder
+  const size_t jmp_out_len_idx = current_object.op_codes.size() - 1; // index of placeholder
 
   // 4) body
   if (node.scope) {
@@ -271,22 +290,22 @@ void ByteCodeVisitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
   }
 
   // 6) jump back to condition start (backward jump)
-  current_object.OpCodes.push_back(JMP);
-  current_object.OpCodes.push_back(static_cast<OpCode>(0)); // placeholder
-  const size_t jmp_back_len_idx = current_object.OpCodes.size() - 1;
+  current_object.op_codes.push_back(JMP);
+  current_object.op_codes.push_back(static_cast<OpCode>(0)); // placeholder
+  const size_t jmp_back_len_idx = current_object.op_codes.size() - 1;
 
   // Patch backward jump:
   // immediate = target_index - (len_idx + 1)  ==> jump from after-immediate to cond_start
   {
     const int back = static_cast<int>(cond_start) - static_cast<int>(jmp_back_len_idx + 1);
-    current_object.OpCodes[jmp_back_len_idx] = static_cast<OpCode>(back);
+    current_object.op_codes[jmp_back_len_idx] = static_cast<OpCode>(back);
   }
 
   // Patch "exit the loop" forward jump:
   // immediate = end_index - (len_idx + 1)  ==> jump from after-immediate to after-loop
   {
-    const int out = static_cast<int>(current_object.OpCodes.size()) - static_cast<int>(jmp_out_len_idx + 1);
-    current_object.OpCodes[jmp_out_len_idx] = static_cast<OpCode>(out);
+    const int out = static_cast<int>(current_object.op_codes.size()) - static_cast<int>(jmp_out_len_idx + 1);
+    current_object.op_codes[jmp_out_len_idx] = static_cast<OpCode>(out);
   }
 }
 
@@ -295,16 +314,16 @@ void ByteCodeVisitor::visit_WhileLoopASTNode(const WhileLoopASTNode &node)
   auto& current_object = m_ObjectStack.back();
 
   // 1) mark the start of the condition
-  const size_t cond_start = current_object.OpCodes.size();
+  const size_t cond_start = current_object.op_codes.size();
 
   // 2) condition
   if (node.condition) {
     node.condition->visit(*this); // leaves truthy/falsy on stack
   }
   // If false -> jump to end (placeholder now, patch later)
-  current_object.OpCodes.push_back(JMP_IF_FALSE);
-  current_object.OpCodes.push_back(static_cast<OpCode>(0));
-  const size_t jmp_out_len_idx = current_object.OpCodes.size() - 1;
+  current_object.op_codes.push_back(JMP_IF_FALSE);
+  current_object.op_codes.push_back(static_cast<OpCode>(0));
+  const size_t jmp_out_len_idx = current_object.op_codes.size() - 1;
 
   // 3) body
   if (node.scope) {
@@ -312,22 +331,22 @@ void ByteCodeVisitor::visit_WhileLoopASTNode(const WhileLoopASTNode &node)
   }
 
   // 4) jump back to condition start
-  current_object.OpCodes.push_back(JMP);
-  current_object.OpCodes.push_back(static_cast<OpCode>(0)); // placeholder
-  const size_t jmp_back_len_idx = current_object.OpCodes.size() - 1;
+  current_object.op_codes.push_back(JMP);
+  current_object.op_codes.push_back(static_cast<OpCode>(0)); // placeholder
+  const size_t jmp_back_len_idx = current_object.op_codes.size() - 1;
 
   // --- patching ---
 
   // Backward jump: from after-immediate to cond_start
   {
     const int back = static_cast<int>(cond_start) - static_cast<int>(jmp_back_len_idx + 1);
-    current_object.OpCodes[jmp_back_len_idx] = static_cast<OpCode>(back);
+    current_object.op_codes[jmp_back_len_idx] = static_cast<OpCode>(back);
   }
 
   // Exit jump: from after-immediate to after-loop (current end)
   {
-    const int out = static_cast<int>(current_object.OpCodes.size()) - static_cast<int>(jmp_out_len_idx + 1);
-    current_object.OpCodes[jmp_out_len_idx] = static_cast<OpCode>(out);
+    const int out = static_cast<int>(current_object.op_codes.size()) - static_cast<int>(jmp_out_len_idx + 1);
+    current_object.op_codes[jmp_out_len_idx] = static_cast<OpCode>(out);
   }
 }
 
@@ -350,12 +369,13 @@ void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
   // push arguments to locals
   // 1. generate a new code object for the function and push it in constants pool
 
-  m_ObjectStack.emplace_back();
-
   const auto decl = static_cast<FunctionDeclASTNode*>(node.decl.get());
   const std::string name = decl->name.value;
-  decl->args->visit(*this);
 
+  m_ObjectStack.push_back({ .name = name });
+
+  decl->args->visit(*this);
+  // FIXME: handle if no return -- return undefined
   node.body->visit(*this);
 
   auto f_code_object = std::move(m_ObjectStack.back());
@@ -363,26 +383,19 @@ void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
 
   auto& current_object = m_ObjectStack.back();
 
-
   auto ptr = std::make_shared<CodeObject>(std::move(f_code_object));
-  current_object.Constants.push_back(std::make_shared<CodeObjectValue>(ptr));
-  auto idx = current_object.Constants.size() - 1;
+  current_object.constants.push_back(std::make_shared<CodeObjectValue>(ptr));
+  auto idx = current_object.constants.size() - 1;
 
-  current_object.ConstantsMap[name] = idx;
-
-  const auto var = std::make_shared<Variable>(true, VALUE_TYPE::UNDEFINED, nullptr, "TODO", name);
-  current_object.Locals.push_back(var);
-  auto locals_idx = current_object.Locals.size() - 1;
-  current_object.LocalsMap[name] = locals_idx;
+  // TODO: handle name conflict
+  current_object.names.push_back(name);
+  std::size_t names_index = current_object.names.size() - 1;
 
   // 2. generate opcode to load the code object from constants and generate a function object
-  current_object.OpCodes.push_back(LOAD_CONST);
-  current_object.OpCodes.push_back(static_cast<OpCode>(idx));
+  current_object.op_codes.push_back(LOAD_CONST);
+  current_object.op_codes.push_back(static_cast<OpCode>(idx));
 
-  current_object.OpCodes.push_back(MAKE_FUNC);
-
-  current_object.OpCodes.push_back(STORE_NAME);
-  current_object.OpCodes.push_back(static_cast<OpCode>(locals_idx));
+  current_object.op_codes.push_back(MAKE_FUNC);
 }
 
 void ByteCodeVisitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode &node)
@@ -390,7 +403,7 @@ void ByteCodeVisitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode 
   node.expr->visit(*this);
 
   auto& current_object = m_ObjectStack.back();
-  current_object.OpCodes.push_back(RETURN);
+  current_object.op_codes.push_back(RETURN);
 }
 
 void ByteCodeVisitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
@@ -400,8 +413,8 @@ void ByteCodeVisitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
   node.base->visit(*this);
 
   auto& current_object = m_ObjectStack.back();
-  current_object.OpCodes.push_back(CALL);
-  current_object.OpCodes.push_back(static_cast<OpCode>(node.args.size()));
+  current_object.op_codes.push_back(CALL);
+  current_object.op_codes.push_back(static_cast<OpCode>(node.args.size()));
 }
 
 void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentListASTNode &node)
@@ -411,16 +424,15 @@ void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentLi
   for (const auto& arg : node.args)
   {
     const auto var_name = std::string(arg->name.value);
-    std::size_t idx = current_object.LocalsMap.contains(var_name) ? current_object.LocalsMap.at(var_name) : -1;
-    if (idx == -1)
+    const auto it = std::ranges::find(current_object.locals, var_name);
+
+    std::size_t index = it != current_object.locals.end() ? it - current_object.locals.begin() : -1;
+    if (index == -1)
     {
-      const auto var = std::make_shared<Variable>(false, VALUE_TYPE::UNDEFINED, nullptr, "TODO", var_name);
-      current_object.Locals.push_back(var);
-      current_object.Names.emplace_back(var_name);
-      idx = current_object.Locals.size() - 1;
-      current_object.LocalsMap[var_name] = idx;
+      current_object.locals.push_back(var_name);
+      index = current_object.locals.size() - 1;
     }
-    m_ScopeVars.back().push_back(idx);
+    m_ScopeVars.back().push_back(index);
   }
 }
 }

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <string_view>
 
 namespace yapl {
 
@@ -19,6 +20,9 @@ enum OpCode {
 
   INIT_VAR,   // sets `is_tdz` to false and assigns value from stack top
   DEINIT_VAR, // sets `is_tdz` to true
+
+  LOAD_LOCAL,
+  STORE_LOCAL,
 
   LOAD_NAME,
   STORE_NAME,
@@ -44,5 +48,47 @@ enum BinaryOp {
   OR,     // or
   AND,    // and
 };
+
+inline std::string_view opcode_to_string(OpCode opcode) {
+  switch (opcode) {
+    case OpCode::NOP:          return "NOP";
+    case OpCode::RETURN:       return "RETURN";
+    case OpCode::HALT:         return "HALT";
+    case OpCode::LOAD_CONST:   return "LOAD_CONST";
+    case OpCode::LOAD_UNDEF:   return "LOAD_UNDEF";
+    case OpCode::MAKE_FUNC:    return "MAKE_FUNC";
+    case OpCode::CALL:         return "CALL";
+    case OpCode::INIT_VAR:     return "INIT_VAR";
+    case OpCode::DEINIT_VAR:   return "DEINIT_VAR";
+    case OpCode::LOAD_LOCAL:   return "LOAD_LOCAL";
+    case OpCode::STORE_LOCAL:  return "STORE_LOCAL";
+    case OpCode::LOAD_NAME:    return "LOAD_NAME";
+    case OpCode::STORE_NAME:   return "STORE_NAME";
+    case OpCode::BINARY_OP:    return "BINARY_OP";
+    case OpCode::JMP:          return "JMP";
+    case OpCode::JMP_IF_FALSE: return "JMP_IF_FALSE";
+  }
+  return "UNKNOWN";
+}
+
+inline std::string_view binary_op_to_string(BinaryOp binary_op) {
+  switch (binary_op) {
+    case BinaryOp::ADD: return "ADD";
+    case BinaryOp::SUB: return "SUB";
+    case BinaryOp::MUL: return "MUL";
+    case BinaryOp::MOD: return "MOD";
+    case BinaryOp::DIV: return "DIV";
+    case BinaryOp::EQ:  return "EQ";
+    case BinaryOp::NEQ: return "NEQ";
+    case BinaryOp::LT:  return "LT";
+    case BinaryOp::LQ:  return "LQ";
+    case BinaryOp::GT:  return "GT";
+    case BinaryOp::GQ:  return "GQ";
+    case BinaryOp::OR:  return "OR";
+    case BinaryOp::AND: return "AND";
+  }
+  return "UNKNOWN_BINOP";
+}
+
 
 }

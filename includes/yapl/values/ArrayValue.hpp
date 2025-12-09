@@ -16,7 +16,7 @@ public:
 	std::vector<std::shared_ptr<Value>> value;
 
 	explicit ArrayValue(std::vector<std::shared_ptr<Value>>& value);
-    explicit ArrayValue(std::vector<std::shared_ptr<Value>>&& value);
+	explicit ArrayValue(std::vector<std::shared_ptr<Value>>&& value);
 
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 

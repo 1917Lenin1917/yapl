@@ -4,9 +4,13 @@
 
 #include "yapl/ByteCodeVM.hpp"
 
+#include <bits/ranges_algo.h>
+#include <yapl/values/ArrayValue.hpp>
+
 #include "yapl/values/CodeObjectValue.hpp"
 #include "yapl/values/UndefinedValue.hpp"
 #include "yapl/values/FunctionValue.hpp"
+#include "yapl/values/IntegerValue.hpp"
 
 namespace yapl {
 
@@ -16,13 +20,13 @@ void ByteCodeVM::Run(CodeObject &code)
 
   while (true)
   {
-    const auto op = code.OpCodes[idx++];
+    const auto op = code.op_codes[idx++];
 
     switch (op)
     {
       case JMP:
       {
-        const auto rel = static_cast<int>(code.OpCodes[idx++]);
+        const auto rel = static_cast<int>(code.op_codes[idx++]);
         idx += rel;
         break;
       }
@@ -32,7 +36,7 @@ void ByteCodeVM::Run(CodeObject &code)
         const auto val = m_Stack.top();
         m_Stack.pop();
 
-        const auto rel = code.OpCodes[idx++];
+        const auto rel = code.op_codes[idx++];
         if (!val->IsTruthy())
         {
           idx += rel;
@@ -42,8 +46,8 @@ void ByteCodeVM::Run(CodeObject &code)
 
       case LOAD_CONST:
       {
-        const auto const_idx = code.OpCodes[idx++];
-        m_Stack.push(code.Constants[const_idx]);
+        const auto const_idx = code.op_codes[idx++];
+        m_Stack.push(code.constants[const_idx]);
         break;
       }
 
@@ -56,9 +60,11 @@ void ByteCodeVM::Run(CodeObject &code)
 
       case INIT_VAR:
       {
-        const auto local_idx = code.OpCodes[idx++];
-        auto& var = code.Locals[local_idx];
-        auto value = m_Stack.top();
+        const auto& frame = m_FrameStack.back();
+
+        const auto local_idx = code.op_codes[idx++];
+        const auto& var = frame.locals[local_idx];
+        const auto value = m_Stack.top();
         m_Stack.pop();
 
         var->is_tdz = false;
@@ -68,8 +74,11 @@ void ByteCodeVM::Run(CodeObject &code)
 
       case DEINIT_VAR:
       {
-        const auto local_idx = code.OpCodes[idx++];
-        auto& var = code.Locals[local_idx];
+        // FIXME: handle this before return and uncomment
+        auto& frame = m_FrameStack.back();
+
+        const auto local_idx = code.op_codes[idx++];
+        auto& var = frame.locals[local_idx];
 
         var->is_tdz = true;
         var->value = nullptr;
@@ -78,35 +87,51 @@ void ByteCodeVM::Run(CodeObject &code)
 
       case BINARY_OP:
       {
-        HandleBinaryOp(static_cast<BinaryOp>(code.OpCodes[idx++]));
+        HandleBinaryOp(static_cast<BinaryOp>(code.op_codes[idx++]));
         break;
       }
 
       case LOAD_NAME:
       {
-        // const auto local_idx = code.OpCodes[idx++];
-        // m_Stack.push(code.Locals[local_idx]->value);
-        const auto name_idx = code.OpCodes[idx++];
-        const auto& name = code.Names[name_idx];
-        bool found = false;
-        for (const auto& local : code.Locals)
-        {
-          if (name == local->name)
-          {
-            m_Stack.push(local->value);
-            found = true;
-            break;
-          }
-        }
-        if (!found) m_Stack.push(mk_undefined());
+        // At this moment, just look up globals
+        const auto name_idx = code.op_codes[idx++];
+        const auto& name = code.names[name_idx];
+        const auto& var = m_Globals.contains(name) ? m_Globals.at(name) : nullptr;
+
+        if (var) m_Stack.push(var->value);
+        else m_Stack.push(mk_undefined());
 
         break;
       }
+      case LOAD_LOCAL:
+      {
+        auto& frame = m_FrameStack.back();
 
+        const auto locals_index = code.op_codes[idx++];
+        const auto var = frame.locals[locals_index];
+        m_Stack.push(var->value);
+        break;
+      }
+      case STORE_LOCAL:
+      {
+        auto& frame = m_FrameStack.back();
+
+        const auto locals_index = code.op_codes[idx++];
+        const auto var = frame.locals[locals_index];
+        const auto value = m_Stack.top();
+        m_Stack.pop();
+
+        var->value = value;
+        var->type = value->type;
+        break;
+
+      }
       case STORE_NAME:
       {
-        const auto local_idx = code.OpCodes[idx++];
-        const auto var = code.Locals[local_idx];
+        const auto names_index = code.op_codes[idx++];
+        const auto name = code.names[names_index];
+        const auto& var = m_Globals.contains(name) ? m_Globals.at(name) : nullptr;
+
         const auto value = m_Stack.top();
         m_Stack.pop();
 
@@ -117,45 +142,68 @@ void ByteCodeVM::Run(CodeObject &code)
       case MAKE_FUNC:
       {
         const auto code_object_value = m_Stack.top();
+        const auto casted = static_cast<CodeObjectValue*>(code_object_value.get());
+        const auto name = casted->code_object->name;
         m_Stack.pop();
 
-        auto fn = mk_func("TODO", static_cast<CodeObjectValue*>(code_object_value.get())->code_object);
-        m_Stack.push(fn);
+        auto fn = mk_func(name, static_cast<CodeObjectValue*>(code_object_value.get())->code_object);
+        m_Globals[name] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, fn, "__main__", name, false);
         break;
       }
 
       case CALL:
       {
-        const auto arg_amount = code.OpCodes[idx++];
-
+        const auto arg_amount = code.op_codes[idx++];
         // todo: pop args
         const auto fn_obj = m_Stack.top();
         m_Stack.pop();
+        m_FrameStack.push_back({});
 
         if (fn_obj->tp == BuiltinFunctionTypeObject)
         {
+          std::vector<std::shared_ptr<Value>> values;
+          for (int i = 0; i < arg_amount; i++)
+          {
+            values.push_back(m_Stack.top());
+            m_Stack.pop();
+          }
+          std::ranges::reverse(values);
+          m_Stack.push(mk_arr(std::move(values)));
           fn_obj->tp->nb_call(*this, fn_obj);
+          m_FrameStack.pop_back();
           break;
         }
 
         const auto fv = static_cast<FunctionValue*>(fn_obj.get());
+        m_FrameStack.back().code_object = fv->code_object;
 
-        for (int i = arg_amount - 1; i > -1; i--)
+        std::vector<std::shared_ptr<Variable>> locals;
+        locals.reserve(fv->code_object->locals.size());
+        for (const auto& name : fv->code_object->locals)
         {
-          fv->code_object->Locals[i]->value = m_Stack.top();
-          m_Stack.pop();
+          locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::UNDEFINED, mk_undefined(), "__main__", name, false));
         }
 
-        fn_obj->tp->nb_call(*this, fn_obj);
+        for (int i = 0; i < arg_amount; i++)
+        {
+          const auto value = m_Stack.top();
+          m_Stack.pop();
 
+          locals[i]->value = value;
+          locals[i]->type = value->type;
+        }
+        m_FrameStack.back().locals = std::move(locals);
+
+        fn_obj->tp->nb_call(*this, fn_obj);
+        m_FrameStack.pop_back();
         break;
       }
+
       case RETURN:
       {
-        // todo: maybe do something else? :)
+        // m_FrameStack.pop_back();
         return;
       }
-
       case HALT:
       {
         return;

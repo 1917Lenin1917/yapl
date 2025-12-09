@@ -8,11 +8,19 @@
 #include <vector>
 
 #include "ByteCode.hpp"
+#include "values/ArrayValue.hpp"
 #include "values/DictValue.hpp"
 #include "values/Value.hpp"
 #include "values/BuiltinFunctionValue.hpp"
+#include "values/IntegerValue.hpp"
 
 namespace yapl {
+
+struct Frame
+{
+  std::shared_ptr<CodeObject> code_object;
+  std::vector<std::shared_ptr<Variable>> locals;
+};
 
 class ByteCodeVM
 {
@@ -20,23 +28,32 @@ public:
   explicit ByteCodeVM(CodeObject obj)
     : m_CodeObject(std::move(obj))
   {
+    std::vector<std::shared_ptr<Variable>> locals;
+    locals.reserve(m_CodeObject.locals.size());
+    for (const auto& name : m_CodeObject.locals)
+    {
+      locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::UNDEFINED, nullptr, "__main__", name));
+    }
+    Frame frame = {
+      .code_object = std::make_shared<CodeObject>(m_CodeObject),
+      .locals = locals
+    };
+    m_FrameStack.push_back(frame);
+
     auto fn = mk_builtin("print", [](ByteCodeVM& VM)
     {
-      const auto value = VM.m_Stack.top();
+      const auto _args = VM.m_Stack.top();
       VM.m_Stack.pop();
-      std::cout << value->print() << "\n";
+      const auto args = static_cast<ArrayValue*>(_args.get());
+
+      for (const auto value : args->value)
+      {
+        std::cout << value->print() << " ";
+      }
+      std::cout << "\n";
     });
-    m_CodeObject.Locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__builtins__", "print", false));
 
-
-    // m_Constants.push_back(mk_int(34));
-    // m_Constants.push_back(mk_int(35));
-    // m_Constants.push_back(mk_int(1000000));
-    //
-    // // m_Constants.push_back(mk_int(3));
-    // m_Constants.push_back(mk_int(1));
-    // m_Locals.push_back(std::make_shared<Variable>(false, VALUE_TYPE::INTEGER, mk_int(0)));
-    // m_Locals.push_back(std::make_shared<Variable>(false, VALUE_TYPE::INTEGER, mk_int(0)));
+    m_Globals["print"] = std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__main__", "print", false);
   }
 
 
@@ -47,7 +64,9 @@ public:
 private:
   std::size_t m_Idx = 0;
   std::stack<std::shared_ptr<Value>> m_Stack;
+  std::vector<Frame> m_FrameStack;
   CodeObject m_CodeObject;
+  std::unordered_map<std::string, std::shared_ptr<Variable>> m_Globals;
 
 private:
   void HandleBinaryOp(BinaryOp compare_type);

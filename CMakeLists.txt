@@ -43,6 +43,7 @@ add_executable(yapl src/main.cpp
         src/values/CodeObjectValue.cpp
         includes/yapl/values/CodeObjectValue.hpp
         src/values/BuiltinFunctionValue.cpp
+        src/CodeObject.cpp
 )
 
 add_subdirectory(externals/Catch2)

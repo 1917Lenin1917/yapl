@@ -110,6 +110,9 @@ int main(int argc, char** argv)
 
   auto vmtime1 = std::chrono::system_clock::now();
   auto obj = v.visit_RootASTNode(*ast_as_root);
+  print_code_object(obj);
+  // auto foo = static_cast<CodeObjectValue*>(obj.constants[0].get());
+  // print_code_object(*foo->code_object);
   ByteCodeVM vm { obj };
   vm.Run();
   auto vmtime2 = std::chrono::system_clock::now();
