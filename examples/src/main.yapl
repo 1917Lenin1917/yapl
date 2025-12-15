@@ -452,9 +452,66 @@
 //bar = 20;
 //baz = foo;
 
-fn fib(a) {
-  if (a < 2) { return a; }
-  else { return fib(a-1) + fib(a-2); }
-}
+//fn fib(a) {
+//  if (a < 2) { return a; }
+//  else { return fib(a-1) + fib(a-2); }
+//}
+//
+//print(fib(35));
 
-print(fib(35));
+//print(1)
+//print("str")
+//print(69.420)
+//print(true)
+//print(false)
+//print(-1)
+//print(!true)
+//print(!false)
+//print("Was:", true, ", now it is:", !true)
+
+//print([1, 2, 3])
+//print({ 1: 2, 3: 4, "5": 6 })
+
+//fn my_print(arg1, arg2, =sep) {
+//  print(arg1)
+//  print(sep)
+//  print(arg1)
+//}
+//my_print(1, 2, sep="-")
+
+//fn bin(a, =op, b) {
+//  if op == "+" { return a + b }
+//  if op == "-" { return a - b }
+//  if op == "*" { return a * b }
+//  if op == "/" { return a / b }
+//  return "ты еблан"
+//}
+//
+//print(bin(34, 35, op="+"))
+//print(bin(34, 35, op="-"))
+//print(bin(34, 35, op="*"))
+//print(bin(34, 35, op="/"))
+//print(bin(34, 35, op="долбоеб"))
+//
+//for let i = 0; i < 10; i += 1; {
+//  print(i, i+1, sep="$")
+//}
+
+//fn create_user(
+//  =name,
+//  =email,
+//  =password
+//) {
+//  print("name", name, sep=": ")
+//  print("email", email, sep=": ")
+//  print("password", password, sep=": ")
+//}
+//
+//create_user(
+//  name="Maksim Litvinenko",
+//  email="ltv.maxym@gmail.com",
+//  password="1917Lenin1917"
+//)
+
+//print(str)
+print(str(1))

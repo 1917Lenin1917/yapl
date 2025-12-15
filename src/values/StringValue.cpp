@@ -113,6 +113,14 @@ void init_str_tp()
 
         return mk_size_iter(self, mk_int(arr->value.size()));
     };
+
+    StringTypeObject->nb_eq = [](const VPtr& self, const VPtr& other) -> VPtr
+    {
+        if (other->tp != StringTypeObject) return NotImplemented;
+        auto self_str = static_cast<StringValue*>(self.get());
+        auto other_str = static_cast<StringValue*>(other.get());
+        return mk_bool(self_str->value == other_str->value);
+    };
 }
 
 }

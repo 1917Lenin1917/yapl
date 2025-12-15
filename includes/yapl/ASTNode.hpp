@@ -90,6 +90,7 @@ public:
     std::string print(size_t indent_size) override;
 
     std::shared_ptr<Value> visit(Visitor &visitor) override;
+    void visit(ByteCodeVisitor &visitor) override { visitor.visit_FloatASTNode(*this); }
 };
 class BooleanASTNode final : public BaseASTNode
 {
@@ -104,6 +105,7 @@ public:
     std::string print(size_t indent_size) override;
 
     std::shared_ptr<Value> visit(Visitor &visitor) override;
+    void visit(ByteCodeVisitor &visitor) override { visitor.visit_BooleanASTNode(*this); }
 };
 class StringASTNode final : public BaseASTNode
 {
@@ -115,6 +117,7 @@ public:
     std::string print(size_t indent_size) override;
 
     std::shared_ptr<Value> visit(Visitor &visitor) override;
+    void visit(ByteCodeVisitor &visitor) override { visitor.visit_StringASTNode(*this); }
 };
 
 class IdentifierASTNode final : public BaseASTNode
@@ -211,6 +214,7 @@ public:
   std::string print(size_t indent_size) override;
 
   std::shared_ptr<Value> visit(Visitor &visitor) override;
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_UnaryOpASTNode(*this); }
 };
 
 class BinaryOpASTNode final : public BaseASTNode
@@ -284,10 +288,10 @@ class FunctionArgumentASTNode final : public BaseASTNode
 public:
   Token name;
   Token type;
-  bool is_args, is_kwargs;
+  bool is_args, is_kwargs, is_keyword;
 
-  FunctionArgumentASTNode(const Token& n, const Token& t, bool is_args = false, bool is_kwargs = false)
-    :BaseASTNode(), name(n), type(t), is_args(is_args), is_kwargs(is_kwargs) {}
+  FunctionArgumentASTNode(const Token& n, const Token& t, bool is_args = false, bool is_kwargs = false, bool is_keyword = false)
+    :BaseASTNode(), name(n), type(t), is_args(is_args), is_kwargs(is_kwargs), is_keyword(is_keyword) {}
 
   std::string print(size_t indent_size) override;
 
@@ -509,6 +513,18 @@ public:
   std::shared_ptr<Value> visit(Visitor &visitor) override;
 };
 
+class KeyParamExpressionASTNode final : public BaseASTNode
+{
+public:
+    Token identifier;
+    std::unique_ptr<BaseASTNode> expression;
+    explicit KeyParamExpressionASTNode(const Token &identifier, std::unique_ptr<BaseASTNode> expr)
+        :BaseASTNode(), identifier(identifier), expression(std::move(expr)) {}
+
+    std::string print(size_t indent_size) override;
+    std::shared_ptr<Value> visit(Visitor &visitor) override;
+    void visit(ByteCodeVisitor &visitor) override { visitor.visit_KeyParamExpressionASTNode(*this); }
+};
 class StarredExpressionASTNode final : public BaseASTNode
 {
 public:

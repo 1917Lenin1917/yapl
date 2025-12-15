@@ -67,6 +67,34 @@ void ByteCodeVisitor::visit_VariableASTNode(const VariableASTNode &node)
   m_ScopeVars.back().push_back(index);
 }
 
+void ByteCodeVisitor::visit_UnaryOpASTNode(const UnaryOpASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  node.RHS->visit(*this);
+
+  current_object.op_codes.push_back(UNARY_OP);
+  switch (node.op.type)
+  {
+    case TOKEN_TYPE::PLUS:
+    {
+      current_object.op_codes.push_back(static_cast<OpCode>(POS));
+      break;
+    }
+    case TOKEN_TYPE::MINUS:
+    {
+      current_object.op_codes.push_back(static_cast<OpCode>(NEG));
+      break;
+    }
+    case TOKEN_TYPE::NOT:
+    {
+      current_object.op_codes.push_back(static_cast<OpCode>(NOT));
+      break;
+    }
+    default: throw std::runtime_error("Unhandled token");
+  }
+}
+
 void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
@@ -181,39 +209,24 @@ void ByteCodeVisitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(index));
 }
 
-std::size_t ByteCodeVisitor::visit_IntegerASTNode(const IntegerASTNode &node)
+void ByteCodeVisitor::visit_IntegerASTNode(const IntegerASTNode &node)
 {
-  auto& current_object = m_ObjectStack.back();
-  int node_value = node.value;
-  auto it = std::ranges::find_if(current_object.constants, [node_value](std::shared_ptr<Value>& value)
-  {
-    const auto int_value = dynamic_cast<IntegerValue*>(value.get());
-    return int_value && int_value->value == node_value;
-  });
-  std::size_t index = it != current_object.constants.end() ? it - current_object.constants.begin() : -1;
-
-  if (index == -1)
-  {
-    current_object.constants.push_back(mk_int(node.value));
-    index = current_object.constants.size() - 1;
-  }
-
-  current_object.op_codes.push_back(LOAD_CONST);
-  current_object.op_codes.push_back(static_cast<OpCode>(index));
-
-  return index;
+  return emitConstantForNode<int, IntegerValue>(node.value);
 }
 
 void ByteCodeVisitor::visit_FloatASTNode(const FloatASTNode &node)
 {
+  emitConstantForNode<float, FloatValue>(node.value);
 }
 
 void ByteCodeVisitor::visit_BooleanASTNode(const BooleanASTNode &node)
 {
+  emitConstantForNode<bool, BooleanValue>(node.value);
 }
 
 void ByteCodeVisitor::visit_StringASTNode(const StringASTNode &node)
 {
+  emitConstantForNode<std::string, StringValue>(node.value);
 }
 
 void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node)
@@ -221,24 +234,34 @@ void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNod
   auto& current_object = m_ObjectStack.back();
 
   node.condition->visit(*this);
+
   current_object.op_codes.push_back(JMP_IF_FALSE);
-  // temp push 0, and save index. after we compute if branch, we go back and update jump amount
   current_object.op_codes.push_back(static_cast<OpCode>(0));
-  auto jmp_len_idx = current_object.op_codes.size() - 1;
+  const std::size_t jmp_if_false_operand_idx = current_object.op_codes.size() - 1;
 
   node.true_scope->visit(*this);
-  // if there is an else branch, we should jump over it
 
   if (node.false_scope)
   {
-    // temp push 0, and save index. after we compute else branch, we go back and update jump amount
     current_object.op_codes.push_back(JMP);
     current_object.op_codes.push_back(static_cast<OpCode>(0));
-    auto jmp_len_idx_2 = current_object.op_codes.size() - 1;
-    current_object.op_codes[jmp_len_idx] = static_cast<OpCode>(current_object.op_codes.size() - jmp_len_idx - 1);
+    const std::size_t jmp_operand_idx = current_object.op_codes.size() - 1;
+
+    const std::size_t else_start_ip = current_object.op_codes.size();
+    current_object.op_codes[jmp_if_false_operand_idx] =
+      static_cast<OpCode>(else_start_ip - (jmp_if_false_operand_idx + 1));
 
     node.false_scope->visit(*this);
-    current_object.op_codes[jmp_len_idx_2] = static_cast<OpCode>(current_object.op_codes.size() - jmp_len_idx_2 - 1);
+
+    const std::size_t end_ip = current_object.op_codes.size();
+    current_object.op_codes[jmp_operand_idx] =
+      static_cast<OpCode>(end_ip - (jmp_operand_idx + 1));
+  }
+  else
+  {
+    const std::size_t end_ip = current_object.op_codes.size();
+    current_object.op_codes[jmp_if_false_operand_idx] =
+      static_cast<OpCode>(end_ip - (jmp_if_false_operand_idx + 1));
   }
 }
 
@@ -289,7 +312,7 @@ void ByteCodeVisitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
     node.increment->visit(*this);
   }
 
-  // 6) jump back to condition start (backward jump)
+  // 6) jump back to condition start (node_value)
   current_object.op_codes.push_back(JMP);
   current_object.op_codes.push_back(static_cast<OpCode>(0)); // placeholder
   const size_t jmp_back_len_idx = current_object.op_codes.size() - 1;
@@ -408,13 +431,38 @@ void ByteCodeVisitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode 
 
 void ByteCodeVisitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
 {
-  for (const auto& arg : node.args) arg->visit(*this);
+  // Firstly, visit all regular params, then key-params
+  std::size_t pos_args = 0, kw_args = 0;
+  for (const auto& arg : node.args)
+  {
+    if (dynamic_cast<KeyParamExpressionASTNode*>(arg.get())) continue;
+    arg->visit(*this);
+    pos_args += 1;
+  }
+  for (const auto& arg : node.args)
+  {
+    if (!dynamic_cast<KeyParamExpressionASTNode*>(arg.get())) continue;
+    arg->visit(*this);
+    kw_args += 1;
+  }
 
   node.base->visit(*this);
 
   auto& current_object = m_ObjectStack.back();
-  current_object.op_codes.push_back(CALL);
-  current_object.op_codes.push_back(static_cast<OpCode>(node.args.size()));
+
+  if (is_kw_func)
+  {
+    is_kw_func = false;
+
+    current_object.op_codes.push_back(KW_CALL);
+    current_object.op_codes.push_back(static_cast<OpCode>(pos_args));
+    current_object.op_codes.push_back(static_cast<OpCode>(kw_args));
+  }
+  else
+  {
+    current_object.op_codes.push_back(CALL);
+    current_object.op_codes.push_back(static_cast<OpCode>(pos_args));
+  }
 }
 
 void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentListASTNode &node)
@@ -433,6 +481,31 @@ void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentLi
       index = current_object.locals.size() - 1;
     }
     m_ScopeVars.back().push_back(index);
+
+    const auto kind = arg->is_keyword
+      ? ParamKind::KeywordOnly
+      : ParamKind::PositionalOrKeyword;
+    current_object.params.push_back(Parameter{
+      .name        = var_name,
+      .kind        = kind,
+      .local_index = index
+    });
   }
 }
+
+// LOAD_CONST 0 (func)
+// LOAD_CONST 1 (1)
+// LOAD_CONST 2 (2)
+// LOAD_CONST 3 ("+")
+// LOAD_CONST 4 ("op")
+// CALL_KW 2 1 (pos_args, kw_args)
+
+void ByteCodeVisitor::visit_KeyParamExpressionASTNode(const KeyParamExpressionASTNode &node)
+{
+  is_kw_func = true;
+
+  node.expression->visit(*this);
+  emitConstantForNode<std::string, StringValue>(node.identifier.value);
+}
+
 }

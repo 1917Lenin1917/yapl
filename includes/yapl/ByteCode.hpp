@@ -16,6 +16,7 @@ enum OpCode {
   LOAD_UNDEF, // pushes undefined to stack
 
   MAKE_FUNC,
+  KW_CALL, // call when we have key arguments like op="+"
   CALL,
 
   INIT_VAR,   // sets `is_tdz` to false and assigns value from stack top
@@ -27,10 +28,17 @@ enum OpCode {
   LOAD_NAME,
   STORE_NAME,
 
+  UNARY_OP,
   BINARY_OP,
 
   JMP,
   JMP_IF_FALSE,
+};
+
+enum UnaryOp {
+  POS,  // +
+  NEG, // -
+  NOT,   // !
 };
 
 enum BinaryOp {
@@ -58,6 +66,7 @@ inline std::string_view opcode_to_string(OpCode opcode) {
     case OpCode::LOAD_UNDEF:   return "LOAD_UNDEF";
     case OpCode::MAKE_FUNC:    return "MAKE_FUNC";
     case OpCode::CALL:         return "CALL";
+    case OpCode::KW_CALL:      return "KW_CALL";
     case OpCode::INIT_VAR:     return "INIT_VAR";
     case OpCode::DEINIT_VAR:   return "DEINIT_VAR";
     case OpCode::LOAD_LOCAL:   return "LOAD_LOCAL";

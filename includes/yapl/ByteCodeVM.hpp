@@ -12,7 +12,9 @@
 #include "values/DictValue.hpp"
 #include "values/Value.hpp"
 #include "values/BuiltinFunctionValue.hpp"
+#include "values/FunctionValue.hpp"
 #include "values/IntegerValue.hpp"
+#include "values/TypeObjectValue.hpp"
 
 namespace yapl {
 
@@ -42,18 +44,42 @@ public:
 
     auto fn = mk_builtin("print", [](ByteCodeVM& VM)
     {
+      std::string sep = " ";
+      std::string end = "\n";
+
+      const auto _args_or_kw = VM.m_Stack.top();
+      if (const auto kw = dynamic_cast<DictValue*>(_args_or_kw.get()))
+      {
+        VM.m_Stack.pop();
+        const auto sep_str = mk_str("sep");
+        const auto end_str = mk_str("end");
+
+        if (kw->value.contains(sep_str)) sep = static_cast<StringValue*>(kw->value.at(sep_str).get())->value;
+        if (kw->value.contains(end_str)) end = static_cast<StringValue*>(kw->value.at(end_str).get())->value;
+      }
       const auto _args = VM.m_Stack.top();
       VM.m_Stack.pop();
       const auto args = static_cast<ArrayValue*>(_args.get());
 
-      for (const auto value : args->value)
+      for (std::size_t i = 0; i < args->value.size(); i++)
       {
-        std::cout << value->print() << " ";
+        std::cout << args->value[i]->print();
+        if (i != args->value.size() - 1) std::cout << sep;
       }
-      std::cout << "\n";
+      std::cout << end;
     });
 
     m_Globals["print"] = std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__main__", "print", false);
+    m_Globals[IntegerTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(IntegerTypeObject), "__main__", IntegerTypeObject->name, false);
+    m_Globals[FloatTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(FloatTypeObject), "__main__", FloatTypeObject->name, false);
+    m_Globals[ArrayTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(ArrayTypeObject), "__main__", ArrayTypeObject->name, false);
+    m_Globals[BooleanTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(BooleanTypeObject), "__main__", BooleanTypeObject->name, false);
+    m_Globals[StringTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(StringTypeObject), "__main__", StringTypeObject->name, false);
+    m_Globals[TypeObjectTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(TypeObjectTypeObject), "__main__", TypeObjectTypeObject->name, false);
+    m_Globals[DictTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(DictTypeObject), "__main__", DictTypeObject->name, false);
+    m_Globals[FunctionTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(FunctionTypeObject), "__main__", FunctionTypeObject->name, false);
+    m_Globals[SizeIteratorTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(SizeIteratorTypeObject), "__main__", SizeIteratorTypeObject->name, false);
+
   }
 
 
@@ -61,7 +87,6 @@ public:
   void Run(CodeObject& co);
 
 
-private:
   std::size_t m_Idx = 0;
   std::stack<std::shared_ptr<Value>> m_Stack;
   std::vector<Frame> m_FrameStack;
@@ -69,6 +94,7 @@ private:
   std::unordered_map<std::string, std::shared_ptr<Variable>> m_Globals;
 
 private:
+  void HandleUnaryOp(UnaryOp compare_type);
   void HandleBinaryOp(BinaryOp compare_type);
 };
 

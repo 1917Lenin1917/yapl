@@ -79,6 +79,22 @@ case OpCode::LOAD_CONST: {
         output << "\n";
         break;
       }
+      case OpCode::KW_CALL: {
+        std::size_t pos_arg_amount = 0;
+        if (read_operand(instruction_pointer, pos_arg_amount)) {
+          output << " " << pos_arg_amount << " ";
+        } else {
+          output << " <missing operand> ";
+        }
+        std::size_t kw_arg_amount = 0;
+        if (read_operand(instruction_pointer, kw_arg_amount)) {
+          output << " " << kw_arg_amount;
+        } else {
+          output << " <missing operand>";
+        }
+        output << "\n";
+        break;
+      }
 
       case OpCode::LOAD_NAME:
       case OpCode::STORE_NAME: {

@@ -20,6 +20,7 @@ void ByteCodeVM::Run(CodeObject &code)
 
   while (true)
   {
+    if (idx == code.op_codes.size()) return;
     const auto op = code.op_codes[idx++];
 
     switch (op)
@@ -30,7 +31,6 @@ void ByteCodeVM::Run(CodeObject &code)
         idx += rel;
         break;
       }
-
       case JMP_IF_FALSE:
       {
         const auto val = m_Stack.top();
@@ -43,21 +43,18 @@ void ByteCodeVM::Run(CodeObject &code)
         }
         break;
       }
-
       case LOAD_CONST:
       {
         const auto const_idx = code.op_codes[idx++];
         m_Stack.push(code.constants[const_idx]);
         break;
       }
-
       case LOAD_UNDEF:
       {
         // TODO: change to load from globals !
         m_Stack.push(mk_undefined());
         break;
       }
-
       case INIT_VAR:
       {
         const auto& frame = m_FrameStack.back();
@@ -71,7 +68,6 @@ void ByteCodeVM::Run(CodeObject &code)
         var->value = value;
         break;
       }
-
       case DEINIT_VAR:
       {
         // FIXME: handle this before return and uncomment
@@ -84,13 +80,16 @@ void ByteCodeVM::Run(CodeObject &code)
         var->value = nullptr;
         break;
       }
-
+      case UNARY_OP:
+      {
+        HandleUnaryOp(static_cast<UnaryOp>(code.op_codes[idx++]));
+        break;
+      }
       case BINARY_OP:
       {
         HandleBinaryOp(static_cast<BinaryOp>(code.op_codes[idx++]));
         break;
       }
-
       case LOAD_NAME:
       {
         // At this moment, just look up globals
@@ -135,10 +134,12 @@ void ByteCodeVM::Run(CodeObject &code)
         const auto value = m_Stack.top();
         m_Stack.pop();
 
+        if (!var)
+          throw std::runtime_error(std::format("Unknown variable {}", name));
+
         var->value = value;
         break;
       }
-
       case MAKE_FUNC:
       {
         const auto code_object_value = m_Stack.top();
@@ -150,55 +151,233 @@ void ByteCodeVM::Run(CodeObject &code)
         m_Globals[name] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, fn, "__main__", name, false);
         break;
       }
-
-      case CALL:
+      case KW_CALL:
       {
-        const auto arg_amount = code.op_codes[idx++];
-        // todo: pop args
-        const auto fn_obj = m_Stack.top();
+        const int positional_arg_count = code.op_codes[idx++];
+        const int keyword_arg_count = code.op_codes[idx++];
+
+        const auto function_object = m_Stack.top();
         m_Stack.pop();
+
         m_FrameStack.push_back({});
 
-        if (fn_obj->tp == BuiltinFunctionTypeObject)
+        std::unordered_map<std::string, VPtr> keyword_arguments;
+        keyword_arguments.reserve(keyword_arg_count);
+
+        for (int i = 0; i < keyword_arg_count; i++)
         {
-          std::vector<std::shared_ptr<Value>> values;
-          for (int i = 0; i < arg_amount; i++)
+          const auto keyword_name_value = m_Stack.top();
+          m_Stack.pop();
+
+          const auto keyword_value = m_Stack.top();
+          m_Stack.pop();
+
+          const auto keyword_name = static_cast<StringValue*>(keyword_name_value.get())->value;
+          keyword_arguments.emplace(keyword_name, keyword_value);
+        }
+
+        std::vector<VPtr> positional_arguments;
+        positional_arguments.reserve(positional_arg_count);
+        for (int i = 0; i < positional_arg_count; i++)
+        {
+          positional_arguments.push_back(m_Stack.top());
+          m_Stack.pop();
+        }
+        std::ranges::reverse(positional_arguments);
+
+
+        if (function_object->tp == BuiltinFunctionTypeObject)
+        {
+          auto dict = mk_dict();
+          for (const auto& [key, value] : keyword_arguments)
           {
-            values.push_back(m_Stack.top());
+            dict->OperatorIndexSet(mk_str(key), value);
+          }
+
+          m_Stack.push(mk_arr(std::move(positional_arguments)));
+          m_Stack.push(dict);
+          function_object->tp->nb_call(*this, function_object);
+          m_FrameStack.pop_back();
+
+          break;
+        }
+
+
+        const auto function_value = static_cast<FunctionValue*>(function_object.get());
+        auto code_object = function_value->code_object;
+
+        std::vector<std::shared_ptr<Variable>> locals;
+        locals.reserve(code_object->locals.size());
+        for (const auto& local_name : code_object->locals)
+        {
+          locals.push_back(std::make_shared<Variable>(
+            true,
+            VALUE_TYPE::UNDEFINED,
+            mk_undefined(),
+            "__main__",
+            local_name,
+            false
+          ));
+        }
+
+        std::size_t positional_index = 0;
+
+        for (const auto& parameter : code_object->params)
+        {
+          auto& variable = locals[parameter.local_index];
+          bool assigned = false;
+
+          if (parameter.kind != ParamKind::KeywordOnly && positional_index < positional_arguments.size())
+          {
+            const auto value = positional_arguments[positional_index++];
+            variable->value = value;
+            variable->type = value->type;
+            assigned = true;
+          }
+          else
+          {
+            const auto it = keyword_arguments.find(parameter.name);
+            if (it != keyword_arguments.end())
+            {
+              const auto value = it->second;
+              variable->value = value;
+              variable->type = value->type;
+              keyword_arguments.erase(it);
+              assigned = true;
+            }
+          }
+
+          if (!assigned)
+          {
+            if (parameter.has_default)
+            {
+              const auto value = code_object->constants[parameter.default_const_index];
+              variable->value = value;
+              variable->type = value->type;
+            }
+            else
+            {
+              throw std::runtime_error(std::format("Missing required argument '{}'", parameter.name));
+            }
+          }
+        }
+
+        if (positional_index != positional_arguments.size())
+        {
+          throw std::runtime_error("Too many positional arguments");
+        }
+
+        if (!keyword_arguments.empty())
+        {
+          const auto unknown = keyword_arguments.begin()->first;
+          throw std::runtime_error(std::format("Unexpected keyword argument '{}'", unknown));
+        }
+
+        m_FrameStack.back().code_object = code_object;
+        m_FrameStack.back().locals = std::move(locals);
+
+        function_object->tp->nb_call(*this, function_object);
+
+        m_FrameStack.pop_back();
+        break;
+      }
+      case CALL:
+      {
+        const auto positional_arg_count = static_cast<std::size_t>(code.op_codes[idx++]);
+
+        const auto function_object = m_Stack.top();
+        m_Stack.pop();
+
+        m_FrameStack.push_back({});
+
+        if (function_object->tp == BuiltinFunctionTypeObject || function_object->tp == TypeObjectTypeObject)
+        {
+          std::vector<VPtr> positional_arguments;
+          positional_arguments.reserve(positional_arg_count);
+
+          for (std::size_t i = 0; i < positional_arg_count; i++)
+          {
+            positional_arguments.push_back(m_Stack.top());
             m_Stack.pop();
           }
-          std::ranges::reverse(values);
-          m_Stack.push(mk_arr(std::move(values)));
-          fn_obj->tp->nb_call(*this, fn_obj);
+
+          std::ranges::reverse(positional_arguments);
+          m_Stack.push(mk_arr(std::move(positional_arguments)));
+
+          function_object->tp->nb_call(*this, function_object);
           m_FrameStack.pop_back();
           break;
         }
 
-        const auto fv = static_cast<FunctionValue*>(fn_obj.get());
-        m_FrameStack.back().code_object = fv->code_object;
+        const auto function_value = static_cast<FunctionValue*>(function_object.get());
+        auto code_object = function_value->code_object;
+
+        m_FrameStack.back().code_object = code_object;
 
         std::vector<std::shared_ptr<Variable>> locals;
-        locals.reserve(fv->code_object->locals.size());
-        for (const auto& name : fv->code_object->locals)
+        locals.reserve(code_object->locals.size());
+
+        for (const auto& local_name : code_object->locals)
         {
-          locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::UNDEFINED, mk_undefined(), "__main__", name, false));
+          locals.push_back(std::make_shared<Variable>(
+            true,
+            VALUE_TYPE::UNDEFINED,
+            mk_undefined(),
+            "__main__",
+            local_name,
+            false
+          ));
         }
 
-        for (int i = 0; i < arg_amount; i++)
+        std::vector<VPtr> positional_arguments;
+        positional_arguments.reserve(positional_arg_count);
+
+        for (std::size_t i = 0; i < positional_arg_count; i++)
         {
-          const auto value = m_Stack.top();
+          positional_arguments.push_back(m_Stack.top());
           m_Stack.pop();
-
-          locals[i]->value = value;
-          locals[i]->type = value->type;
         }
+
+        std::ranges::reverse(positional_arguments);
+
+        std::size_t positional_index = 0;
+
+        for (const auto& parameter : code_object->params)
+        {
+          if (parameter.kind == ParamKind::KeywordOnly)
+          {
+            throw std::runtime_error(std::format(
+              "Missing required keyword-only argument '{}'",
+              parameter.name
+            ));
+          }
+
+          if (positional_index >= positional_arguments.size())
+          {
+            throw std::runtime_error(std::format(
+              "Missing required argument '{}'",
+              parameter.name
+            ));
+          }
+
+          auto& variable = locals[parameter.local_index];
+          const auto value = positional_arguments[positional_index++];
+
+          variable->value = value;
+          variable->type = value->type;
+        }
+
+        if (positional_index != positional_arguments.size())
+        {
+          throw std::runtime_error("Too many positional arguments");
+        }
+
         m_FrameStack.back().locals = std::move(locals);
 
-        fn_obj->tp->nb_call(*this, fn_obj);
+        function_object->tp->nb_call(*this, function_object);
         m_FrameStack.pop_back();
         break;
       }
-
       case RETURN:
       {
         // m_FrameStack.pop_back();
@@ -219,6 +398,31 @@ void ByteCodeVM::Run(CodeObject &code)
 void ByteCodeVM::Run()
 {
   Run(m_CodeObject);
+}
+
+void ByteCodeVM::HandleUnaryOp(UnaryOp compare_type)
+{
+  const auto value = m_Stack.top();
+  m_Stack.pop();
+
+  switch (compare_type)
+  {
+    case POS:
+    {
+      m_Stack.push(value->tp->nb_pos(value));
+      break;
+    }
+    case NEG:
+    {
+      m_Stack.push(value->tp->nb_neg(value));
+      break;
+    }
+    case NOT:
+    {
+      m_Stack.push(value->tp->nb_not(value));
+      break;
+    }
+  }
 }
 
 void ByteCodeVM::HandleBinaryOp(const BinaryOp compare_type)
@@ -309,6 +513,7 @@ void ByteCodeVM::HandleBinaryOp(const BinaryOp compare_type)
       VPtr r = rop(rhs, lhs);
       if (r != NotImplemented) { m_Stack.push(r); return; }
     }
+    throw std::runtime_error("Unhandled binary op");
 }
 
 }

@@ -636,6 +636,16 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return visitor.visit_ForEachLoopASTNode(*this);
     }
 
+    std::string KeyParamExpressionASTNode::print(size_t indent_size)
+    {
+        return std::string();
+    }
+
+    std::shared_ptr<Value> KeyParamExpressionASTNode::visit(Visitor &visitor)
+    {
+        return nullptr;
+    }
+
     std::string StarredExpressionASTNode::print(size_t indent_size) {
         return std::string();
     }

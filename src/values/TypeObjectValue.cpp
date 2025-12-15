@@ -6,6 +6,7 @@
 
 #include "yapl/values/TypeObjectValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
+#include "yapl/ByteCodeVM.hpp"
 
 namespace yapl {
 
@@ -20,16 +21,17 @@ std::unique_ptr<Value> TypeObjectValue::Copy() const
 
 void init_tp_methods(TypeObject *tp)
 {
-    MAKE_METHOD_WITH_VARGS(tp, "make", "value", ARG("this", "this"))
+    tp->nb_call = [](ByteCodeVM& VM, const VPtr& self)->VPtr
     {
-        // TODO: rewrite methods using variadic args
-        auto self = static_cast<TypeObjectValue*>(f_obj->function_scope->vars["this"]->value.get());
-        if (f_obj->function_scope->vars.contains("args"))
-        {
-            auto value = f_obj->function_scope->vars["args"]->value;
-            return self->value->nb_make(as_arr(value.get())->value);
-        }
-        return self->value->nb_make({});
+        auto _args = VM.m_Stack.top();
+        auto args = static_cast<ArrayValue*>(_args.get());
+        const auto self_t = as_type(self.get());
+        VM.m_Stack.pop();
+
+        auto created = self_t->value->nb_make(args->value);
+        VM.m_Stack.push(created);
+
+        return nullptr;
     };
 }
 

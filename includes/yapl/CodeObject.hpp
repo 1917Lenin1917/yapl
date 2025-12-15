@@ -16,6 +16,19 @@ namespace yapl {
 class Value;
 class Variable;
 
+enum class ParamKind {
+  PositionalOrKeyword,
+  KeywordOnly
+};
+
+struct Parameter {
+  std::string name;
+  ParamKind kind;
+  bool has_default;
+  std::size_t default_const_index;
+  std::size_t local_index;
+};
+
 struct CodeObject
 {
   std::vector<OpCode> op_codes;
@@ -26,6 +39,7 @@ struct CodeObject
 
   std::vector<std::string> locals;
   std::vector<std::string> names;
+  std::vector<Parameter> params;
 };
 
 void print_code_object(const CodeObject& code_object, std::ostream& output = std::cout);

@@ -57,6 +57,13 @@ static void init_bool_tp()
         return NotImplemented;
 		};
 
+		BooleanTypeObject->nb_not = [](const VPtr& self)
+		{
+			auto v = as_bool(self.get());
+			return mk_bool(!v->value);
+		};
+
+
     init_base_methods(BooleanTypeObject);
     init_bool_methods(BooleanTypeObject);
 }

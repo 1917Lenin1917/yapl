@@ -11,53 +11,60 @@ namespace yapl {
 void Lexer::check_insert_semicolon(std::vector<Token>& tokens)
 {
     if (inside_import) return;
-    // At every newline we try to auto-insert a semicolon, since parser grammar already requires them
-    // We should check for
-    // 1) now parens and brackets are open
-    // 2) last token on the line is not an operator like + - * / % && || ( [ or and
-    // TODO: add logical operators like && || or and
-    // 3) next line doesn't start with . or =
-    char next_non_white_space = '\0';
-    for (auto i = m_pos+1; i < m_text.size(); i++)
-    {
-        // TODO: look out for comments
-        next_non_white_space = m_text[i];
-        if (next_non_white_space != '\0' && next_non_white_space != '\r' && next_non_white_space != '\t' && next_non_white_space != ' ' && next_non_white_space != '\n')
-            break;
-    }
 
-    if (!tokens.empty())
+    if (paren_depth != 0) return;
+    if (sq_br_depth != 0) return;
+
+    char next_non_white_space = '\0';
+    for (auto i = m_pos + 1; i < m_text.size(); i++)
     {
-        const auto& last_token = tokens[tokens.size()-1];
-        if (last_token.type != TOKEN_TYPE::PLUS &&
-            last_token.type != TOKEN_TYPE::MINUS &&
-            last_token.type != TOKEN_TYPE::TIMES &&
-            last_token.type != TOKEN_TYPE::MOD &&
-            last_token.type != TOKEN_TYPE::SLASH &&
-            last_token.type != TOKEN_TYPE::PERIOD &&
-            last_token.type != TOKEN_TYPE::NOT &&
-            last_token.type != TOKEN_TYPE::LT &&
-            last_token.type != TOKEN_TYPE::GT &&
-            last_token.type != TOKEN_TYPE::LPAREN &&
-            last_token.type != TOKEN_TYPE::LBRACK &&
-            last_token.type != TOKEN_TYPE::LSQBRACK &&
-            last_token.type != TOKEN_TYPE::RBRACK &&
-            last_token.type != TOKEN_TYPE::SEMICOLON &&
-            next_non_white_space != '{' &&
-            next_non_white_space != '.'
-//            (paren_depth == 0 &&
-//            brace_depth == 0 &&
-//            sq_br_depth == 0
-            // TODO: add nextline checking
-            // TODO: change this when return { something }; statements are implemented. For now we just dont insert semicolons for }
-            // paren checks should be tied to the line maybe?
-                )
+        if (m_text[i] == '/' && i + 1 < m_text.size() && m_text[i + 1] == '/')
         {
-            // this may be wrong on lines with comments
-            tokens.emplace_back(TOKEN_TYPE::SEMICOLON, nullptr, current_line, current_col_pos+1, current_col_pos+1);
+            while (i < m_text.size() && m_text[i] != '\n') i++;
+        }
+
+        next_non_white_space = m_text[i];
+        if (next_non_white_space != '\0' &&
+            next_non_white_space != '\r' &&
+            next_non_white_space != '\t' &&
+            next_non_white_space != ' '  &&
+            next_non_white_space != '\n')
+        {
+            break;
         }
     }
 
+    if (tokens.empty()) return;
+
+    const auto& last_token = tokens.back();
+
+    if (last_token.type == TOKEN_TYPE::PLUS ||
+        last_token.type == TOKEN_TYPE::MINUS ||
+        last_token.type == TOKEN_TYPE::TIMES ||
+        last_token.type == TOKEN_TYPE::MOD ||
+        last_token.type == TOKEN_TYPE::SLASH ||
+        last_token.type == TOKEN_TYPE::PERIOD ||
+        last_token.type == TOKEN_TYPE::NOT ||
+        last_token.type == TOKEN_TYPE::LT ||
+        last_token.type == TOKEN_TYPE::GT ||
+        last_token.type == TOKEN_TYPE::LPAREN ||
+        last_token.type == TOKEN_TYPE::LBRACK ||
+        last_token.type == TOKEN_TYPE::LSQBRACK ||
+        last_token.type == TOKEN_TYPE::RBRACK ||
+        last_token.type == TOKEN_TYPE::SEMICOLON ||
+        last_token.type == TOKEN_TYPE::COMMA)
+    {
+        return;
+    }
+
+    if (next_non_white_space == '{' ||
+        next_non_white_space == '.' ||
+        next_non_white_space == '=')
+    {
+        return;
+    }
+
+    tokens.emplace_back(TOKEN_TYPE::SEMICOLON, nullptr, current_line, current_col_pos + 1, current_col_pos + 1);
 }
 
 std::vector<Token> Lexer::make_tokens()
