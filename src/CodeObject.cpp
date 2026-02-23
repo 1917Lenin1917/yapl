@@ -69,6 +69,7 @@ case OpCode::LOAD_CONST: {
         break;
       }
 
+      case OpCode::MAKE_ARR:
       case OpCode::CALL: {
         std::size_t operand = 0;
         if (read_operand(instruction_pointer, operand)) {

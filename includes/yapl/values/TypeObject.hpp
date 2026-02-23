@@ -36,13 +36,7 @@ struct TypeObject
 {
     std::string name;
 
-    std::vector<std::unique_ptr<FunctionASTNode>> methods;
-    std::unordered_map<std::string, FunctionASTNode*> method_dict;
-
-    // make_fn nb_make = [](const std::vector<VPtr>& args) -> VPtr // default impl looks for user-defined init method
-    // {
-    //     return nullptr;
-    // };
+    std::unordered_map<std::string, std::shared_ptr<Value>> methods;
 
     make_fn nb_make = nullptr;
 
@@ -72,13 +66,6 @@ struct TypeObject
     unop_fn nb_str  = nullptr;    // __str__
     unop_fn nb_iter = nullptr;    // __iter__
     unop_fn nb_next = nullptr;    // __next__
-
-
-    void AddMethod(const std::string& method_name, std::unique_ptr<FunctionASTNode>&& function)
-    {
-        methods.push_back(std::move(function));
-        method_dict[method_name] = methods.back().get();
-    }
 };
 
 }

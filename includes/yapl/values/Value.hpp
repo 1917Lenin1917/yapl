@@ -84,69 +84,6 @@ enum class VALUE_TYPE
 
 std::string value_type_to_string(VALUE_TYPE vt);
 
-template<class Class>
-struct MethodAutoReg {
-    Class* self;
-    char*  name_lit;
-    char*  ret_lit;
-    std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
-    std::unique_ptr<FunctionArgumentASTNode> args_arg = nullptr;
-
-    template<class Body>
-    void operator=(Body&& user_body) {
-        /* build the AST for the body the user just wrote */
-        auto body_node =
-                std::make_unique<BuiltinCustomVisitFunctionASTNode>(
-                        std::forward<Body>(user_body));
-
-        /* tokens */
-        const Token name_tok  { TOKEN_TYPE::IDENTIFIER, name_lit };
-        const Token ret_tok   { TOKEN_TYPE::IDENTIFIER, ret_lit };
-
-        /* full FunctionASTNode */
-        auto func = std::make_unique<FunctionASTNode>(
-                std::make_unique<FunctionDeclASTNode>(
-                        name_tok,
-                        std::make_unique<FunctionArgumentListASTNode>(
-                                std::move(args), std::move(args_arg), nullptr),
-                        ret_tok),
-                std::move(body_node));
-        self->AddMethod(name_lit, std::move(func));
-    }
-};
-
-template<class... P>
-std::vector<std::unique_ptr<FunctionArgumentASTNode>>
-make_arg_vector(P&&... p)
-{
-    std::vector<std::unique_ptr<FunctionArgumentASTNode>> v;
-    v.reserve(sizeof...(P));
-    (v.emplace_back(std::forward<P>(p)), ...);
-    return v;
-}
-
-#define ARG(name_lit, type_lit)                                         \
-    std::make_unique<FunctionArgumentASTNode>(                          \
-        Token{TOKEN_TYPE::IDENTIFIER, new char[](name_lit)},            \
-        Token{TOKEN_TYPE::IDENTIFIER, new char[](type_lit)})
-
-#define VA_ARG(name_lit, type_lit)                                         \
-    std::make_unique<FunctionArgumentASTNode>(                             \
-        Token{TOKEN_TYPE::IDENTIFIER, new char[](name_lit)},               \
-        Token{TOKEN_TYPE::IDENTIFIER, new char[](type_lit)}, true, false)
-
-#define MAKE_METHOD(this, name_lit, ret_lit, ...)                       \
-    MethodAutoReg<std::remove_pointer_t<decltype(this)>>{               \
-        this, new char[](name_lit), new char[](ret_lit),                \
-        make_arg_vector(__VA_ARGS__), nullptr                           \
-    } = [&](std::shared_ptr<Function> f_obj)->std::shared_ptr<Value>
-
-#define MAKE_METHOD_WITH_VARGS(this, name_lit, ret_lit, ...)            \
-    MethodAutoReg<std::remove_pointer_t<decltype(this)>>{               \
-        this, new char[](name_lit), new char[](ret_lit),                \
-        make_arg_vector(__VA_ARGS__), VA_ARG("args", "args")            \
-    } = [&](std::shared_ptr<Function> f_obj)->std::shared_ptr<Value>
-
 #define DEFINE_UNOP(method, slot_member, sym)        \
     VPtr method()                                    \
     {                                                \
@@ -171,12 +108,6 @@ public:
 
 	explicit Value(VALUE_TYPE type, TypeObject* tp);
 	virtual ~Value() = default;
-
-  void AddMethod(const std::string& method_name, std::unique_ptr<FunctionASTNode>&& function)
-  {
-      tp->methods.push_back(std::move(function));
-      tp->method_dict[method_name] = tp->methods.back().get();
-  }
 
 	[[nodiscard]] virtual std::string print();
 	[[nodiscard]] virtual std::unique_ptr<Value> Copy() const = 0;
@@ -226,14 +157,6 @@ public:
 		throw std::runtime_error("Unsupported operator!\n");
 	}
 
-	[[nodiscard]] FunctionASTNode* get_method_definition(const std::string& name)
-	{
-		if (tp->method_dict.contains(name))
-			return tp->method_dict[name];
-
-		std::cerr << "Unknown method " << name << "\n";
-		return nullptr;
-	}
 private:
     VPtr dispatch(unop_fn slot, const char* opname);
     VPtr dispatch(binop_fn slot, const VPtr& rhs, const char* opname);

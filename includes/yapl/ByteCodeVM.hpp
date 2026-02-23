@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ByteCode.hpp"
+#include "Variable.hpp"
 #include "values/ArrayValue.hpp"
 #include "values/DictValue.hpp"
 #include "values/Value.hpp"

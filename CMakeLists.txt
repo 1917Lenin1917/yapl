@@ -13,12 +13,8 @@ add_executable(yapl src/main.cpp
         src/Lexer.cpp
         src/Token.cpp
         src/Parser.cpp
-        src/Interpreter.cpp
         src/ASTNode.cpp
-        src/Scope.cpp
         src/Variable.cpp
-        src/Function.cpp
-        src/Visitor.cpp
         src/values/Value.cpp
         src/values/IntegerValue.cpp
         src/values/BooleanValue.cpp
@@ -51,26 +47,31 @@ add_executable(tests
         tests/test_lexer.cpp
         tests/test_parser.cpp
 
+        src/ByteCodeVM.cpp
+        src/ByteCodeVisitor.cpp
         src/Lexer.cpp
         src/Token.cpp
         src/Parser.cpp
-        src/Interpreter.cpp
         src/ASTNode.cpp
-        src/Scope.cpp
         src/Variable.cpp
-        src/Function.cpp
-        src/Visitor.cpp
+
         src/values/Value.cpp
-        src/values/IntegerValue.cpp
-        src/values/BooleanValue.cpp
-        src/values/FloatValue.cpp
+        src/values/CodeObjectValue.cpp
+        src/values/UndefinedValue.cpp
+        src/values/SizeIterator.cpp
         src/values/StringValue.cpp
+        src/values/FloatValue.cpp
+        src/values/BooleanValue.cpp
+        src/values/IntegerValue.cpp
         src/values/ArrayValue.cpp
+        src/values/BuiltinFunctionValue.cpp
+        src/values/DictValue.cpp
+        src/values/FunctionValue.cpp
+        src/values/TypeObjectValue.cpp
+
         src/exceptions/SyntaxError.cpp
         src/exceptions/RuntimeError.cpp
         src/exceptions/StopIteration.cpp
-        includes/yapl/values/SizeIterator.hpp
-        includes/yapl/values/BuiltinFunctionValue.hpp
 )
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 

@@ -45,9 +45,9 @@ int main(int argc, char** argv)
   auto ast = parser.parse_root();
   auto ast_as_root = static_cast<RootASTNode*>(ast.get());
 
+  init_builtin_function_tp();
   init_int_tp();
   init_float_type();
-  init_array_tp();
   init_bool_tp();
   init_str_tp();
   init_tp_tp();
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
   init_size_iterator_type();
   init_undefined_tp();
   init_code_object_type_object();
-  init_builtin_function_tp();
+  init_array_tp();
 
   ByteCodeVisitor v;
 

@@ -8,12 +8,12 @@
 #include <vector>
 
 #include "Token.hpp"
-#include "Interpreter.hpp"
 
 using namespace yapl;
 
 namespace yapl {
 
+class BaseASTNode;
 
 
 class Parser
@@ -76,7 +76,7 @@ public:
   std::unique_ptr<BaseASTNode> parse_root();
 
   //
-  int get_token_precedence(const Token& t)
+  static int get_token_precedence(const Token& t)
   {
     switch (t.type)
     {

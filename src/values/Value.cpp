@@ -50,7 +50,7 @@ std::shared_ptr<Value> Value::Call(const std::vector<VPtr> &args)
 std::shared_ptr<ArrayValue> Value::GetMethods() const
 {
     std::vector<std::shared_ptr<Value>> values;
-    for(const auto& [name, ptr] : tp->method_dict)
+    for(const auto& [name, ptr] : tp->methods)
     {
         values.push_back(std::make_unique<StringValue>(name));
     }
@@ -76,16 +76,16 @@ VPtr Value::dispatch(yapl::binop_fn slot, const yapl::VPtr &rhs, const char *opn
 
 void init_base_methods(TypeObject* tp)
 {
-    MAKE_METHOD(tp, "type", "str", ARG("this", "this"))
-    {
-        auto self = f_obj->function_scope->vars["this"];
-        return std::make_unique<TypeObjectValue>(self->value->tp);
-    };
-
-    MAKE_METHOD(tp, "dir", "array", ARG("this", "this"))
-    {
-        auto self = f_obj->function_scope->vars["this"];
-        return self->value->GetMethods();
-    };
+    // MAKE_METHOD(tp, "type", "str", ARG("this", "this"))
+    // {
+    //     auto self = f_obj->function_scope->vars["this"];
+    //     return std::make_unique<TypeObjectValue>(self->value->tp);
+    // };
+    //
+    // MAKE_METHOD(tp, "dir", "array", ARG("this", "this"))
+    // {
+    //     auto self = f_obj->function_scope->vars["this"];
+    //     return self->value->GetMethods();
+    // };
 }
 }

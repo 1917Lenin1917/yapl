@@ -15,9 +15,13 @@ enum OpCode {
   LOAD_CONST,
   LOAD_UNDEF, // pushes undefined to stack
 
+  MAKE_ARR,
+
   MAKE_FUNC,
   KW_CALL, // call when we have key arguments like op="+"
   CALL,
+  CALL_METHOD,
+  KW_CALL_METHOD,
 
   INIT_VAR,   // sets `is_tdz` to false and assigns value from stack top
   DEINIT_VAR, // sets `is_tdz` to true
@@ -59,23 +63,26 @@ enum BinaryOp {
 
 inline std::string_view opcode_to_string(OpCode opcode) {
   switch (opcode) {
-    case OpCode::NOP:          return "NOP";
-    case OpCode::RETURN:       return "RETURN";
-    case OpCode::HALT:         return "HALT";
-    case OpCode::LOAD_CONST:   return "LOAD_CONST";
-    case OpCode::LOAD_UNDEF:   return "LOAD_UNDEF";
-    case OpCode::MAKE_FUNC:    return "MAKE_FUNC";
-    case OpCode::CALL:         return "CALL";
-    case OpCode::KW_CALL:      return "KW_CALL";
-    case OpCode::INIT_VAR:     return "INIT_VAR";
-    case OpCode::DEINIT_VAR:   return "DEINIT_VAR";
-    case OpCode::LOAD_LOCAL:   return "LOAD_LOCAL";
-    case OpCode::STORE_LOCAL:  return "STORE_LOCAL";
-    case OpCode::LOAD_NAME:    return "LOAD_NAME";
-    case OpCode::STORE_NAME:   return "STORE_NAME";
-    case OpCode::BINARY_OP:    return "BINARY_OP";
-    case OpCode::JMP:          return "JMP";
-    case OpCode::JMP_IF_FALSE: return "JMP_IF_FALSE";
+    case OpCode::NOP:            return "NOP";
+    case OpCode::RETURN:         return "RETURN";
+    case OpCode::HALT:           return "HALT";
+    case OpCode::LOAD_CONST:     return "LOAD_CONST";
+    case OpCode::LOAD_UNDEF:     return "LOAD_UNDEF";
+    case OpCode::MAKE_FUNC:      return "MAKE_FUNC";
+    case OpCode::CALL:           return "CALL";
+    case OpCode::KW_CALL:        return "KW_CALL";
+    case OpCode::CALL_METHOD:    return "CALL_METHOD";
+    case OpCode::KW_CALL_METHOD: return "KW_CALL_METHOD";
+    case OpCode::INIT_VAR:       return "INIT_VAR";
+    case OpCode::DEINIT_VAR:     return "DEINIT_VAR";
+    case OpCode::LOAD_LOCAL:     return "LOAD_LOCAL";
+    case OpCode::STORE_LOCAL:    return "STORE_LOCAL";
+    case OpCode::LOAD_NAME:      return "LOAD_NAME";
+    case OpCode::STORE_NAME:     return "STORE_NAME";
+    case OpCode::BINARY_OP:      return "BINARY_OP";
+    case OpCode::JMP:            return "JMP";
+    case OpCode::JMP_IF_FALSE:   return "JMP_IF_FALSE";
+    case OpCode::MAKE_ARR:       return "MAKE_ARR";
   }
   return "UNKNOWN";
 }

@@ -2,6 +2,8 @@
 // Created by Максим Литвиненко on 27.08.2025.
 //
 
+#include <ranges>
+
 #include "yapl/ByteCodeVisitor.hpp"
 #include "yapl/values/CodeObjectValue.hpp"
 #include "yapl/values/IntegerValue.hpp"
@@ -227,6 +229,16 @@ void ByteCodeVisitor::visit_BooleanASTNode(const BooleanASTNode &node)
 void ByteCodeVisitor::visit_StringASTNode(const StringASTNode &node)
 {
   emitConstantForNode<std::string, StringValue>(node.value);
+}
+
+void ByteCodeVisitor::visit_ArrayASTNode(const ArrayASTNode &node)
+{
+  for (const auto & value : std::ranges::reverse_view(node.values))
+    value->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+  current_object.op_codes.push_back(MAKE_ARR);
+  current_object.op_codes.push_back(static_cast<OpCode>(node.values.size()));
 }
 
 void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node)
@@ -490,6 +502,53 @@ void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentLi
       .kind        = kind,
       .local_index = index
     });
+  }
+}
+
+void ByteCodeVisitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
+{
+  // Firstly, visit all regular params, then key-params
+  std::size_t pos_args = 0, kw_args = 0;
+  for (const auto& arg : node.args)
+  {
+    if (dynamic_cast<KeyParamExpressionASTNode*>(arg.get())) continue;
+    arg->visit(*this);
+    pos_args += 1;
+  }
+  for (const auto& arg : node.args)
+  {
+    if (!dynamic_cast<KeyParamExpressionASTNode*>(arg.get())) continue;
+    arg->visit(*this);
+    kw_args += 1;
+  }
+
+  node.base_expr->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+
+  std::string method_name = node.name.value;
+  const auto names_it = std::ranges::find(current_object.names, method_name);
+  std::size_t index = names_it != current_object.names.end() ? names_it - current_object.names.begin() : -1;
+  if (index == -1)
+  {
+    current_object.names.push_back(method_name);
+    index = current_object.names.size() - 1;
+  }
+
+  if (is_kw_func)
+  {
+    is_kw_func = false;
+
+    current_object.op_codes.push_back(KW_CALL_METHOD);
+    current_object.op_codes.push_back(static_cast<OpCode>(index));
+    current_object.op_codes.push_back(static_cast<OpCode>(pos_args));
+    current_object.op_codes.push_back(static_cast<OpCode>(kw_args));
+  }
+  else
+  {
+    current_object.op_codes.push_back(CALL_METHOD);
+    current_object.op_codes.push_back(static_cast<OpCode>(index));
+    current_object.op_codes.push_back(static_cast<OpCode>(pos_args));
   }
 }
 

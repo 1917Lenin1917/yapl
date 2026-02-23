@@ -4,8 +4,11 @@
 
 #include "yapl/values/ArrayValue.hpp"
 #include "yapl/values/IntegerValue.hpp"
+#include "yapl/values/BuiltinFunctionValue.hpp"
 
 #include <memory>
+
+#include "yapl/ByteCodeVM.hpp"
 
 namespace yapl {
 
@@ -47,25 +50,52 @@ void ArrayValue::OperatorIndexSet(const std::shared_ptr<Value> &idx, std::shared
 
 void init_array_methods(TypeObject* tp)
 {
+	const auto size_lambda = [](ByteCodeVM& VM)
+	{
+		auto _args = VM.m_Stack.top();
+		VM.m_Stack.pop();
+		auto args = as_arr(_args.get());
 
-    MAKE_METHOD(tp, "size", "int", ARG("this", "this"))
-    {
-        auto self = static_cast<ArrayValue*>(f_obj->function_scope->vars["this"]->value.get());
-        return std::make_unique<IntegerValue>(self->value.size());
-    };
-    MAKE_METHOD(tp, "append", "void", ARG("this", "this"), ARG("value", "any"))
-    {
-        auto self = static_cast<ArrayValue*>(f_obj->function_scope->vars["this"]->value.get());
-        auto arg = f_obj->function_scope->vars[f_obj->argument_names[1]];
-        self->value.push_back(arg->value->Copy());
-        return nullptr;
-    };
-    MAKE_METHOD(tp, "pop", "any", ARG("this", "this"))
-    {
-        auto self = static_cast<ArrayValue*>(f_obj->function_scope->vars["this"]->value.get());
-        self->value.pop_back();
-        return nullptr;
-    };
+		auto self = as_arr(args->value[0].get());
+		VM.m_Stack.push(mk_int(self->value.size()));
+	};
+	tp->methods["size"] = mk_builtin("size", size_lambda);
+
+	const auto append_lambda = [](ByteCodeVM& VM)
+	{
+		auto _args = VM.m_Stack.top();
+		VM.m_Stack.pop();
+		auto args = as_arr(_args.get());
+
+		auto self = as_arr(args->value[0].get());
+		self->value.push_back(args->value[1]);
+	};
+	tp->methods["append"] = mk_builtin("append", append_lambda);
+
+	const auto get_lambda = [](ByteCodeVM& VM)
+	{
+		auto _args = VM.m_Stack.top();
+		VM.m_Stack.pop();
+		auto args = as_arr(_args.get());
+
+		auto self = as_arr(args->value[0].get());
+		auto idx = as_int(args->value[1].get());
+		VM.m_Stack.push(self->value[idx->value]);
+	};
+	tp->methods["get"] = mk_builtin("get", get_lambda);
+
+	const auto set_lambda = [](ByteCodeVM& VM)
+	{
+		auto _args = VM.m_Stack.top();
+		VM.m_Stack.pop();
+		auto args = as_arr(_args.get());
+
+		auto self = as_arr(args->value[0].get());
+		auto idx = as_int(args->value[1].get());
+		auto val = args->value[2];
+		self->value[idx->value] = val;
+	};
+	tp->methods["set"] = mk_builtin("set", set_lambda);
 }
 
 }

@@ -21,12 +21,13 @@ class StringASTNode;
 class BooleanASTNode;
 class IntegerASTNode;
 class FloatASTNode;
-class LiteralASTNode;
 class UnaryOpASTNode;
 class BinaryOpASTNode;
 class VariableASTNode;
 class RootASTNode;
 class KeyParamExpressionASTNode;
+class MethodCallASTNode;
+class ArrayASTNode;
 
 class ByteCodeVisitor final
 {
@@ -44,6 +45,8 @@ public:
   void visit_FloatASTNode(const FloatASTNode &node);
   void visit_BooleanASTNode(const BooleanASTNode &node);
   void visit_StringASTNode(const StringASTNode &node);
+  void visit_ArrayASTNode(const ArrayASTNode &node);
+
   void visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node);
   void visit_ScopeASTNode(const ScopeASTNode &node);
   void visit_ForLoopASTNode(const ForLoopASTNode &node);
@@ -53,6 +56,7 @@ public:
   void visit_ReturnStatementASTNode(const ReturnStatementASTNode &node);
   void visit_FunctionCallASTNode(const FunctionCallASTNode& node);
   void visit_FunctionArgumentListASTNode(const FunctionArgumentListASTNode &node);
+  void visit_MethodCallASTNode(const MethodCallASTNode &node);
 
   void visit_KeyParamExpressionASTNode(const KeyParamExpressionASTNode &node);
 
@@ -96,7 +100,6 @@ public:
   Objec visit_ExportASTNode(const ExportASTNode &node) override;
   Objec visit_StatementIndexASTNode(const StatementIndexASTNode &node) override;
   Objec visit_ForEachLoopASTNode(const ForEachLoopASTNode &node) override;
-  Objec visit_MethodCallASTNode(const MethodCallASTNode &node) override;
   Objec visit_GetPropertyASTNode(const GetPropertyASTNode &node) override;
   Objec visit_SetPropertyASTNode(const SetPropertyASTNode &node) override;
   Objec visit_StarredExpressionASTNode(const StarredExpressionASTNode &node) override;

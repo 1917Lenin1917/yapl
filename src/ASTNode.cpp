@@ -11,22 +11,6 @@
 namespace yapl {
 
 //
-// LiteralASTNode
-//
-    std::string LiteralASTNode::print(size_t indent_size)
-    {
-        return REPEAT(indent_size*2, ' ')
-               + std::format("{{ NodeType: LiteralASTNode, Type: {}, Value: {} }}",
-                             ttype_to_string(token.type), token.value);
-    }
-
-    std::shared_ptr<Value> LiteralASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_LiteralASTNode(*this);
-    }
-
-
-//
 // IntegerASTNode
 //
 
@@ -34,11 +18,6 @@ std::string IntegerASTNode::print(size_t indent_size)
 {
     return REPEAT(indent_size*2, ' ')
            + std::format("{{ NodeType: IntegerASTNode, Value: {} }}",value);
-}
-
-std::shared_ptr<Value> IntegerASTNode::visit(yapl::Visitor &visitor)
-{
-    return visitor.visit_IntegerASTNode(*this);
 }
 
 //
@@ -51,12 +30,6 @@ std::string StringASTNode::print(size_t indent_size)
            + std::format("{{ NodeType: StringASTNode, Value: {} }}",value);
 }
 
-std::shared_ptr<Value> StringASTNode::visit(yapl::Visitor &visitor)
-{
-    return visitor.visit_StringASTNode(*this);
-}
-
-
 //
 // BooleanASTNode
 //
@@ -65,11 +38,6 @@ std::string BooleanASTNode::print(size_t indent_size)
 {
     return REPEAT(indent_size*2, ' ')
            + std::format("{{ NodeType: BooleanASTNode, Value: {} }}",value);
-}
-
-std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
-{
-    return visitor.visit_BooleanASTNode(*this);
 }
 
 //
@@ -82,13 +50,6 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
                + std::format("{{ NodeType: FloatASTNode, Value: {} }}",value);
     }
 
-    std::shared_ptr<Value> FloatASTNode::visit(yapl::Visitor &visitor)
-    {
-        return visitor.visit_FloatASTNode(*this);
-    }
-
-
-
 //
 // IdentifierASTNode
 //
@@ -97,11 +58,6 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
         return REPEAT(indent_size*2, ' ')
                + std::format("{{ NodeType: IdentifierASTNode, Value: {} }}",
                              token.value);
-    }
-
-    std::shared_ptr<Value> IdentifierASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_IdentifierASTNode(*this);
     }
 
 
@@ -119,11 +75,6 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
         res += index_expr->print(indent_size+1) + "\n";
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
-    }
-
-    std::shared_ptr<Value> IndexASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_IndexASTNode(*this);
     }
 
 
@@ -146,19 +97,9 @@ std::shared_ptr<Value> BooleanASTNode::visit(yapl::Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> ArrayASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_ArrayASTNode(*this);
-    }
-
     std::string DictASTNode::print(size_t indent_size)
     {
         return "TODO: DICT DEFINITION";
-    }
-
-    std::shared_ptr<Value> DictASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_DictASTNode(*this);
     }
 
 std::string ClassASTNode::print(size_t indent_size)
@@ -175,13 +116,6 @@ std::string ClassASTNode::print(size_t indent_size)
 
     return res;
 }
-
-std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
-{
-    return visitor.visit_ClassASTNode(*this);
-}
-
-
     //
 // VariableASTNode
 //
@@ -201,12 +135,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> VariableASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_VariableASTNode(*this);
-    }
-
-
 //
 // UnaryOpASTNode
 //
@@ -214,12 +142,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
     {
         return "unary:(" + print_token(op) + " " + RHS->print(indent_size) + ")";
     }
-
-    std::shared_ptr<Value> UnaryOpASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_UnaryOpASTNode(*this);
-    }
-
 
 //
 // BinaryOpASTNode
@@ -238,12 +160,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> BinaryOpASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_BinaryOpASTNode(*this);
-    }
-
-
 //
 // StatementASTNode
 //
@@ -259,32 +175,15 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> StatementASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_StatementASTNode(*this);
-    }
-
     std::string ImportASTNode::print(size_t indent_size)
     {
         return "import";
-    }
-
-    std::shared_ptr<Value> ImportASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_ImportASTNode(*this);
     }
 
     std::string ExportASTNode::print(size_t indent_size)
     {
         return "export";
     }
-
-    std::shared_ptr<Value> ExportASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_ExportASTNode(*this);
-    }
-
-
     //
 // StatementIndexASTNode
 //
@@ -300,13 +199,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
     }
-
-    std::shared_ptr<Value> StatementIndexASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_StatementIndexASTNode(*this);
-    }
-
-
 //
 // FunctionArgumentASTNode
 //
@@ -316,12 +208,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
                + std::format("{{ NodeType: FunctionArgumentASTNode, Name: {}, Type: {} }}",
                              name.value, type.value);
     }
-
-    std::shared_ptr<Value> FunctionArgumentASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_FunctionArgumentASTNode(*this);
-    }
-
 
 //
 // FunctionArgumentListASTNode
@@ -341,13 +227,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
     }
-
-    std::shared_ptr<Value> FunctionArgumentListASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_FunctionArgumentListASTNode(*this);
-    }
-
-
 //
 // FunctionDeclASTNode
 //
@@ -362,32 +241,15 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
     }
-
-    std::shared_ptr<Value> FunctionDeclASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_FunctionDeclASTNode(*this);
-    }
-
     std::string GetPropertyASTNode::print(size_t indent_size)
     {
         return "TODO";
-    }
-
-    std::shared_ptr<Value> GetPropertyASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_GetPropertyASTNode(*this);
     }
 
     std::string SetPropertyASTNode::print(size_t indent_size)
     {
         return "TODO";
     }
-
-    std::shared_ptr<Value> SetPropertyASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_SetPropertyASTNode(*this);
-    }
-
 
     //
 // MethodCallASTNode
@@ -408,13 +270,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
     }
-
-    std::shared_ptr<Value> MethodCallASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_MethodCallASTNode(*this);
-    }
-
-
 //
 // FunctionCallASTNode
 //
@@ -433,13 +288,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
     }
-
-    std::shared_ptr<Value> FunctionCallASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_FunctionCallASTNode(*this);
-    }
-
-
 //
 // ReturnStatementASTNode
 //
@@ -453,12 +301,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
     }
-
-    std::shared_ptr<Value> ReturnStatementASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_ReturnStatementASTNode(*this);
-    }
-
 
 //
 // ScopeASTNode
@@ -477,12 +319,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> ScopeASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_ScopeASTNode(*this);
-    }
-
-
 //
 // FunctionASTNode
 //
@@ -497,26 +333,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += body->print(indent_size+1) + "\n";
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
-    }
-
-    std::shared_ptr<Value> FunctionASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_FunctionASTNode(*this);
-    }
-
-
-
-//
-// BuiltinCustomVisitFunctionASTNode
-//
-    std::string BuiltinCustomVisitFunctionASTNode::print(size_t indent_size)
-    {
-        return "";
-    }
-
-    std::shared_ptr<Value> BuiltinCustomVisitFunctionASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_BuiltinCustomVisitFunctionASTNode(*this);
     }
 
 //
@@ -541,12 +357,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> IfElseExpressionASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_IfElseExpressionASTNode(*this);
-    }
-
-
 //
 // WhileLoopASTNode
 //
@@ -562,12 +372,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         res += REPEAT(indent_size*2, ' ') + "}";
         return res;
     }
-
-    std::shared_ptr<Value> WhileLoopASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_WhileLoopASTNode(*this);
-    }
-
 
 //
 // ForLoopASTNode
@@ -589,11 +393,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> ForLoopASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_ForLoopASTNode(*this);
-    }
-
 //
 // RootASTNode
 //
@@ -611,11 +410,6 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> RootASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_RootASTNode(*this);
-    }
-
     std::string ForEachLoopASTNode::print(size_t indent_size)
     {
         std::string res;
@@ -631,26 +425,12 @@ std::shared_ptr<Value> ClassASTNode::visit(Visitor &visitor)
         return res;
     }
 
-    std::shared_ptr<Value> ForEachLoopASTNode::visit(Visitor &visitor)
-    {
-        return visitor.visit_ForEachLoopASTNode(*this);
-    }
-
     std::string KeyParamExpressionASTNode::print(size_t indent_size)
     {
         return std::string();
     }
 
-    std::shared_ptr<Value> KeyParamExpressionASTNode::visit(Visitor &visitor)
-    {
-        return nullptr;
-    }
-
     std::string StarredExpressionASTNode::print(size_t indent_size) {
         return std::string();
-    }
-
-    std::shared_ptr<Value> StarredExpressionASTNode::visit(Visitor &visitor) {
-        return visitor.visit_StarredExpressionASTNode(*this);
     }
 } // namespace yapl
