@@ -23,6 +23,9 @@ enum OpCode {
   CALL_METHOD,
   KW_CALL_METHOD,
 
+  GET_PROPERTY,
+  SET_PROPERTY,
+
   INIT_VAR,   // sets `is_tdz` to false and assigns value from stack top
   DEINIT_VAR, // sets `is_tdz` to true
 
@@ -61,7 +64,7 @@ enum BinaryOp {
   AND,    // and
 };
 
-inline std::string_view opcode_to_string(OpCode opcode) {
+inline std::string_view opcode_to_string(const OpCode opcode) {
   switch (opcode) {
     case OpCode::NOP:            return "NOP";
     case OpCode::RETURN:         return "RETURN";
@@ -83,6 +86,9 @@ inline std::string_view opcode_to_string(OpCode opcode) {
     case OpCode::JMP:            return "JMP";
     case OpCode::JMP_IF_FALSE:   return "JMP_IF_FALSE";
     case OpCode::MAKE_ARR:       return "MAKE_ARR";
+    case OpCode::GET_PROPERTY:   return "GET_PROPERTY";
+    case OpCode::SET_PROPERTY:   return "SET_PROPERTY";
+    case OpCode::UNARY_OP:       return "UNARY_OP";
   }
   return "UNKNOWN";
 }

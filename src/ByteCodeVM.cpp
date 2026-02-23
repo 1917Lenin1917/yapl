@@ -641,6 +641,41 @@ void ByteCodeVM::Run(CodeObject &code)
         m_FrameStack.pop_back();
         break;
       }
+      case GET_PROPERTY:
+      {
+        const auto name_idx = code.op_codes[idx++];
+        const auto& attr_name = code.names[name_idx];
+
+        const auto obj = m_Stack.top();
+        m_Stack.pop();
+
+        if (!obj->tp->nb_getattr)
+          throw std::runtime_error(std::format(
+            "Type '{}' does not support attribute access", obj->tp->name));
+
+        const auto result = obj->tp->nb_getattr(obj, attr_name);
+        m_Stack.push(result);
+        break;
+      }
+      case SET_PROPERTY:
+      {
+        const auto name_idx = code.op_codes[idx++];
+        const auto& attr_name = code.names[name_idx];
+
+        // Stack layout: [..., value, obj]  (compiler pushes value first, then obj)
+        const auto obj = m_Stack.top();
+        m_Stack.pop();
+        const auto value = m_Stack.top();
+        m_Stack.pop();
+
+        if (!obj->tp->nb_setattr)
+          throw std::runtime_error(std::format(
+            "Type '{}' does not support attribute assignment", obj->tp->name));
+
+        const auto result = obj->tp->nb_setattr(obj, attr_name, value);
+        m_Stack.push(result);
+        break;
+      }
 
       case RETURN:
       {

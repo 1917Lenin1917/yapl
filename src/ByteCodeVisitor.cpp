@@ -552,6 +552,61 @@ void ByteCodeVisitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
   }
 }
 
+void ByteCodeVisitor::visit_GetPropertyASTNode(const GetPropertyASTNode &node)
+{
+  // Evaluate the object whose property we're reading
+  node.base_expr->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+
+  // Intern the property name
+  const std::string prop_name = node.name.value;
+  const auto it = std::ranges::find(current_object.names, prop_name);
+  std::size_t index = it != current_object.names.end()
+    ? it - current_object.names.begin()
+    : static_cast<std::size_t>(-1);
+
+  if (index == static_cast<std::size_t>(-1))
+  {
+    current_object.names.push_back(prop_name);
+    index = current_object.names.size() - 1;
+  }
+
+  // Stack before: [..., obj]
+  // Stack after:  [..., obj.prop]
+  current_object.op_codes.push_back(GET_PROPERTY);
+  current_object.op_codes.push_back(static_cast<OpCode>(index));
+}
+
+void ByteCodeVisitor::visit_SetPropertyASTNode(const SetPropertyASTNode &node)
+{
+  // Push the new value first (mirrors visit_StatementASTNode: RHS before target)
+  node.RHS->visit(*this);
+
+  // Then push the object to mutate
+  node.base_expr->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+
+  // Intern the property name
+  const std::string prop_name = node.name.value;
+  const auto it = std::ranges::find(current_object.names, prop_name);
+  std::size_t index = it != current_object.names.end()
+    ? it - current_object.names.begin()
+    : static_cast<std::size_t>(-1);
+
+  if (index == static_cast<std::size_t>(-1))
+  {
+    current_object.names.push_back(prop_name);
+    index = current_object.names.size() - 1;
+  }
+
+  // Stack before: [..., value, obj]
+  // Stack after:  [...] (obj.prop = value, both consumed)
+  current_object.op_codes.push_back(SET_PROPERTY);
+  current_object.op_codes.push_back(static_cast<OpCode>(index));
+}
+
 // LOAD_CONST 0 (func)
 // LOAD_CONST 1 (1)
 // LOAD_CONST 2 (2)

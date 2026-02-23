@@ -328,7 +328,7 @@ public:
 		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm) {}
 
 	std::string print(size_t indent_size) override;
-
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_GetPropertyASTNode(*this); }
 };
 
 class SetPropertyASTNode final : public BaseASTNode
@@ -342,7 +342,7 @@ public:
 		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm), RHS(std::move(RHS)) {}
 
 	std::string print(size_t indent_size) override;
-
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_SetPropertyASTNode(*this); }
 };
 
 class MethodCallASTNode final : public BaseASTNode

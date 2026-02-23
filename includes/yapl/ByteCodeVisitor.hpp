@@ -28,6 +28,8 @@ class RootASTNode;
 class KeyParamExpressionASTNode;
 class MethodCallASTNode;
 class ArrayASTNode;
+class GetPropertyASTNode;
+class SetPropertyASTNode;
 
 class ByteCodeVisitor final
 {
@@ -57,6 +59,8 @@ public:
   void visit_FunctionCallASTNode(const FunctionCallASTNode& node);
   void visit_FunctionArgumentListASTNode(const FunctionArgumentListASTNode &node);
   void visit_MethodCallASTNode(const MethodCallASTNode &node);
+  void visit_GetPropertyASTNode(const GetPropertyASTNode &node);
+  void visit_SetPropertyASTNode(const SetPropertyASTNode &node);
 
   void visit_KeyParamExpressionASTNode(const KeyParamExpressionASTNode &node);
 
@@ -100,8 +104,6 @@ public:
   Objec visit_ExportASTNode(const ExportASTNode &node) override;
   Objec visit_StatementIndexASTNode(const StatementIndexASTNode &node) override;
   Objec visit_ForEachLoopASTNode(const ForEachLoopASTNode &node) override;
-  Objec visit_GetPropertyASTNode(const GetPropertyASTNode &node) override;
-  Objec visit_SetPropertyASTNode(const SetPropertyASTNode &node) override;
   Objec visit_StarredExpressionASTNode(const StarredExpressionASTNode &node) override;
   Objec visit_ClassASTNode(const ClassASTNode &node) override;
   */

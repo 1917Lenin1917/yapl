@@ -516,65 +516,66 @@
 //print(str)
 // print(str(1))
 
+//
+//
+//
+//fn merge_ranges(a, left, mid, right, buffer)
+//{
+//    let i = left
+//    let j = mid
+//    let k = left
+//
+//    while i < mid and j < right {
+//        if a.get(i) <= a.get(j) {
+//          buffer.set(k, a.get(i));
+//          i += 1
+//        } else {
+//          buffer.set(k, a.get(j));
+//          j += 1
+//        }
+//        k += 1
+//    }
+//
+//    // copy any tail
+//    while (i < mid) { buffer.set(k, a.get(i)); k += 1; i += 1; }
+//    while (j < right) { buffer.set(k, a.get(j)); k += 1; j += 1; }
+////    while (i < mid) { buffer[k] = a[i]; k += 1; i += 1; }
+////    while (j < right) { buffer[k] = a[j]; k += 1; j += 1; }
+//
+//    // move sorted slice back to original array
+//    for let t = left; t < right; t += 1; {
+//        a.set(t, buffer.get(t));
+////        a[t] = buffer[t];
+//    }
+//}
+//
+//fn merge_sort_rec(a, left, right, buffer)
+//{
+//    if right - left <= 1 { return 0; }        // base case: 0 or 1 element
+//
+//    const mid = left + (right - left) / 2;
+//    merge_sort_rec(a, left,  mid,  buffer);  // sort left half
+//    merge_sort_rec(a, mid,   right, buffer); // sort right half
+//    merge_ranges(a, left, mid, right, buffer);
+//}
+//
+//fn generate_array(size) {
+//  const arr = []
+//  for let i = 0; i < size; i += 1; {
+//    arr.append(0);
+//  }
+//
+//  return arr
+//}
+//
+//fn merge_sort(a)
+//{
+//    const buffer = generate_array(a.size());
+//    merge_sort_rec(a, 0, a.size(), buffer);
+//}
 
-
-
-fn merge_ranges(a, left, mid, right, buffer)
-{
-    let i = left
-    let j = mid
-    let k = left
-
-    while i < mid and j < right {
-        if a.get(i) <= a.get(j) {
-          buffer.set(k, a.get(i));
-          i += 1
-        } else {
-          buffer.set(k, a.get(j));
-          j += 1
-        }
-        k += 1
-    }
-
-    // copy any tail
-    while (i < mid) { buffer.set(k, a.get(i)); k += 1; i += 1; }
-    while (j < right) { buffer.set(k, a.get(j)); k += 1; j += 1; }
-//    while (i < mid) { buffer[k] = a[i]; k += 1; i += 1; }
-//    while (j < right) { buffer[k] = a[j]; k += 1; j += 1; }
-
-    // move sorted slice back to original array
-    for let t = left; t < right; t += 1; {
-        a.set(t, buffer.get(t));
-//        a[t] = buffer[t];
-    }
-}
-
-fn merge_sort_rec(a, left, right, buffer)
-{
-    if right - left <= 1 { return 0; }        // base case: 0 or 1 element
-
-    const mid = left + (right - left) / 2;
-    merge_sort_rec(a, left,  mid,  buffer);  // sort left half
-    merge_sort_rec(a, mid,   right, buffer); // sort right half
-    merge_ranges(a, left, mid, right, buffer);
-}
-
-fn generate_array(size) {
-  const arr = []
-  for let i = 0; i < size; i += 1; {
-    arr.append(0);
-  }
-
-  return arr
-}
-
-fn merge_sort(a)
-{
-    const buffer = generate_array(a.size());
-    merge_sort_rec(a, 0, a.size(), buffer);
-}
-
-const arr = [4, 3, 9, 2, 0, 1121, 8, 29, 22, 2, 2, 2, 9, 7, 4, 6, 7]
-print(arr)
-merge_sort(arr)
-print(arr)
+//const arr = [4, 3, 9, 2, 0, 1121, 8, 29, 22, 2, 2, 2, 9, 7, 4, 6, 7]
+//print(arr)
+//merge_sort(arr)
+const arr = [1, 2, 3]
+print(arr.length)

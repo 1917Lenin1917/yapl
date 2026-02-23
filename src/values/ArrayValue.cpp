@@ -96,6 +96,16 @@ void init_array_methods(TypeObject* tp)
 		self->value[idx->value] = val;
 	};
 	tp->methods["set"] = mk_builtin("set", set_lambda);
+
+	tp->nb_getattr = [](const VPtr& _self, const std::string& attr_name) -> VPtr
+	{
+		if (attr_name == "length")
+		{
+			auto self = as_arr(_self.get());
+			return mk_int(self->value.size());
+		}
+		return nullptr;
+	};
 }
 
 }
