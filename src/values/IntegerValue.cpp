@@ -12,6 +12,8 @@
 #include <memory>
 #include <vector>
 
+#include "yapl/Serialization.hpp"
+
 namespace yapl {
 
 IntegerValue::IntegerValue(const int value)
@@ -22,6 +24,24 @@ IntegerValue::IntegerValue(const int value)
 std::unique_ptr<Value> IntegerValue::Copy() const
 {
 	return std::make_unique<IntegerValue>(value);
+}
+
+std::vector<std::byte> IntegerValue::Serialize()
+{
+    std::vector<std::byte> buffer;
+
+    const auto moduleLength = module.size();
+
+    buffer.reserve(2 + 4 + module.size());
+
+    appendByte(buffer, static_cast<std::byte>(VALUE_TYPE::INTEGER));
+    appendUint16(buffer, moduleLength);
+    if (moduleLength)
+      appendStringBytes(buffer, module);
+    appendUint16(buffer, 32);
+    appendUint32(buffer, value);
+
+    return buffer;
 }
 
 

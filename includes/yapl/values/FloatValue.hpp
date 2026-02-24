@@ -17,7 +17,7 @@ public:
 	explicit FloatValue(float value);
 
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
-
+  std::vector<std::byte> Serialize() override;
 };
 
 

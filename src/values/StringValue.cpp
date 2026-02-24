@@ -3,6 +3,8 @@
 //
 
 #include "yapl/values/StringValue.hpp"
+
+#include "yapl/Serialization.hpp"
 #include "yapl/values/SizeIterator.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/exceptions/RuntimeError.hpp"
@@ -31,6 +33,26 @@ std::shared_ptr<Value> StringValue::OperatorIndex(const std::shared_ptr<Value> &
 std::unique_ptr<Value> StringValue::Copy() const
 {
 	return std::make_unique<StringValue>(value);
+}
+
+std::vector<std::byte> StringValue::Serialize()
+{
+    std::vector<std::byte> buffer;
+
+    const auto moduleLength = module.size();
+    const auto valueLength = value.size();
+
+    buffer.reserve(2 + 4 + module.size());
+
+    appendByte(buffer, static_cast<std::byte>(VALUE_TYPE::STRING));
+    appendUint16(buffer, moduleLength);
+    if (moduleLength)
+      appendStringBytes(buffer, module);
+    appendUint16(buffer, valueLength);
+    if (valueLength)
+      appendStringBytes(buffer, value);
+
+    return buffer;
 }
 
 

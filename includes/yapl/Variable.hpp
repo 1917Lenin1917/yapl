@@ -8,7 +8,7 @@
 #include "values/Value.hpp"
 
 namespace yapl {
-enum class VALUE_TYPE;
+enum class VALUE_TYPE : std::uint8_t;
 class Value;
 
 class Variable

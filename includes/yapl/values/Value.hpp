@@ -64,7 +64,7 @@ class FunctionDeclASTNode;
 class ArrayValue;
 class StringValue;
 
-enum class VALUE_TYPE
+enum class VALUE_TYPE : std::uint8_t
 {
 	NONE = 0,
 	INTEGER,
@@ -157,6 +157,11 @@ public:
 		throw std::runtime_error("Unsupported operator!\n");
 	}
 
+	virtual std::vector<std::byte> Serialize()
+  {
+	  throw std::runtime_error("Value not serializable\n");
+  }
+
 private:
     VPtr dispatch(unop_fn slot, const char* opname);
     VPtr dispatch(binop_fn slot, const VPtr& rhs, const char* opname);
@@ -165,4 +170,6 @@ private:
 static VPtr NotImplemented{};
 
 void init_base_methods(TypeObject* tp);
+
+
 }

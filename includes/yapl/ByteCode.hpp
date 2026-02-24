@@ -4,10 +4,11 @@
 
 #pragma once
 #include <string_view>
+#include <cstdint>
 
 namespace yapl {
 
-enum OpCode {
+enum OpCode : std::uint32_t {
   NOP,
   RETURN,
   HALT,

@@ -30,6 +30,7 @@ public:
 	{
 		value = dynamic_cast<IntegerValue*>(v.get())->value;
 	}
+    std::vector<std::byte> Serialize() override;
 };
 
 inline TypeObject* IntegerTypeObject = nullptr;

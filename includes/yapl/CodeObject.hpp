@@ -11,6 +11,8 @@
 #include "ByteCode.hpp"
 
 
+constexpr std::uint8_t CODE_OBJECT_VERSION = 1;
+
 namespace yapl {
 class Value;
 class Variable;
@@ -26,6 +28,8 @@ struct Parameter {
   bool has_default;
   std::size_t default_const_index;
   std::size_t local_index;
+
+  [[nodiscard]] std::vector<std::byte> Serialize() const;
 };
 
 struct CodeObject
@@ -33,12 +37,13 @@ struct CodeObject
   std::vector<OpCode> op_codes;
 
   std::string name;
-  std::size_t arg_count;
   std::vector<std::shared_ptr<Value>> constants;
 
   std::vector<std::string> locals;
   std::vector<std::string> names;
   std::vector<Parameter> params;
+
+  [[nodiscard]] std::vector<std::byte> Serialize() const;
 };
 
 void print_code_object(const CodeObject& code_object, std::ostream& output = std::cout);

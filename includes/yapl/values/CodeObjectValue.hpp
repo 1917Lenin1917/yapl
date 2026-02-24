@@ -18,6 +18,7 @@ public:
 
   std::unique_ptr<Value> Copy() const override { return nullptr; }
   bool IsTruthy() const override { return false; }
+  std::vector<std::byte> Serialize() override;
 
 public:
   std::shared_ptr<CodeObject> code_object;

@@ -3,14 +3,81 @@
 //
 
 #include "yapl/CodeObject.hpp"
+
+#include "yapl/Serialization.hpp"
 #include "yapl/values/Value.hpp"
 
 namespace yapl {
+std::vector<std::byte> Parameter::Serialize() const
+{
+    std::vector<std::byte> buffer;
+
+    const auto nameLength = name.size();
+
+    appendUint16(buffer, nameLength);
+    appendStringBytes(buffer, name);
+    appendByte(buffer, static_cast<std::byte>(kind));
+    appendByte(buffer, static_cast<std::byte>(has_default));
+    appendUint16(buffer, default_const_index);
+    appendUint16(buffer, local_index);
+
+    return buffer;
+}
+
+std::vector<std::byte> CodeObject::Serialize() const
+{
+   std::vector<std::byte> buffer;
+
+    appendByte(buffer, static_cast<std::byte>(CODE_OBJECT_VERSION));
+    const auto nameLength = name.size();
+
+    appendUint16(buffer, nameLength);
+    appendStringBytes(buffer, name);
+
+    appendUint16(buffer, names.size());
+    for (const std::string& currentName : names)
+    {
+      const auto currentNameSize = currentName.size();
+      appendUint16(buffer, currentNameSize);
+      appendStringBytes(buffer, currentName);
+    }
+
+    appendUint16(buffer, locals.size());
+    for (const std::string& currentLocal : locals)
+    {
+      const auto currentLocalSize = currentLocal.size();
+      appendUint16(buffer, currentLocalSize);
+      appendStringBytes(buffer, currentLocal);
+    }
+
+    appendUint16(buffer, params.size());
+    for (const auto& currentParam : params)
+    {
+      auto serializedParam = currentParam.Serialize();
+      buffer.insert(buffer.end(), serializedParam.begin(), serializedParam.end());
+    }
+
+    appendUint16(buffer, constants.size());
+    for (const auto& currentConst : constants)
+    {
+      auto serializedParam = currentConst->Serialize();
+      buffer.insert(buffer.end(), serializedParam.begin(), serializedParam.end());
+    }
+
+    appendUint16(buffer, op_codes.size());
+    for (const auto& currentOpCode : op_codes)
+    {
+      appendUint32(buffer, currentOpCode);
+    }
+
+    return buffer;
+}
+
 
 void print_code_object(const CodeObject &code_object, std::ostream &output)
 {
   output << "CodeObject \"" << code_object.name << "\"\n";
-  output << "  args: " << code_object.arg_count << "\n";
+  output << "  args: " << code_object.params.size() << "\n";
   output << "  constants: " << code_object.constants.size() << "\n";
   output << "  locals: " << code_object.locals.size() << "\n";
   output << "  names: " << code_object.names.size() << "\n";

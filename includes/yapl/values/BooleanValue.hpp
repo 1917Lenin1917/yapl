@@ -19,6 +19,8 @@ public:
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
 
 	[[nodiscard]] bool IsTruthy() const override { return value; }
+
+	std::vector<std::byte> Serialize() override;
 };
 
 inline TypeObject* BooleanTypeObject = nullptr;
