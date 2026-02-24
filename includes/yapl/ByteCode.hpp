@@ -16,6 +16,7 @@ enum OpCode {
   LOAD_UNDEF, // pushes undefined to stack
 
   MAKE_ARR,
+  MAKE_TYPE,
 
   MAKE_FUNC,
   KW_CALL, // call when we have key arguments like op="+"
@@ -89,6 +90,7 @@ inline std::string_view opcode_to_string(const OpCode opcode) {
     case OpCode::GET_PROPERTY:   return "GET_PROPERTY";
     case OpCode::SET_PROPERTY:   return "SET_PROPERTY";
     case OpCode::UNARY_OP:       return "UNARY_OP";
+    case OpCode::MAKE_TYPE:      return "MAKE_TYPE";
   }
   return "UNKNOWN";
 }

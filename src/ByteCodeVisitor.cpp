@@ -607,6 +607,68 @@ void ByteCodeVisitor::visit_SetPropertyASTNode(const SetPropertyASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(index));
 }
 
+void ByteCodeVisitor::visit_ClassASTNode(const ClassASTNode &node)
+{
+  const std::size_t current_object_index = m_ObjectStack.size() - 1;
+
+  // Compile each member function exactly like visit_FunctionASTNode,
+  // then also push its name string so the VM can associate name -> method.
+  // Stack layout per method: [..., func, name_str]
+  // (name on top so VM pops name first, then the func)
+  for (const auto& _method_node : node.member_functions)
+  {
+    const auto method_node = static_cast<FunctionASTNode*>(_method_node.get());
+    const auto decl = static_cast<FunctionDeclASTNode*>(method_node->decl.get());
+    const std::string method_name = decl->name.value;
+
+    // Compile the method body into its own CodeObject
+    m_ObjectStack.push_back({ .name = method_name });
+    m_ScopeVars.emplace_back();
+
+    decl->args->visit(*this);
+    method_node->body->visit(*this);
+
+    m_ScopeVars.pop_back();
+    auto method_code_object = std::move(m_ObjectStack.back());
+    m_ObjectStack.pop_back();
+
+    auto& current_object = m_ObjectStack[current_object_index];
+    // Store the CodeObject in the enclosing object's constants pool
+    auto ptr = std::make_shared<CodeObject>(std::move(method_code_object));
+    current_object.constants.push_back(std::make_shared<CodeObjectValue>(ptr));
+    const std::size_t code_idx = current_object.constants.size() - 1;
+
+    // LOAD_CONST <code_object> + MAKE_FUNC => leaves a FunctionValue on stack
+    current_object.op_codes.push_back(LOAD_CONST);
+    current_object.op_codes.push_back(static_cast<OpCode>(code_idx));
+    // current_object.op_codes.push_back(MAKE_FUNC);
+
+    // Push the method name as a string constant so VM can key the method
+    emitConstantForNode<std::string, StringValue>(method_name);
+  }
+  auto& current_object = m_ObjectStack[current_object_index];
+
+  // Intern the class name in names[] for the VM to use as the type name
+  const std::string class_name = node.name.value;
+  const auto names_it = std::ranges::find(current_object.names, class_name);
+  std::size_t name_index = names_it != current_object.names.end()
+    ? names_it - current_object.names.begin()
+    : static_cast<std::size_t>(-1);
+
+  if (name_index == static_cast<std::size_t>(-1))
+  {
+    current_object.names.push_back(class_name);
+    name_index = current_object.names.size() - 1;
+  }
+
+  // MAKE_TYPE <name_index> <method_count>
+  // VM pops method_count * (name_str, func) pairs, builds a TypeObject,
+  // then registers it in globals under names[name_index]
+  current_object.op_codes.push_back(MAKE_TYPE);
+  current_object.op_codes.push_back(static_cast<OpCode>(name_index));
+  current_object.op_codes.push_back(static_cast<OpCode>(node.member_functions.size()));
+}
+
 // LOAD_CONST 0 (func)
 // LOAD_CONST 1 (1)
 // LOAD_CONST 2 (2)

@@ -577,5 +577,46 @@
 //const arr = [4, 3, 9, 2, 0, 1121, 8, 29, 22, 2, 2, 2, 9, 7, 4, 6, 7]
 //print(arr)
 //merge_sort(arr)
-const arr = [1, 2, 3]
-print(arr.length)
+//const arr = [1, 2, 3]
+//print(arr.length)
+
+//class Penis
+//{
+//  fn init(this, name)
+//  {
+//    this.name = name;
+//  }
+//
+//  fn print(this)
+//  {
+//    print("Penis { ", this.name, " }")
+//  }
+//
+//  fn change_name(this, new_name)
+//  {
+//    this.name = new_name
+//  }
+//}
+//
+//const penis = Penis("Maksim")
+//penis.print()
+//penis.change_name("Sergay")
+//penis.print()
+//print(penis.name)
+
+//fn fizz_buzz() {
+//  for let k = 1; k <= 100; k += 1; {
+//    let out = k;
+//    if k % 15 == 0 {
+//        out = "FizzBuzz"
+//    } else if k % 3 == 0 {
+//        out = "Fizz"
+//    } else if k % 5 == 0 {
+//        out = "Buzz"
+//    } else {
+//        out = k
+//    }
+//    print(out)
+//  }
+//}
+//fizz_buzz()

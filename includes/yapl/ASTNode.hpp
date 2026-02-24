@@ -159,7 +159,7 @@ public:
     :name(name), member_functions(std::move(member_functions)) {}
 
   std::string print(size_t indent_size) override;
-
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ClassASTNode(*this); }
 };
 
 class VariableASTNode final : public BaseASTNode

@@ -76,6 +76,16 @@ VPtr Value::dispatch(yapl::binop_fn slot, const yapl::VPtr &rhs, const char *opn
 
 void init_base_methods(TypeObject* tp)
 {
+    //VPtr(const VPtr&, const std::string& attr_name)
+    tp->nb_getattr = [](const VPtr& self, const std::string& attr_name) -> VPtr
+    {
+        return self->GetField(attr_name);
+    };
+    // VPtr(const VPtr& self, const std::string& attr_name, const VPtr& value)
+    tp->nb_setattr = [](const VPtr& self, const std::string& attr_name, const VPtr& value)
+    {
+        self->SetField(attr_name, value);
+    };
     // MAKE_METHOD(tp, "type", "str", ARG("this", "this"))
     // {
     //     auto self = f_obj->function_scope->vars["this"];

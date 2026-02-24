@@ -36,21 +36,22 @@ void print_code_object(const CodeObject &code_object, std::ostream &output)
     output << opcode_index << ":\t" << opcode_to_string(opcode);
 
     switch (opcode) {
-case OpCode::LOAD_CONST: {
-      std::size_t operand = 0;
-      if (read_operand(instruction_pointer, operand)) {
-        output << " " << operand;
-        if (operand < code_object.constants.size() && code_object.constants[operand]) {
-          output << " (";
-          output << code_object.constants[operand]->print();
-          output << ")";
+      case OpCode::LOAD_CONST:
+      {
+        std::size_t operand = 0;
+        if (read_operand(instruction_pointer, operand)) {
+          output << " " << operand;
+          if (operand < code_object.constants.size() && code_object.constants[operand]) {
+            output << " (";
+            output << code_object.constants[operand]->print();
+            output << ")";
+          }
+        } else {
+          output << " <missing operand>";
         }
-      } else {
-        output << " <missing operand>";
+        output << "\n";
+        break;
       }
-      output << "\n";
-      break;
-    }
 
       case OpCode::LOAD_LOCAL:
       case OpCode::STORE_LOCAL:
@@ -97,8 +98,32 @@ case OpCode::LOAD_CONST: {
         break;
       }
 
+      case OpCode::MAKE_TYPE:
+      {
+        std::size_t operand = 0;
+        if (read_operand(instruction_pointer, operand)) {
+          output << " " << operand;
+          if (operand < code_object.names.size()) {
+            output << " (" << code_object.names[operand] << ")";
+          }
+        } else {
+          output << " <missing operand>";
+        }
+        std::size_t method_amount = 0;
+        if (read_operand(instruction_pointer, method_amount)) {
+          output << " " << method_amount;
+        } else {
+          output << " <missing operand>";
+        }
+        output << "\n";
+        break;
+      }
+
       case OpCode::LOAD_NAME:
-      case OpCode::STORE_NAME: {
+      case OpCode::STORE_NAME:
+      case OpCode::SET_PROPERTY:
+      case OpCode::GET_PROPERTY:
+      {
         std::size_t operand = 0;
         if (read_operand(instruction_pointer, operand)) {
           output << " " << operand;
@@ -148,3 +173,7 @@ case OpCode::LOAD_CONST: {
   }
 }
 }
+
+// current_object.op_codes.push_back(MAKE_TYPE);
+// current_object.op_codes.push_back(static_cast<OpCode>(name_index));
+// current_object.op_codes.push_back(static_cast<OpCode>(node.member_functions.size()));

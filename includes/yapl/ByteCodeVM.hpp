@@ -43,7 +43,7 @@ public:
     };
     m_FrameStack.push_back(frame);
 
-    auto fn = mk_builtin("print", [](ByteCodeVM& VM)
+    auto print_lambda = [](ByteCodeVM& VM)
     {
       std::string sep = " ";
       std::string end = "\n";
@@ -68,7 +68,8 @@ public:
         if (i != args->value.size() - 1) std::cout << sep;
       }
       std::cout << end;
-    });
+    };
+    auto fn = mk_builtin("print", print_lambda);
 
     m_Globals["print"] = std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__main__", "print", false);
     m_Globals[IntegerTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(IntegerTypeObject), "__main__", IntegerTypeObject->name, false);
@@ -83,6 +84,12 @@ public:
 
   }
 
+  ~ByteCodeVM()
+  {
+    for (auto type : m_Types)
+      delete type;
+  }
+
 
   void Run();
   void Run(CodeObject& co);
@@ -93,10 +100,17 @@ public:
   std::vector<Frame> m_FrameStack;
   CodeObject m_CodeObject;
   std::unordered_map<std::string, std::shared_ptr<Variable>> m_Globals;
+  std::vector<TypeObject*> m_Types;
+
 
 private:
   void HandleUnaryOp(UnaryOp compare_type);
   void HandleBinaryOp(BinaryOp compare_type);
+
+  void InvokeFunction(
+      const VPtr& function_object,
+      std::vector<VPtr> positional_arguments,
+      std::unordered_map<std::string, VPtr> keyword_arguments = {});
 };
 
 }

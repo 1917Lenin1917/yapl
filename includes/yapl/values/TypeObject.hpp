@@ -32,7 +32,7 @@ using hash_fn = std::function<std::size_t(const VPtr&)>;
 using unop_fn = std::function<VPtr(const VPtr&)>;
 using binop_fn = std::function<VPtr(const VPtr&, const VPtr&)>;
 using get_attr_fn = std::function<VPtr(const VPtr&, const std::string& attr_name)>;
-using set_attr_fn = std::function<VPtr(const VPtr& self, const std::string& attr_name, const VPtr& value)>;
+using set_attr_fn = std::function<void(const VPtr& self, const std::string& attr_name, const VPtr& value)>;
 
 struct TypeObject
 {

@@ -23,6 +23,10 @@ void init_tp_methods(TypeObject *tp)
 {
     tp->nb_call = [](ByteCodeVM& VM, const VPtr& self)->VPtr
     {
+        auto _kwargs = VM.m_Stack.top();
+        auto kwargs = static_cast<DictValue*>(_kwargs.get());
+        VM.m_Stack.pop();
+
         auto _args = VM.m_Stack.top();
         auto args = static_cast<ArrayValue*>(_args.get());
         const auto self_t = as_type(self.get());

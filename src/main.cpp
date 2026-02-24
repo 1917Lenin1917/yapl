@@ -31,6 +31,19 @@ std::vector<std::string> get_lines_from_text(const std::string& text)
     return res;
 }
 
+void recursively_print_code_objects(const CodeObject& co)
+{
+  print_code_object(co);
+  std::cout << "\n\n";
+  for (const auto& constant : co.constants)
+  {
+    if (const auto cov = dynamic_cast<CodeObjectValue*>(constant.get()))
+    {
+      recursively_print_code_objects(*cov->code_object);
+    }
+  }
+}
+
 int main(int argc, char** argv)
 {
   std::setlocale(LC_ALL, "ru_RU.utf-8");
@@ -62,9 +75,7 @@ int main(int argc, char** argv)
 
   auto vmtime1 = std::chrono::system_clock::now();
   auto obj = v.visit_RootASTNode(*ast_as_root);
-  print_code_object(obj);
-  // auto foo = static_cast<CodeObjectValue*>(obj.constants[0].get());
-  // print_code_object(*foo->code_object);
+  recursively_print_code_objects(obj);
   try
   {
     ByteCodeVM vm { obj };
