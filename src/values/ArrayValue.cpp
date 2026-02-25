@@ -52,6 +52,10 @@ void init_array_methods(TypeObject* tp)
 {
 	const auto size_lambda = [](ByteCodeVM& VM)
 	{
+		auto _kwargs = VM.m_Stack.top();
+		auto kwargs = static_cast<DictValue*>(_kwargs.get());
+		VM.m_Stack.pop();
+
 		auto _args = VM.m_Stack.top();
 		VM.m_Stack.pop();
 		auto args = as_arr(_args.get());
@@ -63,6 +67,10 @@ void init_array_methods(TypeObject* tp)
 
 	const auto append_lambda = [](ByteCodeVM& VM)
 	{
+		auto _kwargs = VM.m_Stack.top();
+		auto kwargs = static_cast<DictValue*>(_kwargs.get());
+		VM.m_Stack.pop();
+
 		auto _args = VM.m_Stack.top();
 		VM.m_Stack.pop();
 		auto args = as_arr(_args.get());
@@ -74,6 +82,10 @@ void init_array_methods(TypeObject* tp)
 
 	const auto get_lambda = [](ByteCodeVM& VM)
 	{
+		auto _kwargs = VM.m_Stack.top();
+		auto kwargs = static_cast<DictValue*>(_kwargs.get());
+		VM.m_Stack.pop();
+
 		auto _args = VM.m_Stack.top();
 		VM.m_Stack.pop();
 		auto args = as_arr(_args.get());
@@ -86,6 +98,10 @@ void init_array_methods(TypeObject* tp)
 
 	const auto set_lambda = [](ByteCodeVM& VM)
 	{
+		auto _kwargs = VM.m_Stack.top();
+		auto kwargs = static_cast<DictValue*>(_kwargs.get());
+		VM.m_Stack.pop();
+
 		auto _args = VM.m_Stack.top();
 		VM.m_Stack.pop();
 		auto args = as_arr(_args.get());

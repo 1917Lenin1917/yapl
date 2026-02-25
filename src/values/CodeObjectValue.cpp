@@ -20,7 +20,7 @@ std::vector<std::byte> CodeObjectValue::Serialize()
 
     buffer.reserve(2 + 4 + module.size());
 
-    appendByte(buffer, static_cast<std::byte>(VALUE_TYPE::INTEGER));
+    appendByte(buffer, static_cast<std::byte>(VALUE_TYPE::CODE_OBJECT));
     appendUint16(buffer, moduleLength);
     if (moduleLength)
       appendStringBytes(buffer, module);

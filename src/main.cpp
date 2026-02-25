@@ -52,9 +52,10 @@ int main(int argc, char** argv)
   Lexer lexer {text};
   auto tokens = lexer.make_tokens();
 
-  auto filename = std::filesystem::path(argv[1]).filename().string();
+  auto path = std::filesystem::path(argv[1]).parent_path();
+  auto filename = std::filesystem::path(argv[1]).filename();
   auto lines = get_lines_from_text(text);
-  Parser parser {tokens, filename, lines};
+  Parser parser {tokens, filename.string(), lines};
   auto ast = parser.parse_root();
   auto ast_as_root = static_cast<RootASTNode*>(ast.get());
 
@@ -76,6 +77,17 @@ int main(int argc, char** argv)
   auto vmtime1 = std::chrono::system_clock::now();
   auto obj = v.visit_RootASTNode(*ast_as_root);
   recursively_print_code_objects(obj);
+
+  auto bytes = obj.Serialize();
+  auto cache_path = path / ".cache";
+  std::filesystem::create_directories(cache_path);
+
+  std::ofstream cache(cache_path / filename.replace_extension("yaplcache"), std::ios::binary);
+  cache.write(
+    reinterpret_cast<const char*>(bytes.data()),
+    static_cast<std::streamsize>(bytes.size())
+  );
+
   try
   {
     ByteCodeVM vm { obj };
