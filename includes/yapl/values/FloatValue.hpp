@@ -18,6 +18,7 @@ public:
 
 	[[nodiscard]] std::unique_ptr<Value> Copy() const override;
   std::vector<std::byte> Serialize() override;
+  static VPtr Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset);
 };
 
 

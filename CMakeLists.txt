@@ -9,6 +9,8 @@ include_directories(${CMAKE_SOURCE_DIR}/includes)
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 #set(CMAKE_CXX_FLAGS "-O3")
 
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+
 add_executable(yapl src/main.cpp
         src/Lexer.cpp
         src/Token.cpp
@@ -42,6 +44,7 @@ add_executable(yapl src/main.cpp
         src/CodeObject.cpp
         includes/yapl/Serialization.hpp
         src/Serialization.cpp
+        includes/yapl/Hasher.hpp
 )
 
 add_subdirectory(externals/Catch2)
@@ -76,5 +79,6 @@ add_executable(tests
         src/exceptions/StopIteration.cpp
 )
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(yapl PRIVATE OpenSSL::Crypto)
 
 #set_target_properties(yapl PROPERTIES UNITY_BUILD ON)

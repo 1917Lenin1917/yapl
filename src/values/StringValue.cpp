@@ -55,6 +55,20 @@ std::vector<std::byte> StringValue::Serialize()
     return buffer;
 }
 
+VPtr StringValue::Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset)
+{
+  auto module_name_len = readUint16(bytes, offset);
+  auto module_name = readStringBytes(bytes, offset, module_name_len);
+
+  auto value_len = readUint16(bytes, offset);
+  auto value = readStringBytes(bytes, offset, value_len);
+
+  auto b = mk_str(value);
+  b->module = module_name;
+
+  return b;
+}
+
 
 void init_str_methods(TypeObject* tp)
 {

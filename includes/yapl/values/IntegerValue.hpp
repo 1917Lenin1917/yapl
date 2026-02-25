@@ -31,6 +31,7 @@ public:
 		value = dynamic_cast<IntegerValue*>(v.get())->value;
 	}
     std::vector<std::byte> Serialize() override;
+    static VPtr Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset);
 };
 
 inline TypeObject* IntegerTypeObject = nullptr;

@@ -30,4 +30,18 @@ std::vector<std::byte> CodeObjectValue::Serialize()
 
     return buffer;
 }
+
+VPtr CodeObjectValue::Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset)
+{
+  auto module_name_len = readUint16(bytes, offset);
+  auto module_name = readStringBytes(bytes, offset, module_name_len);
+
+  auto co = CodeObject::Deserialize(bytes, offset);
+
+  auto b = mk_code_obj(std::make_shared<CodeObject>(co));
+  b->module = module_name;
+
+  return b;
+}
+
 }

@@ -1,9 +1,18 @@
 ```
+Module
+
+  1 2 3 4 5 6 7 8     
++ - - - - - - - - + - - - - - - - - + - - - - - - - - +
+|    version      |          md5 (32 bytes)           |
++ - - - - - - - - + - - - - - - - - + - - - - - - - - +
+|                     code_object                     |  <- Embedded CodeObject
++ - - - - - - - - + - - - - - - - - + - - - - - - - - +
+
+
+
 CodeObject
 
   1 2 3 4 5 6 7 8   1 2 3 4 5 6 7 8  
-+ - - - - - - - - + 
-|    version      |
 + - - - - - - - - + - - - - - - - - + - - - - - - - - +
 |             name_len              |      name       |
 + - - - - - - - - + - - - - - - - - + - - - - - - - - +
@@ -15,7 +24,7 @@ CodeObject
 + - - - - - - - - + - - - - - - - - + - - - - - - - - + 
 |            consts_len             |      consts     |
 + - - - - - - - - + - - - - - - - - + - - - - - - - - + 
-|            opcode_len             |      opcode     |
+|            opcode_len             |      opcode     |  <- 4 bytes per opcode
 + - - - - - - - - + - - - - - - - - + - - - - - - - - + 
 
 

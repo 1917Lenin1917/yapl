@@ -24,11 +24,31 @@ std::vector<std::byte> Parameter::Serialize() const
     return buffer;
 }
 
+Parameter Parameter::Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset)
+{
+  auto name_len = readUint16(bytes, offset);
+  auto name = readStringBytes(bytes, offset, name_len);
+
+  auto kind = readByte(bytes, offset);
+  auto has_default = readByte(bytes, offset);
+
+  auto default_const_index = readUint16(bytes, offset);
+  auto local_index = readUint16(bytes, offset);
+
+  return {
+  .name = name,
+  .kind = static_cast<ParamKind>(kind),
+  .has_default = static_cast<bool>(has_default),
+  .default_const_index = default_const_index,
+  .local_index = local_index
+  };
+}
+
 std::vector<std::byte> CodeObject::Serialize() const
 {
-   std::vector<std::byte> buffer;
+    std::vector<std::byte> buffer;
 
-    appendByte(buffer, static_cast<std::byte>(CODE_OBJECT_VERSION));
+    // appendByte(buffer, static_cast<std::byte>(CODE_OBJECT_VERSION));
     const auto nameLength = name.size();
 
     appendUint16(buffer, nameLength);
@@ -71,6 +91,68 @@ std::vector<std::byte> CodeObject::Serialize() const
     }
 
     return buffer;
+}
+
+CodeObject CodeObject::Deserialize(const std::vector<std::byte> &bytes, std::size_t& offset)
+{
+  auto module_name_len = readUint16(bytes, offset);
+  auto module_name = readStringBytes(bytes, offset, module_name_len);
+
+  auto names_len = readUint16(bytes, offset);
+  std::vector<std::string> names;
+  names.reserve(names_len);
+
+  for (std::size_t i = 0; i < names_len; i++)
+  {
+    auto name_len = readUint16(bytes, offset);
+    names.push_back(readStringBytes(bytes, offset, name_len));
+  }
+
+  auto locals_len = readUint16(bytes, offset);
+  std::vector<std::string> locals;
+  locals.reserve(locals_len);
+
+  for (std::size_t i = 0; i < locals_len; i++)
+  {
+    auto local_len = readUint16(bytes, offset);
+    locals.push_back(readStringBytes(bytes, offset, local_len));
+  }
+
+  auto params_len = readUint16(bytes, offset);
+  std::vector<Parameter> params;
+  params.reserve(params_len);
+
+  for (std::size_t i = 0; i < params_len; i++)
+  {
+    params.push_back(Parameter::Deserialize(bytes, offset));
+  }
+
+  auto consts_len = readUint16(bytes, offset);
+  std::vector<VPtr> constants;
+  constants.reserve(consts_len);
+
+  for (std::size_t i = 0; i < consts_len; i++)
+  {
+    constants.push_back(readValue(bytes, offset));
+  }
+
+  auto op_codes_len = readUint16(bytes, offset);
+  std::vector<OpCode> op_codes;
+  op_codes.reserve(op_codes_len);
+
+  for (std::size_t i = 0; i < op_codes_len; i++)
+  {
+    op_codes.push_back(static_cast<OpCode>(readUint32(bytes, offset)));
+  }
+
+  return {
+    .op_codes  = std::move(op_codes),
+    .name      = module_name,
+    .constants = std::move(constants),
+    .locals    = std::move(locals),
+    .names     = std::move(names),
+    .params    = std::move(params)
+  };
 }
 
 

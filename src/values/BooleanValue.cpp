@@ -33,6 +33,19 @@ std::vector<std::byte> BooleanValue::Serialize()
     return buffer;
 }
 
+VPtr BooleanValue::Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset)
+{
+  auto value = readByte(bytes, offset);
+
+  auto module_name_len = readUint16(bytes, offset);
+  auto module_name = readStringBytes(bytes, offset, module_name_len);
+
+  auto b = mk_bool(static_cast<bool>(value));
+  b->module = module_name;
+
+  return b;
+}
+
 void init_bool_methods(TypeObject* tp)
 {
 

@@ -78,10 +78,14 @@ class Instruction:
     annotations: List[str]
 
 @dataclass
+class Module:
+    version: int
+    md5: str
+
+@dataclass
 class CodeObject:
     id: int
     name: str
-    version: int
     names: List[str]
     locals: List[str]
     params: List[Parameter]
@@ -144,20 +148,10 @@ class Parser:
         mod_ln = self.u16()
         module = self.string(mod_ln) if mod_ln else ""
 
-        if type_id == 1:   # INTEGER (or old CODE_OBJECT = 1)
-            saved_pos = self.pos
-            _bw = self.u16()
-            if _bw == 32:
-                val = self.u32()
-                return Constant(index, type_id, "INTEGER", module, str(val))
-            else:
-                # bit-width is not 32 → this is actually a CODE_OBJECT
-                # with an older type-byte encoding (CODE_OBJECT=1 in old enum).
-                # Rewind and parse the embedded CodeObject.
-                self.pos = saved_pos
-                child = self.parse_code_object()
-                return Constant(index, 13, "CODE_OBJECT", module,
-                                f"<CodeObject '{child.name}'>", code_object_id=child.id)
+        if type_id == 1:   # INTEGER
+            _bw = self.u16()   # bit-width (always 32)
+            val = self.u32()
+            return Constant(index, type_id, "INTEGER", module, str(val))
 
         elif type_id == 2: # FLOAT
             _bw  = self.u16()
@@ -204,6 +198,9 @@ class Parser:
                 elif kind == "unary_op":
                     annots.append(f"({UNARY_OPS.get(op,'?')})")
                 elif kind == "jmp":
+                    if op >= 0x80000000:
+                        op = op - 0x100000000
+                        operands[-1] = op
                     annots.append(f"→{op}")
                 else:
                     annots.append("")
@@ -211,9 +208,8 @@ class Parser:
         return out
 
     def parse_code_object(self, parent_id: Optional[int] = None) -> CodeObject:
-        co_id   = self._id; self._id += 1
-        version = self.u8()
-        name    = self.string(self.u16())
+        co_id = self._id; self._id += 1
+        name  = self.string(self.u16())
 
         names_n  = self.u16()
         names    = [self.string_entry() for _ in range(names_n)]
@@ -224,8 +220,7 @@ class Parser:
         params_n = self.u16()
         params   = [self.parse_param() for _ in range(params_n)]
 
-        # Placeholder object added early so children can reference parent
-        co = CodeObject(co_id, name, version, names, locals_, params, [], [], parent_id)
+        co = CodeObject(co_id, name, names, locals_, params, [], [], parent_id)
         self.all.append(co)
 
         consts_n = self.u16()
@@ -244,8 +239,14 @@ class Parser:
         return co
 
     def parse(self):
+        version = self.u8()
+        if self.pos + 32 > len(self.data):
+            raise ParseError(f"EOF reading MD5 at {self.pos}")
+        md5 = self.data[self.pos:self.pos + 32].decode('ascii', errors='replace')
+        self.pos += 32
+        module = Module(version, md5)
         root = self.parse_code_object()
-        return root, self.all
+        return module, root, self.all
 
 
 # ─── Serialise to JSON-friendly dicts ──────────────────────────────────────────
@@ -254,7 +255,6 @@ def obj_to_dict(co: CodeObject) -> dict:
     return {
         "id":       co.id,
         "name":     co.name,
-        "version":  co.version,
         "parent":   co.parent_id,
         "children": co.children_ids,
         "names":    co.names,
@@ -281,9 +281,10 @@ def obj_to_dict(co: CodeObject) -> dict:
 
 # ─── HTML Generator ────────────────────────────────────────────────────────────
 
-def generate_html(filename: str, all_objects: List[CodeObject]) -> str:
-    data_json = json.dumps([obj_to_dict(o) for o in all_objects], indent=2)
-    basename  = os.path.basename(filename)
+def generate_html(filename: str, module: Module, all_objects: List[CodeObject]) -> str:
+    data_json   = json.dumps([obj_to_dict(o) for o in all_objects], indent=2)
+    module_json = json.dumps({"version": module.version, "md5": module.md5})
+    basename    = os.path.basename(filename)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -561,14 +562,36 @@ def generate_html(filename: str, all_objects: List[CodeObject]) -> str:
     font-size: 12px;
     line-height: 1.7;
   }}
-  .instr {{ display: flex; gap: 0; align-items: baseline; border-radius: 3px; }}
+  .instr {{
+    display: flex;
+    gap: 0;
+    align-items: baseline;
+    border-radius: 3px;
+    border-left: 2px solid transparent;
+    padding-left: 6px;
+  }}
   .instr:hover {{ background: var(--card); }}
-  .instr.is-jmp-target {{ background: rgba(61, 232, 160, 0.06); border-left: 2px solid var(--accent); padding-left: 4px; }}
-  .i-off  {{ color: var(--dim);     min-width: 36px; flex-shrink: 0; }}
+  .instr.is-jmp-target {{ background: rgba(61, 232, 160, 0.06); border-left-color: var(--accent); }}
+  .i-num  {{ color: var(--dim); width: 36px; text-align: right; flex-shrink: 0; }}
+  .i-col  {{ color: var(--dim); padding: 0 6px 0 1px; flex-shrink: 0; }}
   .i-op   {{ color: var(--keyword); min-width: 160px; flex-shrink: 0; font-weight: 600; }}
   .i-arg  {{ color: var(--number);  min-width: 28px; }}
   .i-ann  {{ color: var(--string);  font-size: 11px; }}
-  .i-ann.is-jmp {{ color: var(--accent2); }}
+  .jbadge {{
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    border-radius: 3px;
+    padding: 0 5px;
+    cursor: pointer;
+    margin-left: 6px;
+    border: 1px solid currentColor;
+    opacity: 0.8;
+    transition: opacity 0.1s;
+    user-select: none;
+  }}
+  .jbadge:hover {{ opacity: 1; }}
 
   /* ── No selection ── */
   .no-selection {{
@@ -627,13 +650,16 @@ def generate_html(filename: str, all_objects: List[CodeObject]) -> str:
 <script>
 // ── Data ──────────────────────────────────────────────────────────────────────
 const ALL_OBJECTS = {data_json};
+const MODULE      = {module_json};
 
 const byId = Object.fromEntries(ALL_OBJECTS.map(o => [o.id, o]));
 let selectedId = null;
 
 // ── Header stats ──────────────────────────────────────────────────────────────
-document.getElementById('hdr-stats').textContent =
-  `${{ALL_OBJECTS.length}} code object${{ALL_OBJECTS.length !== 1 ? 's' : ''}}`;
+document.getElementById('hdr-stats').innerHTML =
+  `v${{MODULE.version}} &nbsp;·&nbsp; ` +
+  `<span title="MD5" style="color:var(--dim);font-size:10px;letter-spacing:0.5px">${{MODULE.md5}}</span>` +
+  ` &nbsp;·&nbsp; ${{ALL_OBJECTS.length}} code object${{ALL_OBJECTS.length !== 1 ? 's' : ''}}`;
 
 // ── Splitter (resize graph panel) ────────────────────────────────────────────
 (function() {{
@@ -880,23 +906,68 @@ function renderDetail(co) {{
     return `<span class="crumb" onclick="selectObject(${{c.id}})">${{esc(c.name)}}</span>`;
   }}).join(' <span style="color:var(--dim)">›</span> ');
 
-  const jmpTargets = new Set(
-    co.instructions.filter(i => i.name === 'JMP' || i.name === 'JMP_IF_FALSE')
-                   .flatMap(i => i.operands)
-  );
+  const JMP_PALETTE = [
+    ['#2a1f3d','#c084fc'], ['#1f2d1a','#86efac'], ['#2d1f1a','#fda4af'],
+    ['#1a2535','#67e8f9'], ['#2d2a1a','#fde68a'], ['#1a2d2a','#6ee7b7'],
+  ];
+
+  // jmpSources[srcOffset] = {{target, color, idx}}
+  // jmpTargets[tgtOffset] = [{{source, color, idx}}, ...]
+  const jmpSources = {{}};
+  const jmpTargets = {{}};
+  let jmpIdx = 0;
+  co.instructions.forEach(instr => {{
+    if (instr.name === 'JMP' || instr.name === 'JMP_IF_FALSE') {{
+      const target = instr.operands[0];
+      const color  = JMP_PALETTE[jmpIdx % JMP_PALETTE.length];
+      const info   = {{ target, color, idx: jmpIdx, source: instr.offset }};
+      jmpSources[instr.offset] = info;
+      if (!jmpTargets[target]) jmpTargets[target] = [];
+      jmpTargets[target].push(info);
+      jmpIdx++;
+    }}
+  }});
+
+  const iid = off => `ii-${{co.id}}-${{off}}`;
 
   const disasmHtml = co.instructions.map(instr => {{
-    const isTarget = jmpTargets.has(instr.offset);
-    const argHtml  = instr.operands.map((op, i) => {{
-      const ann    = instr.annotations[i] || '';
-      const isJmp  = (instr.name === 'JMP' || instr.name === 'JMP_IF_FALSE');
-      return `<span class="i-arg">${{op}}</span> <span class="i-ann${{isJmp ? ' is-jmp' : ''}}">${{esc(ann)}}</span>`;
+    const isTarget = instr.offset in jmpTargets;
+
+    // regular operand + annotation spans
+    const argHtml = instr.operands.map((op, i) => {{
+      const ann   = instr.annotations[i] || '';
+      const isJmp = (instr.name === 'JMP' || instr.name === 'JMP_IF_FALSE');
+      if (isJmp) return `<span class="i-arg">${{op + 1}}</span>`;
+      return `<span class="i-arg">${{op}}</span><span class="i-ann"> ${{esc(ann)}}</span>`;
     }}).join(' ');
-    return `<div class="instr${{isTarget ? ' is-jmp-target' : ''}}">
-      <span class="i-off">${{instr.offset}}:</span>
-      <span class="i-op">${{esc(instr.name)}}</span>
-      ${{argHtml}}
-    </div>`;
+
+    // badge on the jump source → clicking scrolls to target
+    let srcBadge = '';
+    if (instr.offset in jmpSources) {{
+      const info = jmpSources[instr.offset];
+      const [bg, fg] = info.color;
+      const dir = info.target > instr.offset ? '↓' : '↑';
+      srcBadge = `<span class="jbadge" style="background:${{bg}};color:${{fg}}"
+        onclick="document.getElementById('${{iid(info.target)}}')?.scrollIntoView({{block:'center'}})"
+        title="→ ${{info.target + 1}}">${{dir}} ${{info.target + 1}}</span>`;
+    }}
+
+    // badge(s) on the jump target ← clicking scrolls back to source
+    let tgtBadges = '';
+    if (isTarget) {{
+      tgtBadges = jmpTargets[instr.offset].map(info => {{
+        const [bg, fg] = info.color;
+        const dir = info.source < instr.offset ? '↑' : '↓';
+        return `<span class="jbadge" style="background:${{bg}};color:${{fg}}"
+          onclick="document.getElementById('${{iid(info.source)}}')?.scrollIntoView({{block:'center'}})"
+          title="from ${{info.source + 1}}">${{dir}} from ${{info.source + 1}}</span>`;
+      }}).join('');
+    }}
+
+    return `<div class="instr${{isTarget ? ' is-jmp-target' : ''}}" id="${{iid(instr.offset)}}">` +
+      `<span class="i-num">${{instr.offset + 1}}</span><span class="i-col">:</span>` +
+      `<span class="i-op">${{esc(instr.name)}}</span>` +
+      `${{argHtml}}${{srcBadge}}${{tgtBadges}}</div>`;
   }}).join('');
 
   const constsHtml = co.constants.length === 0 ? '<span class="empty">none</span>' :
@@ -944,8 +1015,7 @@ function renderDetail(co) {{
     <div class="detail-header">
       <div class="co-name">${{esc(co.name)}}</div>
       <div class="co-meta">
-        version ${{co.version}}
-        &nbsp;·&nbsp; ${{co.constants.length}} constant${{co.constants.length !== 1 ? 's' : ''}}
+        ${{co.constants.length}} constant${{co.constants.length !== 1 ? 's' : ''}}
         &nbsp;·&nbsp; ${{co.locals.length}} local${{co.locals.length !== 1 ? 's' : ''}}
         &nbsp;·&nbsp; ${{co.params.length}} param${{co.params.length !== 1 ? 's' : ''}}
         &nbsp;·&nbsp; ${{co.instructions.length}} instruction${{co.instructions.length !== 1 ? 's' : ''}}
@@ -953,11 +1023,19 @@ function renderDetail(co) {{
       <div class="breadcrumb">${{bcHtml}}</div>
     </div>
 
+    ${{co.parent === null ? `
+    <div class="section">
+      <div class="section-title">Module</div>
+      <div class="fields">
+        <div class="field"><div class="field-key">version</div><div class="field-value">${{MODULE.version}}</div></div>
+        <div class="field" style="grid-column:span 3"><div class="field-key">md5</div><div class="field-value" style="font-size:11px;letter-spacing:0.5px;color:var(--muted)">${{esc(MODULE.md5)}}</div></div>
+      </div>
+    </div>` : ''}}
+
     <div class="section">
       <div class="section-title">Fields</div>
       <div class="fields">
         <div class="field"><div class="field-key">name</div><div class="field-value">${{esc(co.name)}}</div></div>
-        <div class="field"><div class="field-key">version</div><div class="field-value">${{co.version}}</div></div>
         <div class="field"><div class="field-key">params</div><div class="field-value">${{co.params.length}}</div></div>
         <div class="field"><div class="field-key">locals</div><div class="field-value">${{co.locals.length}}</div></div>
         <div class="field"><div class="field-key">names</div><div class="field-value">${{co.names.length}}</div></div>
@@ -1026,17 +1104,18 @@ def main():
 
     try:
         parser = Parser(data)
-        root, all_objects = parser.parse()
+        module, root, all_objects = parser.parse()
     except ParseError as e:
         print(f"  error    {e}", file=sys.stderr)
         sys.exit(1)
 
+    print(f"  module   v{module.version}  md5={module.md5}")
     print(f"  found    {len(all_objects)} code object(s)")
     for co in all_objects:
         indent = "  " * (sum(1 for o in all_objects if _is_ancestor(o.id, co.id, all_objects)))
         print(f"           {indent}· {co.name!r}  ({len(co.constants)} consts, {len(co.instructions)} instrs)")
 
-    html = generate_html(input_path, all_objects)
+    html = generate_html(input_path, module, all_objects)
     open(output_path, 'w', encoding='utf-8').write(html)
     print(f"  written  {output_path}")
 

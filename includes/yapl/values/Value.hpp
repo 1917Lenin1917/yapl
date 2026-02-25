@@ -50,7 +50,7 @@ namespace yapl {
 #define mk_undefined() std::make_shared<UndefinedValue>()
 #define as_undefined(v) static_cast<UndefinedValue*>(v)
 
-#define mk_code_obj() std::make_shared<CodeObjectValue>()
+#define mk_code_obj(co) std::make_shared<CodeObjectValue>(co)
 #define as_code_obj(v) static_cast<CodeObjectValue*>(v)
 
 struct TypeObject;
@@ -170,6 +170,5 @@ private:
 static VPtr NotImplemented{};
 
 void init_base_methods(TypeObject* tp);
-
 
 }

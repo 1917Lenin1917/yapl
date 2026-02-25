@@ -21,6 +21,7 @@ public:
 	[[nodiscard]] bool IsTruthy() const override { return value; }
 
 	std::vector<std::byte> Serialize() override;
+	static VPtr Deserialize(const std::vector<std::byte>& buffer, std::size_t& offset);
 };
 
 inline TypeObject* BooleanTypeObject = nullptr;

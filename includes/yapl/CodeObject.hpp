@@ -11,8 +11,6 @@
 #include "ByteCode.hpp"
 
 
-constexpr std::uint8_t CODE_OBJECT_VERSION = 1;
-
 namespace yapl {
 class Value;
 class Variable;
@@ -30,6 +28,7 @@ struct Parameter {
   std::size_t local_index;
 
   [[nodiscard]] std::vector<std::byte> Serialize() const;
+  [[nodiscard]] static Parameter Deserialize(const std::vector<std::byte>& bytes, std::size_t& offset);
 };
 
 struct CodeObject
@@ -44,6 +43,7 @@ struct CodeObject
   std::vector<Parameter> params;
 
   [[nodiscard]] std::vector<std::byte> Serialize() const;
+  [[nodiscard]] static CodeObject Deserialize(const std::vector<std::byte>& bytes, std::size_t& offset);
 };
 
 void print_code_object(const CodeObject& code_object, std::ostream& output = std::cout);

@@ -34,6 +34,20 @@ std::vector<std::byte> FloatValue::Serialize()
     return buffer;
 }
 
+VPtr FloatValue::Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset)
+{
+  auto module_name_len = readUint16(bytes, offset);
+  auto module_name = readStringBytes(bytes, offset, module_name_len);
+
+  auto value_len = readUint16(bytes, offset);
+  auto value = readFloat(bytes, offset);
+
+  auto b = mk_float(value);
+  b->module = module_name;
+
+  return b;
+}
+
 
 void init_float_methods(TypeObject* tp)
 {

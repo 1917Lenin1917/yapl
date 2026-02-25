@@ -44,6 +44,21 @@ std::vector<std::byte> IntegerValue::Serialize()
     return buffer;
 }
 
+VPtr IntegerValue::Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset)
+{
+  auto module_name_len = readUint16(bytes, offset);
+  auto module_name = readStringBytes(bytes, offset, module_name_len);
+
+  auto value_len = readUint16(bytes, offset);
+  auto value = readUint32(bytes, offset);
+
+
+  auto b = mk_int(static_cast<int>(value));
+  b->module = module_name;
+
+  return b;
+}
+
 
 void init_int_methods(TypeObject* tp)
 {
