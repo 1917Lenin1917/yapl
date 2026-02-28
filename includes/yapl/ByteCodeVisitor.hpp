@@ -31,6 +31,8 @@ class ArrayASTNode;
 class GetPropertyASTNode;
 class SetPropertyASTNode;
 class ClassASTNode;
+class ExportASTNode;
+class ImportASTNode;
 
 class ByteCodeVisitor final
 {
@@ -63,6 +65,8 @@ public:
   void visit_GetPropertyASTNode(const GetPropertyASTNode &node);
   void visit_SetPropertyASTNode(const SetPropertyASTNode &node);
   void visit_ClassASTNode(const ClassASTNode &node);
+  void visit_ExportASTNode(const ExportASTNode &node);
+  void visit_ImportASTNode(const ImportASTNode &node);
 
   void visit_KeyParamExpressionASTNode(const KeyParamExpressionASTNode &node);
 
@@ -97,12 +101,8 @@ public:
     current_object.op_codes.push_back(static_cast<OpCode>(index));
   }
   /*
-  Objec visit_ArrayASTNode(const ArrayASTNode &node) override;
   Objec visit_DictASTNode(const DictASTNode &node) override;
   Objec visit_IndexASTNode(const IndexASTNode &node) override;
-  Objec visit_UnaryOpASTNode(const UnaryOpASTNode &node) override;
-  Objec visit_ImportASTNode(const ImportASTNode &node) override;
-  Objec visit_ExportASTNode(const ExportASTNode &node) override;
   Objec visit_StatementIndexASTNode(const StatementIndexASTNode &node) override;
   Objec visit_ForEachLoopASTNode(const ForEachLoopASTNode &node) override;
   Objec visit_StarredExpressionASTNode(const StarredExpressionASTNode &node) override;

@@ -12,14 +12,15 @@ enum OpCode : std::uint32_t {
   NOP,
   RETURN,
   HALT,
+  POP, // Pops from the stack
 
   LOAD_CONST,
   LOAD_UNDEF, // pushes undefined to stack
 
   MAKE_ARR,
   MAKE_TYPE,
-
   MAKE_FUNC,
+
   KW_CALL, // call when we have key arguments like op="+"
   CALL,
   CALL_METHOD,
@@ -36,6 +37,9 @@ enum OpCode : std::uint32_t {
 
   LOAD_NAME,
   STORE_NAME,
+
+  LOAD_MODULE,
+  IMPORT_NAME,
 
   UNARY_OP,
   BINARY_OP,
@@ -92,6 +96,9 @@ inline std::string_view opcode_to_string(const OpCode opcode) {
     case OpCode::SET_PROPERTY:   return "SET_PROPERTY";
     case OpCode::UNARY_OP:       return "UNARY_OP";
     case OpCode::MAKE_TYPE:      return "MAKE_TYPE";
+    case OpCode::POP:            return "POP";
+    case OpCode::IMPORT_NAME:    return "IMPORT_NAME";
+    case OpCode::LOAD_MODULE:    return "LOAD_MODULE";
   }
   return "UNKNOWN";
 }

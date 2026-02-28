@@ -7,14 +7,16 @@
 #include "StringValue.hpp"
 
 namespace yapl {
+struct Frame;
 
 class FunctionValue final : public Value
 {
 public:
-  std::shared_ptr<CodeObject>& code_object;
+  std::shared_ptr<Frame> globals;
+  std::shared_ptr<CodeObject> code_object;
   std::string name;
 
-  explicit FunctionValue(std::string name, std::shared_ptr<CodeObject>& code_object);
+  explicit FunctionValue(std::string name, std::shared_ptr<CodeObject> code_object, std::shared_ptr<Frame> globals);
 
   std::unique_ptr<Value> Copy() const override;
 };

@@ -44,6 +44,35 @@ Parameter Parameter::Deserialize(const std::vector<std::byte> &bytes, std::size_
   };
 }
 
+std::vector<std::byte> Export::Serialize() const
+{
+    std::vector<std::byte> buffer;
+
+    const auto nameLength = name.size();
+
+    appendUint16(buffer, nameLength);
+    appendStringBytes(buffer, name);
+    appendByte(buffer, static_cast<std::byte>(kind));
+    appendUint32(buffer, index);
+
+    return buffer;
+}
+
+Export Export::Deserialize(const std::vector<std::byte> &bytes, std::size_t &offset)
+{
+  auto module_name_len = readUint16(bytes, offset);
+  auto module_name = readStringBytes(bytes, offset, module_name_len);
+
+  auto kind = readByte(bytes, offset);
+  auto index = readUint32(bytes, offset);
+
+  return {
+    .kind = static_cast<ExportKind>(kind),
+    .index = static_cast<std::size_t>(index),
+    .name = module_name,
+  };
+}
+
 std::vector<std::byte> CodeObject::Serialize() const
 {
     std::vector<std::byte> buffer;
@@ -88,6 +117,13 @@ std::vector<std::byte> CodeObject::Serialize() const
     for (const auto& currentOpCode : op_codes)
     {
       appendUint32(buffer, currentOpCode);
+    }
+
+    appendUint16(buffer, exports.size());
+    for (const auto& currentExport : exports)
+    {
+      auto serializedExport = currentExport.Serialize();
+      buffer.insert(buffer.end(), serializedExport.begin(), serializedExport.end());
     }
 
     return buffer;
@@ -268,6 +304,7 @@ void print_code_object(const CodeObject &code_object, std::ostream &output)
         break;
       }
 
+      case OpCode::IMPORT_NAME:
       case OpCode::LOAD_NAME:
       case OpCode::STORE_NAME:
       case OpCode::SET_PROPERTY:
@@ -310,6 +347,8 @@ void print_code_object(const CodeObject &code_object, std::ostream &output)
         break;
       }
 
+      case OpCode::LOAD_MODULE:
+      case OpCode::POP:
       case OpCode::NOP:
       case OpCode::RETURN:
       case OpCode::HALT:

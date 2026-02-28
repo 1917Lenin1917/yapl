@@ -17,49 +17,12 @@
 #include "yapl/values/BooleanValue.hpp"
 #include "yapl/values/CodeObjectValue.hpp"
 #include "yapl/Hasher.hpp"
+#include "yapl/Utils.hpp"
+#include "yapl/values/ModuleValue.hpp"
 
 using namespace yapl;
 
-std::vector<std::string> get_lines_from_text(const std::string& text)
-{
-    std::vector<std::string> res;
-    std::stringstream ss { text };
-    while (!ss.eof())
-    {
-        std::string line;
-        std::getline(ss, line);
-        res.push_back(line);
-    }
-    return res;
-}
-
-void recursively_print_code_objects(const CodeObject& co)
-{
-  print_code_object(co);
-  std::cout << "\n\n";
-  for (const auto& constant : co.constants)
-  {
-    if (const auto cov = dynamic_cast<CodeObjectValue*>(constant.get()))
-    {
-      recursively_print_code_objects(*cov->code_object);
-    }
-  }
-}
-
-constexpr std::uint8_t MODULE_VERSION = 1;
-
-std::vector<std::byte> serialize_module(const std::vector<std::byte>& co_bytes, const std::filesystem::path& module_path)
-{
-  std::vector<std::byte> result;
-  appendByte(result, static_cast<std::byte>(MODULE_VERSION));
-  const auto hash = md5HexFromFile(module_path);
-  appendStringBytes(result, hash);
-  result.insert(result.end(), co_bytes.begin(), co_bytes.end());
-
-  return result;
-}
-
-ByteCodeVisitor initialize()
+void initialize()
 {
   init_builtin_function_tp();
   init_int_tp();
@@ -73,33 +36,24 @@ ByteCodeVisitor initialize()
   init_undefined_tp();
   init_code_object_type_object();
   init_array_tp();
-
-  return ByteCodeVisitor{};
+  init_module_type_object();
 }
 
-bool is_valid_cache(const std::filesystem::path& module_path)
+void recursively_print_code_objects(const CodeObject &co)
 {
-  auto cache_path = module_path.parent_path() / ".cache" / module_path.filename().replace_extension("yaplcache");
-  auto new_md5 = md5HexFromFile(module_path);
-  std::ifstream t(cache_path, std::ios::binary);
-  if (!t.is_open())
-    return false;
-
-  std::uint8_t version = 0;
-  t.read(reinterpret_cast<std::istream::char_type *>(&version), 1);
-
-  assert(("Module version is wrong!", version == MODULE_VERSION));
-
-  std::string old_md5;
-  old_md5.resize(32);
-  t.read(old_md5.data(), 32);
-
-  t.close();
-
-  return old_md5 == new_md5;
+  print_code_object(co);
+  std::cout << "\n\n";
+  for (const auto &constant: co.constants)
+  {
+    if (const auto cov = dynamic_cast<CodeObjectValue *>(constant.get()))
+    {
+      recursively_print_code_objects(*cov->code_object);
+    }
+  }
 }
 
-int main(int argc, char** argv)
+
+int main(int argc, char **argv)
 {
   std::setlocale(LC_ALL, "ru_RU.utf-8");
 
@@ -107,7 +61,7 @@ int main(int argc, char** argv)
   auto path = full_path.parent_path();
   auto filename = full_path.filename();
 
-  auto v = initialize();
+  initialize();
 
   bool is_valid = is_valid_cache(full_path);
 
@@ -118,15 +72,17 @@ int main(int argc, char** argv)
     auto vmtime1 = std::chrono::system_clock::now();
     std::ifstream t(argv[1]);
     std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
-    Lexer lexer {text};
+    Lexer lexer{text};
     auto tokens = lexer.make_tokens();
 
     auto lines = get_lines_from_text(text);
-    Parser parser {tokens, filename.string(), lines};
+    Parser parser{tokens, filename.string(), lines};
     auto ast = parser.parse_root();
-    auto ast_as_root = static_cast<RootASTNode*>(ast.get());
+    auto ast_as_root = static_cast<RootASTNode *>(ast.get());
 
-    co = v.visit_RootASTNode(*ast_as_root);
+    ByteCodeVisitor visitor;
+
+    co = visitor.visit_RootASTNode(*ast_as_root);
     // recursively_print_code_objects(co);
 
     auto co_bytes = co.Serialize();
@@ -136,13 +92,13 @@ int main(int argc, char** argv)
 
     std::ofstream cache(cache_path / filename.replace_extension("yaplcache"), std::ios::binary);
     cache.write(
-      reinterpret_cast<const char*>(bytes.data()),
+      reinterpret_cast<const char *>(bytes.data()),
       static_cast<std::streamsize>(bytes.size())
     );
 
     auto vmtime2 = std::chrono::system_clock::now();
-    std::cout << "Parsing file from source took: " << std::chrono::duration_cast<std::chrono::microseconds>(vmtime2-vmtime1) << "\n";
-
+    std::cout << "Parsing file from source took: " << std::chrono::duration_cast<
+      std::chrono::microseconds>(vmtime2 - vmtime1) << "\n";
   }
   else
   {
@@ -158,27 +114,29 @@ int main(int argc, char** argv)
     fin.seekg(33, std::ios::beg);
 
     std::vector<std::byte> bytes(size - 33);
-    fin.read(reinterpret_cast<char*>(bytes.data()), size);
+    fin.read(reinterpret_cast<char *>(bytes.data()), size);
 
     std::size_t offset = 0;
     co = CodeObject::Deserialize(bytes, offset);
 
     auto vmtime2 = std::chrono::system_clock::now();
-    std::cout << "Loading from cache took: " << std::chrono::duration_cast<std::chrono::microseconds>(vmtime2-vmtime1) << "\n";
+    std::cout << "Loading from cache took: " << std::chrono::duration_cast<std::chrono::microseconds>(vmtime2 - vmtime1)
+        << "\n";
   }
 
   try
   {
     auto vmtime1 = std::chrono::system_clock::now();
-    ByteCodeVM vm { co };
+    ByteCodeVM vm{co};
+    vm.base_path = path;
     vm.Run();
     auto vmtime2 = std::chrono::system_clock::now();
-    std::cout << "Virtual Byting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vmtime2-vmtime1) << "\n";
+    std::cout << "Virtual Byting took: " << std::chrono::duration_cast<std::chrono::milliseconds>(vmtime2 - vmtime1) <<
+        "\n";
     std::cout << std::endl;
-  }
-  catch (const std::runtime_error& e)
+  } catch (const std::runtime_error &e)
   {
-      std::cerr << e.what() << std::endl;
+    std::cerr << e.what() << std::endl;
   }
   return 0;
 }

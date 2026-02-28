@@ -4,12 +4,14 @@
 
 #include "yapl/values/StringValue.hpp"
 
+#include "yapl/ByteCodeVM.hpp"
 #include "yapl/Serialization.hpp"
 #include "yapl/values/SizeIterator.hpp"
 #include "yapl/values/IntegerValue.hpp"
 #include "yapl/exceptions/RuntimeError.hpp"
 
 namespace yapl {
+class DictValue;
 
 StringValue::StringValue(std::string value)
 		:Value(VALUE_TYPE::STRING, StringTypeObject), value(std::move(value)) {}
@@ -72,11 +74,31 @@ VPtr StringValue::Deserialize(const std::vector<std::byte> &bytes, std::size_t &
 
 void init_str_methods(TypeObject* tp)
 {
-    // MAKE_METHOD(tp, "size", "int", ARG("this", "this"))
-    // {
-    //     auto self = as_str(f_obj->function_scope->vars["this"]->value.get());
-    //     return std::make_unique<IntegerValue>(self->value.size());
-    // };
+	const auto size_lambda = [](ByteCodeVM& VM)
+	{
+		auto _kwargs = VM.m_Stack.top();
+		auto kwargs = static_cast<DictValue*>(_kwargs.get());
+		VM.m_Stack.pop();
+
+		auto _args = VM.m_Stack.top();
+		VM.m_Stack.pop();
+		auto args = as_arr(_args.get());
+
+		auto self = as_str(args->value[0].get());
+		VM.m_Stack.push(mk_int(self->value.size()));
+	};
+	tp->methods["size"] = mk_builtin("size", size_lambda);
+
+
+	tp->nb_getattr = [](const VPtr& _self, const std::string& attr_name) -> VPtr
+	{
+		if (attr_name == "length")
+		{
+			auto self = as_str(_self.get());
+			return mk_int(self->value.size());
+		}
+		return nullptr;
+	};
 }
 
 void init_str_tp()

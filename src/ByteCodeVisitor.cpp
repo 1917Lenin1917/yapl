@@ -669,6 +669,68 @@ void ByteCodeVisitor::visit_ClassASTNode(const ClassASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(node.member_functions.size()));
 }
 
+void ByteCodeVisitor::visit_ExportASTNode(const ExportASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  for (const auto& var : node.variables)
+  {
+    const auto identifier = static_cast<IdentifierASTNode*>(var.get());
+    const std::string name = identifier->token.value;
+
+
+    // Firstly, check locals, if not found, check globals
+    bool is_local = true;
+    const auto locals_it = std::ranges::find(current_object.locals, name);
+    std::size_t index = locals_it != current_object.locals.end() ? locals_it - current_object.locals.begin() : -1;
+
+    if (index == -1)
+    {
+      const auto names_it = std::ranges::find(current_object.names, name);
+      index = names_it != current_object.names.end() ? names_it - current_object.names.begin() : -1;
+      is_local = false;
+    }
+    // it is not in locals nor names
+    if (index == -1) throw std::runtime_error("Handle this later better, but this is not known name or local");
+
+    current_object.exports.push_back({
+      .kind = is_local ? ExportKind::LOCAL : ExportKind::NAME,
+      .index = index,
+      .name = name,
+    });
+  }
+}
+
+void ByteCodeVisitor::visit_ImportASTNode(const ImportASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  // Push module name on the stack
+  // TODO: this should probably be a name, not a string constant
+  node.module->visit(*this);
+
+  // This loads module on the stack
+  current_object.op_codes.push_back(OpCode::LOAD_MODULE);
+
+  for (const auto& identifier : node.identifiers)
+  {
+    std::string name = identifier.value;
+    const auto names_it = std::ranges::find(current_object.names, name);
+    std::size_t index = names_it != current_object.names.end() ? names_it - current_object.names.begin() : -1;
+
+    if (index == -1)
+    {
+      current_object.names.push_back(name);
+      index = current_object.names.size() - 1;
+    }
+
+    current_object.op_codes.push_back(OpCode::IMPORT_NAME);
+    current_object.op_codes.push_back(static_cast<OpCode>(index));
+  }
+
+  current_object.op_codes.push_back(OpCode::POP);
+}
+
 // LOAD_CONST 0 (func)
 // LOAD_CONST 1 (1)
 // LOAD_CONST 2 (2)

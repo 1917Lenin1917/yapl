@@ -10,8 +10,11 @@
 
 namespace yapl {
 
-FunctionValue::FunctionValue(std::string name, std::shared_ptr<CodeObject>& code_object)
-    :Value(VALUE_TYPE::FUNCTION, FunctionTypeObject), code_object(code_object), name(std::move(name)) {}
+FunctionValue::FunctionValue(std::string name, std::shared_ptr<CodeObject> code_object, std::shared_ptr<Frame> globals)
+    :Value(VALUE_TYPE::FUNCTION, FunctionTypeObject),
+     globals(std::move(globals)),
+     code_object(std::move(code_object)),
+     name(std::move(name)) {}
 
 std::unique_ptr<Value> FunctionValue::Copy() const
 {

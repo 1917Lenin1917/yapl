@@ -10,17 +10,30 @@
 #include "yapl/values/TypeObjectValue.hpp"
 
 namespace yapl {
-    std::string value_type_to_string(VALUE_TYPE vt)
+    std::string value_type_to_string(const VALUE_TYPE vt)
     {
         switch (vt) {
+            case VALUE_TYPE::NONE: return "NONE";
             case VALUE_TYPE::INTEGER: return "int";
-            case VALUE_TYPE::STRING: return "str";
+            case VALUE_TYPE::FLOAT: return "float";
+            case VALUE_TYPE::BOOL: return "bool";
+            case VALUE_TYPE::STRING: return "string";
+            case VALUE_TYPE::ARRAY: return "array";
+            case VALUE_TYPE::TYPE: return "type";
+            case VALUE_TYPE::DICT: return "dict";
+            case VALUE_TYPE::USER_DEFINED: return "custom";
+            case VALUE_TYPE::FUNCTION: return "fn";
+            case VALUE_TYPE::BUILTIN_FUNCTION: return "builtin_fn";
+            case VALUE_TYPE::ITERATOR: return "iterator";
+            case VALUE_TYPE::UNDEFINED: return "undefined";
+            case VALUE_TYPE::CODE_OBJECT: return "code_object";
+            case VALUE_TYPE::MODULE: return "module";
             default: return "unhandled";
         }
     }
 
 Value::Value(const VALUE_TYPE type, TypeObject* tp)
-	:type(type), tp(tp)
+	:tp(tp), type(type)
 {
 }
 
@@ -41,10 +54,6 @@ std::string Value::print()
 std::shared_ptr<Value> Value::Call(const std::vector<VPtr> &args)
 {
     return NotImplemented;
-    // if (!tp->nb_call) return NotImplemented;
-    //
-    // VPtr r = tp->nb_call(shared_from_this(), args);
-    // return r != NotImplemented ? r : NotImplemented;
 }
 
 std::shared_ptr<ArrayValue> Value::GetMethods() const
@@ -57,7 +66,7 @@ std::shared_ptr<ArrayValue> Value::GetMethods() const
     return std::make_unique<ArrayValue>(values);
 }
 
-VPtr Value::dispatch(yapl::unop_fn slot, const char *opname)
+VPtr Value::dispatch(unop_fn slot, const char *opname)
 {
     if (!slot) return NotImplemented;
 
@@ -86,17 +95,6 @@ void init_base_methods(TypeObject* tp)
     {
         self->SetField(attr_name, value);
     };
-    // MAKE_METHOD(tp, "type", "str", ARG("this", "this"))
-    // {
-    //     auto self = f_obj->function_scope->vars["this"];
-    //     return std::make_unique<TypeObjectValue>(self->value->tp);
-    // };
-    //
-    // MAKE_METHOD(tp, "dir", "array", ARG("this", "this"))
-    // {
-    //     auto self = f_obj->function_scope->vars["this"];
-    //     return self->value->GetMethods();
-    // };
 }
 
 

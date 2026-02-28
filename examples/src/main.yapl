@@ -273,18 +273,18 @@
 //penis.x = 5
 //print(penis.x)
 
-//import { pad_left, pad_right, join } from 'utils.yapl'
-//
-//const string = '12345'
-//const _pad_len = 10
-//const _pad_char = '#'
-//
-//print(pad_left(string, _pad_char, _pad_len))
-//print(pad_right(string, _pad_char, _pad_len))
-//
-//print(pad_left, pad_right)
-////print(generate_padding)
-//print(join([1, 2, 3]))
+import { pad_left, pad_right, join } from 'utils'
+
+const string = '12345'
+const _pad_len = 10
+const _pad_char = '#'
+
+print(pad_left(string, _pad_char, _pad_len))
+print(pad_right(string, _pad_char, _pad_len))
+
+print(pad_left, pad_right)
+print(generate_padding)
+print(join([1, 2, 3]))
 
 
 //const arr = [4, 3, 9, 2, 0, 1121, 8, 29, 22, 2, 2, 2, 9, 7, 4, 6, 7]
@@ -497,27 +497,27 @@
 //  print(i, i+1, sep="$")
 //}
 
-fn create_user(
-  =name,
-  =email,
-  =password
-) {
-  print("name", name, sep=": ")
-  print("email", email, sep=": ")
-  print("password", password, sep=": ")
-}
-
-create_user(
-  name="Maksim Litvinenko",
-  email="ltv.maxym@gmail.com",
-  password="1917Lenin1917"
-)
-
-let i = 5;
-while i > 0 {
-  print(i);
-  i -= 1;
-}
+//fn create_user(
+//  =name,
+//  =email,
+//  =password
+//) {
+//  print("name", name, sep=": ")
+//  print("email", email, sep=": ")
+//  print("password", password, sep=": ")
+//}
+//
+//create_user(
+//  name="Maksim Litvinenko",
+//  email="ltv.maxym@gmail.com",
+//  password="1917Lenin1917"
+//)
+//
+//let i = 5;
+//while i > 0 {
+//  print(i);
+//  i -= 1;
+//}
 
 //
 //print(str)
@@ -631,3 +631,31 @@ while i > 0 {
 //const a = 10;
 //const b = a + 6;
 //print(b + a);
+
+//import { SEPARATOR, get_separator } from 'constants'
+////
+//print(SEPARATOR)
+//print(get_separator())
+
+
+// Find module with name 'constants'
+// If first-time loaded: run it and save its frame (???)
+// Look at its CodeObject's exports
+// Check if values with names like these exist in exports
+// If they do, push them into the current module frame as names / some other kind of variable map (???)
+// Adjust LOAD_NAME to look in that new variable map
+//
+//
+// IMPORT_NAME <name_index>
+
+//fn join(arr) {
+//  let result = ""
+//
+//  for let i = 0; i < arr.size(); i += 1; {
+//    result += arr.get(i)
+//    if i != arr.size() - 1 { result += ", " }
+//  }
+//  return result
+//}
+//
+//print(join([1, 2, 3]))

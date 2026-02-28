@@ -14,7 +14,7 @@ namespace yapl {
 class CodeObjectValue : public Value
 {
 public:
-  explicit CodeObjectValue(const std::shared_ptr<CodeObject> &code_object);
+  explicit CodeObjectValue(std::shared_ptr<CodeObject> code_object);
 
   std::unique_ptr<Value> Copy() const override { return nullptr; }
   bool IsTruthy() const override { return false; }

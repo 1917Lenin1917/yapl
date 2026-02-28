@@ -31,6 +31,22 @@ struct Parameter {
   [[nodiscard]] static Parameter Deserialize(const std::vector<std::byte>& bytes, std::size_t& offset);
 };
 
+enum class ExportKind : std::uint8_t
+{
+  LOCAL,
+  NAME,
+};
+
+struct Export
+{
+  ExportKind kind;
+  std::size_t index;
+  std::string name;
+
+  [[nodiscard]] std::vector<std::byte> Serialize() const;
+  [[nodiscard]] static Export Deserialize(const std::vector<std::byte>& bytes, std::size_t& offset);
+};
+
 struct CodeObject
 {
   std::vector<OpCode> op_codes;
@@ -41,6 +57,8 @@ struct CodeObject
   std::vector<std::string> locals;
   std::vector<std::string> names;
   std::vector<Parameter> params;
+  std::vector<Export> exports;
+
 
   [[nodiscard]] std::vector<std::byte> Serialize() const;
   [[nodiscard]] static CodeObject Deserialize(const std::vector<std::byte>& bytes, std::size_t& offset);

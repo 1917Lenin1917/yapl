@@ -2,6 +2,8 @@
 // Created by Максим Литвиненко on 11.09.2025.
 //
 
+#include <utility>
+
 #include "yapl/values/CodeObjectValue.hpp"
 
 #include "yapl/Serialization.hpp"
@@ -9,8 +11,8 @@
 
 namespace yapl {
 
-CodeObjectValue::CodeObjectValue(const std::shared_ptr<CodeObject>& code_object)
-  :Value(VALUE_TYPE::CODE_OBJECT, CodeObjectTypeObject), code_object(code_object) {  }
+CodeObjectValue::CodeObjectValue(std::shared_ptr<CodeObject> code_object)
+  :Value(VALUE_TYPE::CODE_OBJECT, CodeObjectTypeObject), code_object(std::move(code_object)) {  }
 
 std::vector<std::byte> CodeObjectValue::Serialize()
 {

@@ -3,9 +3,12 @@
 //
 
 #pragma once
+#include <filesystem>
 #include <stack>
 #include <utility>
 #include <vector>
+#include <memory>
+#include <unordered_map>
 
 #include "ByteCode.hpp"
 #include "Variable.hpp"
@@ -23,6 +26,9 @@ struct Frame
 {
   std::shared_ptr<CodeObject> code_object;
   std::vector<std::shared_ptr<Variable>> locals;
+  std::unordered_map<std::string, std::shared_ptr<Variable>> names;
+
+  std::shared_ptr<Frame> globals;
 };
 
 class ByteCodeVM
@@ -37,10 +43,12 @@ public:
     {
       locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::UNDEFINED, nullptr, "__main__", name));
     }
-    Frame frame = {
-      .code_object = std::make_shared<CodeObject>(m_CodeObject),
-      .locals = locals
-    };
+
+    auto frame = std::make_shared<Frame>();
+    frame->code_object = std::make_shared<CodeObject>(m_CodeObject);
+    frame->locals = std::move(locals);
+    frame->globals = frame;
+
     m_FrameStack.push_back(frame);
 
     auto print_lambda = [](ByteCodeVM& VM)
@@ -81,7 +89,6 @@ public:
     m_Globals[DictTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(DictTypeObject), "__main__", DictTypeObject->name, false);
     m_Globals[FunctionTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(FunctionTypeObject), "__main__", FunctionTypeObject->name, false);
     m_Globals[SizeIteratorTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(SizeIteratorTypeObject), "__main__", SizeIteratorTypeObject->name, false);
-
   }
 
   ~ByteCodeVM()
@@ -90,18 +97,19 @@ public:
       delete type;
   }
 
-
   void Run();
   void Run(CodeObject& co);
 
-
   std::size_t m_Idx = 0;
   std::stack<std::shared_ptr<Value>> m_Stack;
-  std::vector<Frame> m_FrameStack;
+  std::vector<std::shared_ptr<Frame>> m_FrameStack;
   CodeObject m_CodeObject;
   std::unordered_map<std::string, std::shared_ptr<Variable>> m_Globals;
   std::vector<TypeObject*> m_Types;
 
+  std::unordered_map<std::string, std::shared_ptr<Frame>> modules;
+
+  std::filesystem::path base_path;
 
 private:
   void HandleUnaryOp(UnaryOp compare_type);
@@ -111,6 +119,8 @@ private:
       const VPtr& function_object,
       std::vector<VPtr> positional_arguments,
       std::unordered_map<std::string, VPtr> keyword_arguments = {});
+
+  void LoadModule(const std::string& module_name);
 };
 
 }

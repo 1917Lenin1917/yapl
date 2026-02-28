@@ -1,9 +1,9 @@
-import { get_separator } from 'constants.yapl'
+import { get_separator } from 'constants'
 
 fn generate_padding(size, char, len) {
   const pad_len = len - size
   let padding = ""
-  for let i; i < pad_len; i += 1; {
+  for let i = 0; i < pad_len; i += 1; {
     padding += char
   }
 
@@ -27,7 +27,7 @@ fn join(arr) {
   let result = ""
 
   for let i = 0; i < arr.size(); i += 1; {
-    result += arr[i]
+    result += arr.get(i)
     if i != arr.size() - 1 { result += get_separator() }
   }
   return result

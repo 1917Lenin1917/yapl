@@ -231,6 +231,7 @@ public:
 
   std::string print(size_t indent_size) override;
 
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ImportASTNode(*this); }
 };
 class ExportASTNode final : public BaseASTNode
 {
@@ -241,7 +242,7 @@ public:
     :BaseASTNode(), variables(std::move(vars)) {}
 
   std::string print(size_t indent_size) override;
-
+  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ExportASTNode(*this); }
 };
 
 
