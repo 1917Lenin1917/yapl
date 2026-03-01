@@ -1,7 +1,3 @@
-//
-// Created by lenin on 01.03.2026.
-//
-
 #include "yapl/Resolver.hpp"
 
 #include "yapl/values/ArrayValue.hpp"
@@ -11,6 +7,46 @@
 #include "yapl/values/TypeObjectValue.hpp"
 
 namespace yapl {
+
+namespace {
+
+Position ToPosition(const SourcePosition& position)
+{
+  return Position{
+    .line = position.line,
+    .character = position.character
+  };
+}
+
+Location ToLocation(const SourceLocation& location)
+{
+  return Location{
+    .start = ToPosition(location.start),
+    .end = ToPosition(location.end)
+  };
+}
+
+Location ToLocation(const BaseASTNode& node)
+{
+  return ToLocation(node.location);
+}
+
+Location ToLocation(const Token& token)
+{
+  return Location{
+    .start = Position{
+      .line = static_cast<std::size_t>(token.line),
+      .character = static_cast<std::size_t>(token.col_start)
+    },
+    .end = Position{
+      .line = static_cast<std::size_t>(token.line),
+      .character = static_cast<std::size_t>(token.col_end)
+    }
+  };
+}
+
+}
+
 Resolver::Resolver() = default;
 
 ResolutionResult Resolver::Resolve(const RootASTNode& ast_node)
@@ -74,7 +110,7 @@ void Resolver::visit(const VariableASTNode& node)
     .is_exported = false,
     .declaration_scope_id = scope.id,
     .declaration_node_id = node.id,
-    .declaration_location = {},
+    .declaration_location = ToLocation(node.name),
     .reference_locations = {},
     .reference_node_ids = {},
   });
@@ -88,14 +124,12 @@ void Resolver::visit(const VariableASTNode& node)
 void Resolver::visit(const UnaryOpASTNode &node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
-
   node.RHS->visit(*this);
 }
 
 void Resolver::visit(const BinaryOpASTNode &node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
-
   node.LHS->visit(*this);
   node.RHS->visit(*this);
 }
@@ -104,7 +138,7 @@ void Resolver::visit(const IdentifierASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
 
-  const std::size_t symbol_id = LookupInParentScopes(node.token.value);
+  const std::size_t symbol_id = LookupInCurrentOrParentScopes(node.token.value);
   if (symbol_id == -1ull) {
     ReportUnknownIdentifier(node.token);
     return;
@@ -115,13 +149,13 @@ void Resolver::visit(const IdentifierASTNode& node)
   BindNodeToSymbol(node.id, symbol_id);
 
   symbol.reference_node_ids.push_back(node.id);
-  symbol.reference_locations.push_back(Location{});
+  symbol.reference_locations.push_back(ToLocation(node));
 
   m_Result.symbol_references.push_back(SymbolReference{
     .node_id = node.id,
     .symbol_id = symbol_id,
     .scope_id = CurrentScopeId(),
-    .location = {},
+    .location = ToLocation(node),
     .kind = ReferenceKind::READ,
   });
 }
@@ -279,7 +313,7 @@ void Resolver::visit(const FunctionASTNode& node)
     .is_exported = false,
     .declaration_scope_id = parent_scope.id,
     .declaration_node_id = function_decl->id,
-    .declaration_location = {},
+    .declaration_location = ToLocation(*function_decl),
     .reference_locations = {},
     .reference_node_ids = {},
   });
@@ -312,7 +346,6 @@ void Resolver::visit(const FunctionASTNode& node)
 void Resolver::visit(const ReturnStatementASTNode &node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
-
   node.expr->visit(*this);
 }
 
@@ -369,14 +402,12 @@ void Resolver::visit(const MethodCallASTNode& node)
 void Resolver::visit(const GetPropertyASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
-
   node.base_expr->visit(*this);
 }
 
 void Resolver::visit(const SetPropertyASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
-
   node.base_expr->visit(*this);
   node.RHS->visit(*this);
 }
@@ -409,7 +440,7 @@ void Resolver::visit(const ClassASTNode& node)
     .is_exported = false,
     .declaration_scope_id = parent_scope.id,
     .declaration_node_id = node.id,
-    .declaration_location = {},
+    .declaration_location = ToLocation(node),
     .owned_scope_id = -1ull,
     .reference_locations = {},
     .reference_node_ids = {},
@@ -467,7 +498,6 @@ void Resolver::visit(const ImportASTNode& node)
 void Resolver::visit(const KeyParamExpressionASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
-
   node.expression->visit(*this);
 }
 
@@ -476,8 +506,8 @@ void Resolver::ReportDuplicateDeclaration(const Token& name_token, const Symbol&
   m_Result.diagnostics.push_back(Diagnostic{
     .severity = DiagnosticSeverity::ERROR,
     .code = DiagnosticCode::DUPLICATE_DECLARATION,
-    .message = std::format("Name {} is already declared", name_token.value),
-    .location = {},
+    .message = std::format("Name {} is already declared at {}:{}", name_token.value, prev_symbol.declaration_location.start.line, prev_symbol.declaration_location.start.character),
+    .location = ToLocation(name_token),
   });
 }
 
@@ -486,8 +516,8 @@ void Resolver::ReportShadowingDeclaration(const Token& name_token, const Symbol&
   m_Result.diagnostics.push_back(Diagnostic{
     .severity = DiagnosticSeverity::WARNING,
     .code = DiagnosticCode::SHADOWING_DECLARATION,
-    .message = std::format("Name {} shadows an outer declaration", name_token.value),
-    .location = {},
+    .message = std::format("Name {} shadows an outer declaration at {}:{}", name_token.value, prev_symbol.declaration_location.start.line, prev_symbol.declaration_location.start.character),
+    .location = ToLocation(name_token),
   });
 }
 
@@ -497,7 +527,7 @@ void Resolver::ReportUnknownIdentifier(const Token& name_token)
     .severity = DiagnosticSeverity::ERROR,
     .code = DiagnosticCode::UNKNOWN_IDENTIFIER,
     .message = std::format("Unknown identifier {}", name_token.value),
-    .location = {},
+    .location = ToLocation(name_token),
   });
 }
 
@@ -507,7 +537,7 @@ void Resolver::ReportConstReassignment(const Token& name_token)
     .severity = DiagnosticSeverity::ERROR,
     .code = DiagnosticCode::CONST_REASSIGNMENT,
     .message = std::format("Cannot reassign constant {}", name_token.value),
-    .location = {},
+    .location = ToLocation(name_token),
   });
 }
 
@@ -521,7 +551,7 @@ bool Resolver::EnsureModuleScope(const BaseASTNode& node, const std::string_view
     .severity = DiagnosticSeverity::ERROR,
     .code = DiagnosticCode::INVALID_MODULE_SCOPE,
     .message = std::format("{} is only allowed at module scope", construct_name),
-    .location = {},
+    .location = ToLocation(node),
   });
 
   return false;
@@ -541,7 +571,7 @@ void Resolver::ResolveAssignmentTarget(const IdentifierASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
 
-  const std::size_t symbol_id = LookupInParentScopes(node.token.value);
+  const std::size_t symbol_id = LookupInCurrentOrParentScopes(node.token.value);
   if (symbol_id == -1ull) {
     ReportUnknownIdentifier(node.token);
     return;
@@ -556,13 +586,13 @@ void Resolver::ResolveAssignmentTarget(const IdentifierASTNode& node)
   BindNodeToSymbol(node.id, symbol_id);
 
   symbol.reference_node_ids.push_back(node.id);
-  symbol.reference_locations.push_back(Location{});
+  symbol.reference_locations.push_back(ToLocation(node));
 
   m_Result.symbol_references.push_back(SymbolReference{
     .node_id = node.id,
     .symbol_id = symbol_id,
     .scope_id = CurrentScopeId(),
-    .location = {},
+    .location = ToLocation(node),
     .kind = ReferenceKind::WRITE,
   });
 }
@@ -571,7 +601,7 @@ void Resolver::ResolveCallTarget(const IdentifierASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
 
-  const std::size_t symbol_id = LookupInParentScopes(node.token.value);
+  const std::size_t symbol_id = LookupInCurrentOrParentScopes(node.token.value);
   if (symbol_id == -1ull) {
     ReportUnknownIdentifier(node.token);
     return;
@@ -582,13 +612,13 @@ void Resolver::ResolveCallTarget(const IdentifierASTNode& node)
   BindNodeToSymbol(node.id, symbol_id);
 
   symbol.reference_node_ids.push_back(node.id);
-  symbol.reference_locations.push_back(Location{});
+  symbol.reference_locations.push_back(ToLocation(node));
 
   m_Result.symbol_references.push_back(SymbolReference{
     .node_id = node.id,
     .symbol_id = symbol_id,
     .scope_id = CurrentScopeId(),
-    .location = {},
+    .location = ToLocation(node),
     .kind = ReferenceKind::CALL,
   });
 }
@@ -597,7 +627,7 @@ void Resolver::ResolveExportTarget(const IdentifierASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
 
-  const std::size_t symbol_id = LookupInParentScopes(node.token.value);
+  const std::size_t symbol_id = LookupInCurrentOrParentScopes(node.token.value);
   if (symbol_id == -1ull) {
     ReportUnknownIdentifier(node.token);
     return;
@@ -610,13 +640,13 @@ void Resolver::ResolveExportTarget(const IdentifierASTNode& node)
   BindNodeToSymbol(node.id, symbol_id);
 
   symbol.reference_node_ids.push_back(node.id);
-  symbol.reference_locations.push_back({});
+  symbol.reference_locations.push_back(ToLocation(node));
 
   m_Result.symbol_references.push_back({
     .node_id = node.id,
     .symbol_id = symbol_id,
     .scope_id = CurrentScopeId(),
-    .location = {},
+    .location = ToLocation(node),
     .kind = ReferenceKind::EXPORT,
   });
 }
@@ -648,7 +678,7 @@ void Resolver::DeclareFunctionParameter(const FunctionArgumentASTNode& node)
     .is_exported = false,
     .declaration_scope_id = scope.id,
     .declaration_node_id = node.id,
-    .declaration_location = {},
+    .declaration_location = ToLocation(node),
     .reference_locations = {},
     .reference_node_ids = {},
   });
@@ -684,7 +714,7 @@ void Resolver::DeclareImportedSymbol(const Token& name_token, const std::size_t 
     .is_exported = false,
     .declaration_scope_id = scope.id,
     .declaration_node_id = declaration_node_id,
-    .declaration_location = {},
+    .declaration_location = ToLocation(name_token),
     .owned_scope_id = -1ull,
     .reference_locations = {},
     .reference_node_ids = {},
@@ -747,7 +777,33 @@ std::size_t Resolver::LookupInParentScopes(std::string_view name) const
   return -1ull;
 }
 
-std::size_t Resolver::PushScope(const ScopeKind kind, const std::size_t node_id, const std::size_t parent_scope_id)
+std::size_t Resolver::LookupInCurrentOrParentScopes(std::string_view name) const
+{
+  if (m_ScopeStack.empty()) {
+    return -1ull;
+  }
+
+  std::size_t scope_id = CurrentScopeId();
+
+  while (scope_id != -1ull) {
+    const auto& scope = m_Result.scopes[scope_id];
+
+    const auto iterator = scope.name_to_symbol.find(std::string(name));
+    if (iterator != scope.name_to_symbol.end()) {
+      return iterator->second;
+    }
+
+    scope_id = scope.parent_scope_id;
+  }
+
+  return -1ull;
+}
+
+std::size_t Resolver::PushScope(
+  const ScopeKind kind,
+  const std::size_t node_id,
+  const std::size_t parent_scope_id
+)
 {
   const std::size_t scope_id = m_ScopeId++;
 

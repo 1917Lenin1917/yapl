@@ -14,9 +14,6 @@ namespace yapl {
 // IntegerASTNode
 //
 
-BaseASTNode::BaseASTNode(const std::size_t id)
-    :id(id) { }
-
 std::string IntegerASTNode::print(size_t indent_size)
 {
     return REPEAT(indent_size*2, ' ')

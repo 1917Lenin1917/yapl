@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <string>
 #include <clocale>
+#include <iterator>
 
 #include <yapl/values/ArrayValue.hpp>
 #include <yapl/values/FunctionValue.hpp>
@@ -63,22 +64,11 @@ struct ParsedUnit
   ResolutionResult resolver_output;
 };
 
-ParsedUnit parse_and_resolve_file(
-  const std::filesystem::path &full_path,
+ParsedUnit parse_and_resolve_text(
+  std::string text,
   const std::filesystem::path &filename
 )
 {
-  std::ifstream source_file(full_path);
-  if (!source_file.is_open())
-  {
-    throw std::runtime_error("Failed to open source file: " + full_path.string());
-  }
-
-  std::string text(
-    (std::istreambuf_iterator<char>(source_file)),
-    std::istreambuf_iterator<char>()
-  );
-
   Lexer lexer{text};
   auto tokens = lexer.make_tokens();
 
@@ -97,6 +87,25 @@ ParsedUnit parse_and_resolve_file(
     std::move(ast),
     std::move(resolver_output)
   };
+}
+
+ParsedUnit parse_and_resolve_file(
+  const std::filesystem::path &full_path,
+  const std::filesystem::path &filename
+)
+{
+  std::ifstream source_file(full_path);
+  if (!source_file.is_open())
+  {
+    throw std::runtime_error("Failed to open source file: " + full_path.string());
+  }
+
+  std::string text(
+    (std::istreambuf_iterator<char>(source_file)),
+    std::istreambuf_iterator<char>()
+  );
+
+  return parse_and_resolve_text(std::move(text), filename);
 }
 
 CodeObject build_code_object_from_ast(RootASTNode &root_ast_node)
@@ -123,14 +132,36 @@ int run_diagnostics_mode(const std::filesystem::path &full_path)
   }
 }
 
+int run_diagnostics_stdin_mode(const std::filesystem::path &full_path)
+{
+  const auto filename = full_path.filename();
+
+  try
+  {
+    std::string text(
+      (std::istreambuf_iterator<char>(std::cin)),
+      std::istreambuf_iterator<char>()
+    );
+
+    auto parsed_unit = parse_and_resolve_text(std::move(text), filename);
+    serialize_json(parsed_unit.resolver_output, std::cout);
+    std::cout << '\n';
+    return 0;
+  }
+  catch (const std::exception &error)
+  {
+    std::cerr << error.what() << '\n';
+    return 1;
+  }
+}
+
 int run_vm_mode(const std::filesystem::path &full_path)
 {
   const auto path = full_path.parent_path();
   const auto filename = full_path.filename();
 
   CodeObject code_object;
-  bool is_valid = is_valid_cache(filename);
-  // bool is_valid = false;
+  bool is_valid = is_valid_cache(full_path);
 
   if (!is_valid)
   {
@@ -217,6 +248,7 @@ int main(int argc, char **argv)
     std::cerr << "Usage:\n";
     std::cerr << "  yapl <file>\n";
     std::cerr << "  yapl --diagnostics <file>\n";
+    std::cerr << "  yapl --diagnostics --stdin <file>\n";
     return 1;
   }
 
@@ -226,14 +258,22 @@ int main(int argc, char **argv)
 
   if (first_argument == "--diagnostics")
   {
-    if (argc < 3)
+    if (argc == 3)
     {
-      std::cerr << "Missing file path for diagnostics mode\n";
-      return 1;
+      const auto full_path = std::filesystem::path(argv[2]);
+      return run_diagnostics_mode(full_path);
     }
 
-    const auto full_path = std::filesystem::path(argv[2]);
-    return run_diagnostics_mode(full_path);
+    if (argc == 4 && std::string(argv[2]) == "--stdin")
+    {
+      const auto full_path = std::filesystem::path(argv[3]);
+      return run_diagnostics_stdin_mode(full_path);
+    }
+
+    std::cerr << "Usage:\n";
+    std::cerr << "  yapl --diagnostics <file>\n";
+    std::cerr << "  yapl --diagnostics --stdin <file>\n";
+    return 1;
   }
 
   const auto full_path = std::filesystem::path(argv[1]);

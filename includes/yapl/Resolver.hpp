@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <unordered_map>
 #include <sstream>
 
 #include "ASTNode.hpp"
@@ -197,6 +198,7 @@ private:
   std::size_t DeclareBuiltinSymbol(std::string_view name, SymbolKind kind);
 
   std::size_t LookupInParentScopes(std::string_view name) const;
+  std::size_t LookupInCurrentOrParentScopes(std::string_view name) const;
 
   std::size_t PushScope(ScopeKind kind, std::size_t node_id, std::size_t parent_scope_id);
   void PopScope();
