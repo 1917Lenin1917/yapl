@@ -4,8 +4,8 @@
 
 #include "yapl/ByteCodeVM.hpp"
 
+#include <algorithm>
 #include <fstream>
-#include <bits/ranges_algo.h>
 #include <yapl/Lexer.hpp>
 #include <yapl/Parser.hpp>
 #include <yapl/values/ArrayValue.hpp>
@@ -26,6 +26,9 @@
 #define DEBUG std::raise(SIGINT);
 #endif
 #ifdef __MINGW32__
+#define DEBUG __debugbreak();
+#endif
+#ifdef _MSC_VER
 #define DEBUG __debugbreak();
 #endif
 

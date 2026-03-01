@@ -11,52 +11,53 @@
 #include <memory>
 #include <utility>
 
-#include "ByteCodeVisitor.hpp"
 #include "Token.hpp"
+#include "BaseVisitor.hpp"
+#include "ByteCodeVisitor.hpp"
 #include "values/Value.hpp"
 
 #define REPEAT(n, c) std::string(n, c)
 
 namespace yapl {
-class Visitor;
 class ByteCodeVisitor;
 class Function;
 class Value;
 
+class BaseASTNode;
+using ASTPtr = std::unique_ptr<BaseASTNode>;
+
 class BaseASTNode
 {
 public:
+  std::size_t id;
+
   virtual ~BaseASTNode() = default;
 
-  BaseASTNode() = default;
+  explicit BaseASTNode(const std::size_t id);
 
   virtual std::string print(size_t indent_size) = 0;
 
-  virtual void visit(ByteCodeVisitor &visitor) {}
+  virtual void visit(Visitor &visitor) {}
 };
 
 class IntegerASTNode final : public BaseASTNode
 {
 public:
     int value;
-    explicit IntegerASTNode(const Token& t)
-            :BaseASTNode()
-    {
-        value = std::stoi(t.value);
-    }
+    explicit IntegerASTNode(const Token& t, const std::size_t id)
+            :BaseASTNode(id), value(std::stoi(t.value)) { }
 
     std::string print(size_t indent_size) override;
 
-  
-    void visit(ByteCodeVisitor &visitor) override { visitor.visit_IntegerASTNode(*this); }
+    void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class FloatASTNode final : public BaseASTNode
 {
 public:
     float value;
-    explicit FloatASTNode(const Token& t)
-            :BaseASTNode()
+    explicit FloatASTNode(const Token& t, const std::size_t id)
+            :BaseASTNode(id)
     {
         value = std::stof(t.value);
     }
@@ -64,14 +65,14 @@ public:
     std::string print(size_t indent_size) override;
 
   
-    void visit(ByteCodeVisitor &visitor) override { visitor.visit_FloatASTNode(*this); }
+    void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 class BooleanASTNode final : public BaseASTNode
 {
 public:
     bool value;
-    explicit BooleanASTNode(const Token& t)
-            :BaseASTNode()
+    explicit BooleanASTNode(const Token& t, const std::size_t id)
+            :BaseASTNode(id)
     {
         value = t.value == std::string("true");
     }
@@ -79,19 +80,19 @@ public:
     std::string print(size_t indent_size) override;
 
   
-    void visit(ByteCodeVisitor &visitor) override { visitor.visit_BooleanASTNode(*this); }
+    void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 class StringASTNode final : public BaseASTNode
 {
 public:
     std::string value;
-    explicit StringASTNode(const Token& t)
-            :BaseASTNode(), value(t.value) {}
+    explicit StringASTNode(const Token& t, const std::size_t id)
+            :BaseASTNode(id), value(t.value) {}
 
     std::string print(size_t indent_size) override;
 
   
-    void visit(ByteCodeVisitor &visitor) override { visitor.visit_StringASTNode(*this); }
+    void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class IdentifierASTNode final : public BaseASTNode
@@ -99,23 +100,23 @@ class IdentifierASTNode final : public BaseASTNode
 public:
   Token token;
 
-  explicit IdentifierASTNode(const Token& t)
-    :BaseASTNode(), token(t) {}
+  explicit IdentifierASTNode(const Token& t, const std::size_t id)
+    :BaseASTNode(id), token(t) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_IdentifierASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class IndexASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> base_expr;
-  std::unique_ptr<BaseASTNode> index_expr;
+  ASTPtr base_expr;
+  ASTPtr index_expr;
 
-  IndexASTNode(std::unique_ptr<BaseASTNode> base_expr, std::unique_ptr<BaseASTNode> index_expr)
-    :BaseASTNode(), base_expr(std::move(base_expr)), index_expr(std::move(index_expr)) {}
+  IndexASTNode(ASTPtr base_expr, ASTPtr index_expr, const std::size_t id)
+    :BaseASTNode(id), base_expr(std::move(base_expr)), index_expr(std::move(index_expr)) {}
 
   std::string print(size_t indent_size) override;
 
@@ -125,25 +126,25 @@ public:
 class ArrayASTNode final : public BaseASTNode
 {
 public:
-  std::vector<std::unique_ptr<BaseASTNode>> values;
+  std::vector<ASTPtr> values;
 
-  explicit ArrayASTNode(std::vector<std::unique_ptr<BaseASTNode>>& values)
-    :BaseASTNode(), values(std::move(values)) {}
+  explicit ArrayASTNode(std::vector<ASTPtr>& values, const std::size_t id)
+    :BaseASTNode(id), values(std::move(values)) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ArrayASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class DictASTNode final : public BaseASTNode
 {
 public:
-  std::vector<std::unique_ptr<BaseASTNode>> keys;
-  std::vector<std::unique_ptr<BaseASTNode>> values;
+  std::vector<ASTPtr> keys;
+  std::vector<ASTPtr> values;
 
-  explicit DictASTNode(std::vector<std::unique_ptr<BaseASTNode>>&& keys, std::vector<std::unique_ptr<BaseASTNode>>&& values)
-    :BaseASTNode(), keys(std::move(keys)), values(std::move(values)) { }
+  explicit DictASTNode(std::vector<ASTPtr>&& keys, std::vector<ASTPtr>&& values, const std::size_t id)
+    :BaseASTNode(id), keys(std::move(keys)), values(std::move(values)) { }
 
   std::string print(size_t indent_size) override;
 
@@ -153,13 +154,13 @@ class ClassASTNode final : public BaseASTNode
 {
 public:
   Token name;
-  std::vector<std::unique_ptr<BaseASTNode>> member_functions;
+  std::vector<ASTPtr> member_functions;
 
-  explicit ClassASTNode(const Token &name, std::vector<std::unique_ptr<BaseASTNode>>&& member_functions)
-    :name(name), member_functions(std::move(member_functions)) {}
+  explicit ClassASTNode(const Token &name, std::vector<ASTPtr>&& member_functions, const std::size_t id)
+    :BaseASTNode(id), name(name), member_functions(std::move(member_functions)) {}
 
   std::string print(size_t indent_size) override;
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ClassASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class VariableASTNode final : public BaseASTNode
@@ -167,92 +168,92 @@ class VariableASTNode final : public BaseASTNode
 public:
   Token type;
   Token name;
-  std::unique_ptr<BaseASTNode> value;
+  ASTPtr value;
 public:
-  explicit VariableASTNode(const Token& t, const Token& n, std::unique_ptr<BaseASTNode> v = nullptr)
-    : BaseASTNode(), type(t), name(n), value(std::move(v)) {}
+  explicit VariableASTNode(const Token& t, const Token& n, ASTPtr v, const std::size_t id)
+    : BaseASTNode(id), type(t), name(n), value(std::move(v)) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_VariableASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class UnaryOpASTNode final : public BaseASTNode
 {
 public:
   Token op;
-  std::unique_ptr<BaseASTNode> RHS;
-  UnaryOpASTNode(const Token& t, std::unique_ptr<BaseASTNode> RHS)
-    :BaseASTNode(), op(t), RHS(std::move(RHS)) {}
+  ASTPtr RHS;
+  UnaryOpASTNode(const Token& t, ASTPtr RHS, const std::size_t id)
+    :BaseASTNode(id), op(t), RHS(std::move(RHS)) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_UnaryOpASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class BinaryOpASTNode final : public BaseASTNode
 {
 public:
     Token op;
-    std::unique_ptr<BaseASTNode> LHS, RHS;
-  BinaryOpASTNode(const Token& token, std::unique_ptr<BaseASTNode> LHS, std::unique_ptr<BaseASTNode> RHS)
-    :BaseASTNode(), op(token), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+    ASTPtr LHS, RHS;
+  BinaryOpASTNode(const Token& token, ASTPtr LHS, ASTPtr RHS, const std::size_t id)
+    :BaseASTNode(id), op(token), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_BinaryOpASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class StatementASTNode final : public BaseASTNode
 {
 public:
-    std::unique_ptr<BaseASTNode> base;
-    std::unique_ptr<BaseASTNode> RHS;
-  StatementASTNode(std::unique_ptr<BaseASTNode> base, std::unique_ptr<BaseASTNode> r)
-    :BaseASTNode(), base(std::move(base)), RHS(std::move(r)) {}
+    ASTPtr base;
+    ASTPtr RHS;
+  StatementASTNode(ASTPtr base, ASTPtr r, const std::size_t id)
+    :BaseASTNode(id), base(std::move(base)), RHS(std::move(r)) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_StatementASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class ImportASTNode final : public BaseASTNode
 {
 public:
   std::vector<Token> identifiers;
-  std::unique_ptr<BaseASTNode> module;
+  ASTPtr module;
 
-  ImportASTNode(std::vector<Token>&& ids, std::unique_ptr<BaseASTNode> module)
-    :BaseASTNode(), identifiers(std::move(ids)), module(std::move(module)) {}
+  ImportASTNode(std::vector<Token>&& ids, ASTPtr module, const std::size_t id)
+    :BaseASTNode(id), identifiers(std::move(ids)), module(std::move(module)) {}
 
   std::string print(size_t indent_size) override;
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ImportASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 class ExportASTNode final : public BaseASTNode
 {
 public:
-  std::vector<std::unique_ptr<BaseASTNode>> variables;
+  std::vector<ASTPtr> variables;
 
-  explicit ExportASTNode(std::vector<std::unique_ptr<BaseASTNode>>&& vars)
-    :BaseASTNode(), variables(std::move(vars)) {}
+  explicit ExportASTNode(std::vector<ASTPtr>&& vars, const std::size_t id)
+    :BaseASTNode(id), variables(std::move(vars)) {}
 
   std::string print(size_t indent_size) override;
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ExportASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 
 class StatementIndexASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> identifier; // IndexASTNode
-  std::unique_ptr<BaseASTNode> RHS;
-  StatementIndexASTNode(std::unique_ptr<BaseASTNode> i, std::unique_ptr<BaseASTNode> r)
-    :BaseASTNode(), identifier(std::move(i)), RHS(std::move(r)) {}
+  ASTPtr identifier; // IndexASTNode
+  ASTPtr RHS;
+  StatementIndexASTNode(ASTPtr i, ASTPtr r, const std::size_t id)
+    :BaseASTNode(id), identifier(std::move(i)), RHS(std::move(r)) {}
 
   std::string print(size_t indent_size) override;
 
@@ -266,8 +267,8 @@ public:
   Token type;
   bool is_args, is_kwargs, is_keyword;
 
-  FunctionArgumentASTNode(const Token& n, const Token& t, bool is_args = false, bool is_kwargs = false, bool is_keyword = false)
-    :BaseASTNode(), name(n), type(t), is_args(is_args), is_kwargs(is_kwargs), is_keyword(is_keyword) {}
+  FunctionArgumentASTNode(const Token& n, const Token& t, bool is_args, bool is_kwargs, bool is_keyword, const std::size_t id)
+    :BaseASTNode(id), name(n), type(t), is_args(is_args), is_kwargs(is_kwargs), is_keyword(is_keyword) {}
 
   std::string print(size_t indent_size) override;
 
@@ -276,242 +277,245 @@ public:
 
 class FunctionArgumentListASTNode final : public BaseASTNode
 {
-  int m_arg_amount = -1;
 public:
   std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
   std::unique_ptr<FunctionArgumentASTNode> args_arg, kwargs_arg;
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args)
-    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)) {}
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args)
-    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, const std::size_t id)
+    :BaseASTNode(id), args(std::move(args)) {}
+  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args, const std::size_t id)
+    :BaseASTNode(id), args(std::move(args)) {}
 
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args, std::unique_ptr<FunctionArgumentASTNode> args_arg, std::unique_ptr<FunctionArgumentASTNode> kwargs_arg)
-    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)), args_arg(std::move(args_arg)), kwargs_arg(std::move(kwargs_arg)) {}
-  explicit FunctionArgumentListASTNode(std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args, std::unique_ptr<FunctionArgumentASTNode> args_arg, std::unique_ptr<FunctionArgumentASTNode> kwargs_arg)
-    :BaseASTNode(), m_arg_amount(args.size()), args(std::move(args)), args_arg(std::move(args_arg)), kwargs_arg(std::move(kwargs_arg)) {}
+  explicit FunctionArgumentListASTNode(
+    std::vector<std::unique_ptr<FunctionArgumentASTNode>>& args,
+    std::unique_ptr<FunctionArgumentASTNode> args_arg,
+    std::unique_ptr<FunctionArgumentASTNode> kwargs_arg,
+    const std::size_t id
+  ):
+    BaseASTNode(id),
+    args(std::move(args)),
+    args_arg(std::move(args_arg)),
+    kwargs_arg(std::move(kwargs_arg)) {}
+
+  explicit FunctionArgumentListASTNode(
+    std::vector<std::unique_ptr<FunctionArgumentASTNode>>&& args,
+    std::unique_ptr<FunctionArgumentASTNode> args_arg,
+    std::unique_ptr<FunctionArgumentASTNode> kwargs_arg,
+    const std::size_t id
+  ):
+    BaseASTNode(id),
+    args(std::move(args)),
+    args_arg(std::move(args_arg)),
+    kwargs_arg(std::move(kwargs_arg)) {}
 
   std::string print(size_t indent_size) override;
 
-
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_FunctionArgumentListASTNode(*this); }
-
-  [[nodiscard]] int get_argument_amount() const { return m_arg_amount; }
-  [[nodiscard]] std::string get_argument_name(size_t idx) const
-  {
-    if (m_arg_amount == -1)
-      return "argument_" + std::to_string(idx);
-    return args[idx]->name.value;
-  }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class FunctionDeclASTNode final : public BaseASTNode
 {
 public:
   Token name;
-  std::unique_ptr<BaseASTNode> args;
+  ASTPtr args;
   Token return_type;
 
-  FunctionDeclASTNode(const Token& n, std::unique_ptr<BaseASTNode> args, const Token& rt)
-    :BaseASTNode(), name(n), args(std::move(args)), return_type(rt) {}
+  FunctionDeclASTNode(const Token& n, ASTPtr args, const Token& rt, const std::size_t id)
+    :BaseASTNode(id), name(n), args(std::move(args)), return_type(rt) {}
 
   std::string print(size_t indent_size) override;
-
-
 };
 
 class GetPropertyASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> base_expr;
+  ASTPtr base_expr;
 	Token name;
 
-	GetPropertyASTNode(std::unique_ptr<BaseASTNode> base_expr, const Token& nm)
-		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm) {}
+	GetPropertyASTNode(ASTPtr base_expr, const Token& nm, const std::size_t id)
+		:BaseASTNode(id), base_expr(std::move(base_expr)), name(nm) {}
 
 	std::string print(size_t indent_size) override;
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_GetPropertyASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class SetPropertyASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> base_expr;
+  ASTPtr base_expr;
 	Token name;
-  std::unique_ptr<BaseASTNode> RHS;
+  ASTPtr RHS;
 
-	SetPropertyASTNode(std::unique_ptr<BaseASTNode> base_expr, const Token& nm, std::unique_ptr<BaseASTNode> RHS)
-		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm), RHS(std::move(RHS)) {}
+	SetPropertyASTNode(ASTPtr base_expr, const Token& nm, ASTPtr RHS, const std::size_t id)
+		:BaseASTNode(id), base_expr(std::move(base_expr)), name(nm), RHS(std::move(RHS)) {}
 
 	std::string print(size_t indent_size) override;
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_SetPropertyASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class MethodCallASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> base_expr;
+  ASTPtr base_expr;
 	Token name;
-	std::vector<std::unique_ptr<BaseASTNode>> args;
-	MethodCallASTNode(std::unique_ptr<BaseASTNode> base_expr, const Token& nm, std::vector<std::unique_ptr<BaseASTNode>>& args)
-		:BaseASTNode(), base_expr(std::move(base_expr)), name(nm), args(std::move(args)) {}
+	std::vector<ASTPtr> args;
+	MethodCallASTNode(
+	  ASTPtr base_expr,
+	  const Token& nm,
+	  std::vector<ASTPtr>& args,
+	  const std::size_t id
+	)
+		:BaseASTNode(id), base_expr(std::move(base_expr)), name(nm), args(std::move(args)) {}
 
 	std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_MethodCallASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 class FunctionCallASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> base;
-	std::vector<std::unique_ptr<BaseASTNode>> args;
-	FunctionCallASTNode(std::unique_ptr<BaseASTNode> base, std::vector<std::unique_ptr<BaseASTNode>>& args)
-		:BaseASTNode(), base(std::move(base)), args(std::move(args)) {}
+  ASTPtr base;
+	std::vector<ASTPtr> args;
+	FunctionCallASTNode(ASTPtr base, std::vector<ASTPtr>& args, const std::size_t id)
+		:BaseASTNode(id), base(std::move(base)), args(std::move(args)) {}
 
 	std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_FunctionCallASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class ReturnStatementASTNode final : public BaseASTNode
 {
 public:
-	std::unique_ptr<BaseASTNode> expr;
-	explicit ReturnStatementASTNode(std::unique_ptr<BaseASTNode> e)
-		:expr(std::move(e)) {}
+	ASTPtr expr;
+	explicit ReturnStatementASTNode(ASTPtr e, const std::size_t id)
+		:BaseASTNode(id), expr(std::move(e)) {}
 
 	std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ReturnStatementASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class ScopeASTNode final : public BaseASTNode
 {
 public:
-  std::vector<std::unique_ptr<BaseASTNode>> nodes;
-  ScopeASTNode()
-    :BaseASTNode() {}
+  std::vector<ASTPtr> nodes;
+  explicit ScopeASTNode(const std::size_t id)
+    :BaseASTNode(id) {}
 
   std::string print(size_t indent_size) override;
 
-
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ScopeASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class FunctionASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> decl;
-  std::unique_ptr<BaseASTNode> body;
+  ASTPtr decl;
+  ASTPtr body;
 
-  FunctionASTNode(std::unique_ptr<BaseASTNode> decl, std::unique_ptr<BaseASTNode> body)
-    :BaseASTNode(), decl(std::move(decl)), body(std::move(body)) {}
+  FunctionASTNode(ASTPtr decl, ASTPtr body, const std::size_t id)
+    :BaseASTNode(id), decl(std::move(decl)), body(std::move(body)) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_FunctionASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class IfElseExpressionASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> condition;
-  std::unique_ptr<BaseASTNode> true_scope;
-  std::unique_ptr<BaseASTNode> false_scope;
+  ASTPtr condition;
+  ASTPtr true_scope;
+  ASTPtr false_scope;
 
-  IfElseExpressionASTNode(std::unique_ptr<BaseASTNode> cond, std::unique_ptr<BaseASTNode> ts, std::unique_ptr<BaseASTNode> fs = nullptr)
-    :BaseASTNode(), condition(std::move(cond)), true_scope(std::move(ts)), false_scope(std::move(fs)) {}
+  IfElseExpressionASTNode(ASTPtr cond, ASTPtr true_scope, ASTPtr false_scope, const std::size_t id)
+    :BaseASTNode(id), condition(std::move(cond)), true_scope(std::move(true_scope)), false_scope(std::move(false_scope)) {}
 
   std::string print(size_t indent_size) override;
 
 
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_IfElseExpressionASTNode(*this); };
+  void visit(Visitor &visitor) override { visitor.visit(*this); };
 };
 
 class WhileLoopASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> condition;
-  std::unique_ptr<BaseASTNode> scope;
+  ASTPtr condition;
+  ASTPtr scope;
 
-  WhileLoopASTNode(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<BaseASTNode> scope)
-    :BaseASTNode(), condition(std::move(condition)), scope(std::move(scope)) {}
+  WhileLoopASTNode(ASTPtr condition, ASTPtr scope, const std::size_t id)
+    :BaseASTNode(id), condition(std::move(condition)), scope(std::move(scope)) {}
 
   std::string print(size_t indent_size) override;
 
-
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_WhileLoopASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 class ForLoopASTNode final : public BaseASTNode
 {
 public:
-  std::unique_ptr<BaseASTNode> declaration;
-  std::unique_ptr<BaseASTNode> condition;
-  std::unique_ptr<BaseASTNode> increment;
+  ASTPtr declaration;
+  ASTPtr condition;
+  ASTPtr increment;
 
-  std::unique_ptr<BaseASTNode> scope;
+  ASTPtr scope;
 
-  ForLoopASTNode(std::unique_ptr<BaseASTNode> decl, std::unique_ptr<BaseASTNode> cond, std::unique_ptr<BaseASTNode> inc, std::unique_ptr<BaseASTNode> scope)
-    :BaseASTNode(), declaration(std::move(decl)), condition(std::move(cond)), increment(std::move(inc)), scope(std::move(scope)){}
+  ForLoopASTNode(ASTPtr decl, ASTPtr cond, ASTPtr inc, ASTPtr scope, const std::size_t id)
+    :BaseASTNode(id), declaration(std::move(decl)), condition(std::move(cond)), increment(std::move(inc)), scope(std::move(scope)){}
 
   std::string print(size_t indent_size) override;
 
-
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_ForLoopASTNode(*this); }
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class ForEachLoopASTNode final : public BaseASTNode
 {
 public:
   Token identifier;
-  std::unique_ptr<BaseASTNode> iterable_expr;
-  std::unique_ptr<BaseASTNode> scope;
+  ASTPtr iterable_expr;
+  ASTPtr scope;
 
-  ForEachLoopASTNode(const Token &identifier, std::unique_ptr<BaseASTNode> iterable, std::unique_ptr<BaseASTNode> scope)
-    :BaseASTNode(), identifier(identifier), iterable_expr(std::move(iterable)), scope(std::move(scope)) {}
+  ForEachLoopASTNode(const Token &identifier, ASTPtr iterable, ASTPtr scope, const std::size_t id)
+    :BaseASTNode(id), identifier(identifier), iterable_expr(std::move(iterable)), scope(std::move(scope)) {}
 
   std::string print(size_t indent_size) override;
-
-
 };
 
 class KeyParamExpressionASTNode final : public BaseASTNode
 {
 public:
     Token identifier;
-    std::unique_ptr<BaseASTNode> expression;
-    explicit KeyParamExpressionASTNode(const Token &identifier, std::unique_ptr<BaseASTNode> expr)
-        :BaseASTNode(), identifier(identifier), expression(std::move(expr)) {}
+    ASTPtr expression;
+    explicit KeyParamExpressionASTNode(const Token &identifier, ASTPtr expr, const std::size_t id)
+        :BaseASTNode(id), identifier(identifier), expression(std::move(expr)) {}
 
     std::string print(size_t indent_size) override;
   
-    void visit(ByteCodeVisitor &visitor) override { visitor.visit_KeyParamExpressionASTNode(*this); }
+    void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 class StarredExpressionASTNode final : public BaseASTNode
 {
 public:
-    std::unique_ptr<BaseASTNode> expression;
-    explicit StarredExpressionASTNode(std::unique_ptr<BaseASTNode> expr)
-        :BaseASTNode(), expression(std::move(expr)) {}
+    ASTPtr expression;
+    explicit StarredExpressionASTNode(ASTPtr expr, const std::size_t id)
+        :BaseASTNode(id), expression(std::move(expr)) {}
 
     std::string print(size_t indent_size) override;
-  
 };
 
 class RootASTNode final : public BaseASTNode
 {
 public:
-  std::vector<std::unique_ptr<BaseASTNode>> nodes;
-  RootASTNode()
-    :BaseASTNode() {}
+  std::vector<ASTPtr> nodes;
+  explicit RootASTNode(const std::size_t id)
+    :BaseASTNode(id) {}
 
   std::string print(size_t indent_size) override;
 
-
-  void visit(ByteCodeVisitor &visitor) override { visitor.visit_RootASTNode(*this); }
+  void visit(ByteCodeVisitor &visitor) { visitor.visit_RootASTNode(*this); }
 };
 }
 

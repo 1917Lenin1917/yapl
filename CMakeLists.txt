@@ -48,6 +48,8 @@ add_executable(yapl src/main.cpp
         includes/yapl/Utils.hpp
         includes/yapl/values/ModuleValue.hpp
         src/values/ModuleValue.cpp
+        includes/yapl/Resolver.hpp
+        src/Resolver.cpp
 )
 
 add_subdirectory(externals/Catch2)

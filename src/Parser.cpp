@@ -45,11 +45,11 @@ std::unique_ptr<BaseASTNode> Parser::parse_literal()
 	advance();
 
     switch (token.type) {
-        case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerASTNode>(token);
+        case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerASTNode>(token, m_node_id++);
         case TOKEN_TYPE::STRING:
-        case TOKEN_TYPE::FSTRING: return std::make_unique<StringASTNode>(token);
-        case TOKEN_TYPE::FLOAT: return std::make_unique<FloatASTNode>(token);
-        case TOKEN_TYPE::BOOL: return std::make_unique<BooleanASTNode>(token);
+        case TOKEN_TYPE::FSTRING: return std::make_unique<StringASTNode>(token, m_node_id++);
+        case TOKEN_TYPE::FLOAT: return std::make_unique<FloatASTNode>(token, m_node_id++);
+        case TOKEN_TYPE::BOOL: return std::make_unique<BooleanASTNode>(token, m_node_id++);
         default: throw SyntaxError(
                     m_filename,
                     token.line,
@@ -66,7 +66,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_starred_expr_or_expr()
     if (m_tokens[m_pos].type == TOKEN_TYPE::TIMES)
     {
         advance();
-        return std::make_unique<StarredExpressionASTNode>(std::move(parse_expr()));
+        return std::make_unique<StarredExpressionASTNode>(std::move(parse_expr()), m_node_id++);
     }
     return parse_expr();
 }
@@ -84,7 +84,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_call(Token identifier)
 						advance();
 						advance();
 						auto expression = parse_expr();
-						args.push_back(std::make_unique<KeyParamExpressionASTNode>(identifier, std::move(expression)));
+						args.push_back(std::make_unique<KeyParamExpressionASTNode>(identifier, std::move(expression), m_node_id++));
     		}
 				else
     		{
@@ -108,7 +108,9 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_call(Token identifier)
         }
     }
     advance(); // eat )
-    return std::make_unique<FunctionCallASTNode>(std::make_unique<IdentifierASTNode>(identifier), args);
+		auto ident_id = m_node_id++;
+		auto call_id = m_node_id++;
+    return std::make_unique<FunctionCallASTNode>(std::make_unique<IdentifierASTNode>(identifier, ident_id), args, call_id);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_method_or_property_call(Token identifier)
@@ -117,8 +119,10 @@ std::unique_ptr<BaseASTNode> Parser::parse_method_or_property_call(Token identif
     auto name = m_tokens[m_pos];
     advance(); // eat name
 
+		auto ident_id = m_node_id++;
+		auto call_id = m_node_id++;
 		if (m_tokens[m_pos].type != TOKEN_TYPE::LPAREN)
-			return std::make_unique<GetPropertyASTNode>(std::make_unique<IdentifierASTNode>(identifier), name);
+			return std::make_unique<GetPropertyASTNode>(std::make_unique<IdentifierASTNode>(identifier, ident_id), name, call_id);
 
     std::vector<std::unique_ptr<BaseASTNode>> args;
     // function call;
@@ -132,15 +136,18 @@ std::unique_ptr<BaseASTNode> Parser::parse_method_or_property_call(Token identif
         }
     }
     advance(); // eat )
-    return std::make_unique<MethodCallASTNode>(std::make_unique<IdentifierASTNode>(identifier), name, args);
+    return std::make_unique<MethodCallASTNode>(std::make_unique<IdentifierASTNode>(identifier, ident_id), name, args, call_id);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_indexing(Token identifier)
 {
+		auto ident_id = m_node_id++;
+		auto call_id = m_node_id++;
+
     advance(); // eat [
     auto expr = parse_expr(); // TODO: maybe move this to paren expr as well?
     advance(); // eat ]
-    return std::make_unique<IndexASTNode>(std::make_unique<IdentifierASTNode>(identifier), std::move(expr));
+    return std::make_unique<IndexASTNode>(std::make_unique<IdentifierASTNode>(identifier, ident_id), std::move(expr), call_id);
 }
 
 
@@ -153,9 +160,9 @@ std::unique_ptr<BaseASTNode> Parser::parse_identifier()
 	if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK)
 		return parse_indexing(identifier);
 	if (m_tokens[m_pos].type == TOKEN_TYPE::PERIOD)
-		return parse_property_or_method_chain(std::make_unique<IdentifierASTNode>(identifier));
+		return parse_property_or_method_chain(std::make_unique<IdentifierASTNode>(identifier, m_node_id++));
 
-	auto res = std::make_unique<IdentifierASTNode>(identifier);
+	auto res = std::make_unique<IdentifierASTNode>(identifier, m_node_id++);
 	return res;
 }
 
@@ -176,7 +183,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_array()
 
 	advance(); // eat ]
 
-	return std::make_unique<ArrayASTNode>(values);
+	return std::make_unique<ArrayASTNode>(values, m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_dict()
@@ -202,7 +209,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_dict()
 	}
 	advance(); // }
 
-	return std::make_unique<DictASTNode>(std::move(keys), std::move(values));
+	return std::make_unique<DictASTNode>(std::move(keys), std::move(values), m_node_id++);
 }
 
 
@@ -247,7 +254,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_unary()
 	else
 		expr = parse_primary_expr();
 
-	return std::make_unique<UnaryOpASTNode>(op, std::move(expr));
+	return std::make_unique<UnaryOpASTNode>(op, std::move(expr), m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_paren_expr()
@@ -266,7 +273,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_paren_expr()
         auto index_expr = parse_expr();
         check(TOKEN_TYPE::RSQBRACK);
         advance(); // eat ]
-        return std::make_unique<IndexASTNode>(std::move(expr), std::move(index_expr));
+        return std::make_unique<IndexASTNode>(std::move(expr), std::move(index_expr), m_node_id++);
     }
     // if there is a ., then this is a method call
     if (m_tokens[m_pos].type == TOKEN_TYPE::PERIOD)
@@ -277,7 +284,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_paren_expr()
         advance(); // eat name
 
 				if (m_tokens[m_pos].type != TOKEN_TYPE::LPAREN)
-					return std::make_unique<GetPropertyASTNode>(std::move(expr), name);
+					return std::make_unique<GetPropertyASTNode>(std::move(expr), name, m_node_id++);
 
         std::vector<std::unique_ptr<BaseASTNode>> args;
         // function call;
@@ -292,7 +299,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_paren_expr()
             }
         }
         advance(); // eat )
-        return std::make_unique<MethodCallASTNode>(std::move(expr), name, args);
+        return std::make_unique<MethodCallASTNode>(std::move(expr), name, args, m_node_id++);
     }
 
 	return expr;
@@ -350,7 +357,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_binop_rhs(int expr_prec, std::unique_
 				return nullptr;
 		}
 
-		LHS = std::make_unique<BinaryOpASTNode>(op, std::move(LHS), std::move(RHS));
+		LHS = std::make_unique<BinaryOpASTNode>(op, std::move(LHS), std::move(RHS), m_node_id++);
 	}
 }
 
@@ -383,7 +390,7 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
 		{
 			advance(); // eat =
 			auto expr = parse_expr();
-			ret_val.push_back(std::move(std::make_unique<VariableASTNode>(decl_token, name_identifier, std::move(expr))));
+			ret_val.push_back(std::move(std::make_unique<VariableASTNode>(decl_token, name_identifier, std::move(expr), m_node_id++)));
 
 			if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
 			{
@@ -404,7 +411,7 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
                     std::format("Expected semicolon after variable declaration")
             );
 		}
-		ret_val.push_back(std::move(std::make_unique<VariableASTNode>(decl_token, name_identifier)));
+		ret_val.push_back(std::move(std::make_unique<VariableASTNode>(decl_token, name_identifier, nullptr, m_node_id++)));
 		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
 		{
 			advance(); // eat comma
@@ -447,7 +454,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_method_call(std::unique_ptr<BaseASTNo
 	}
 	advance(); // eat )
 
-	return std::make_unique<MethodCallASTNode>(std::move(identifier), name, args);
+	return std::make_unique<MethodCallASTNode>(std::move(identifier), name, args, m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_property_get(std::unique_ptr<BaseASTNode> identifier)
@@ -460,10 +467,10 @@ std::unique_ptr<BaseASTNode> Parser::parse_property_get(std::unique_ptr<BaseASTN
 		advance(); // eat =
 		auto expr = parse_expr();
 
-		return std::make_unique<SetPropertyASTNode>(std::move(identifier), name, std::move(expr));
+		return std::make_unique<SetPropertyASTNode>(std::move(identifier), name, std::move(expr), m_node_id++);
 	}
 
-	return std::make_unique<GetPropertyASTNode>(std::move(identifier), name);
+	return std::make_unique<GetPropertyASTNode>(std::move(identifier), name, m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_property_or_method_chain(std::unique_ptr<BaseASTNode> identifier)
@@ -502,7 +509,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 	}
 	if (m_tokens[m_pos].type == TOKEN_TYPE::PERIOD) // method call or property set
 	{
-		auto chain = parse_property_or_method_chain(std::make_unique<IdentifierASTNode>(identifier));
+		auto chain = parse_property_or_method_chain(std::make_unique<IdentifierASTNode>(identifier, m_node_id++));
 		check(TOKEN_TYPE::SEMICOLON);
 		advance();
 		return chain;
@@ -512,7 +519,8 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 		advance(); // eat eq
 		auto expr = parse_semic_expr();
 
-		auto stmnt = std::make_unique<StatementASTNode>(std::make_unique<IdentifierASTNode>(identifier), std::move(expr));
+		auto ident_id = m_node_id++;
+		auto stmnt = std::make_unique<StatementASTNode>(std::make_unique<IdentifierASTNode>(identifier, ident_id), std::move(expr), m_node_id++);
 		return std::move(stmnt);
 	}
 	if (m_tokens[m_pos].type == TOKEN_TYPE::PLUSEQ
@@ -531,9 +539,11 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 			auto new_token = tt_to_tt[m_tokens[m_pos].type];
 			advance(); // eat pluseq
 			auto expr = parse_semic_expr();
-			auto expanded_expr = std::make_unique<BinaryOpASTNode>(Token{new_token}, std::make_unique<IdentifierASTNode>(identifier), std::move(expr));
+			auto ident_id = m_node_id++;
+			auto expanded_expr = std::make_unique<BinaryOpASTNode>(Token{new_token}, std::make_unique<IdentifierASTNode>(identifier, ident_id), std::move(expr), m_node_id++);
 
-			auto stmnt = std::make_unique<StatementASTNode>(std::make_unique<IdentifierASTNode>(identifier), std::move(expanded_expr));
+			auto ident_id_2 = m_node_id++;
+			auto stmnt = std::make_unique<StatementASTNode>(std::make_unique<IdentifierASTNode>(identifier, ident_id_2), std::move(expanded_expr), m_node_id++);
 			return std::move(stmnt);
 	}
 	if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK) // then this is a[1] = 5; or just a[1];
@@ -544,7 +554,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
         {
             advance(); // eat =
             auto expr = parse_semic_expr();
-            return std::make_unique<StatementIndexASTNode>(std::move(idx), std::move(expr));
+            return std::make_unique<StatementIndexASTNode>(std::move(idx), std::move(expr), m_node_id++);
         }
         check(TOKEN_TYPE::SEMICOLON);
         advance();
@@ -553,7 +563,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
 	if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
 	{
 		advance(); // eat ;
-		return std::make_unique<IdentifierASTNode>(identifier);
+		return std::make_unique<IdentifierASTNode>(identifier, m_node_id++);
 	}
 
 	m_pos--;
@@ -595,7 +605,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_import()
 	check(TOKEN_TYPE::SEMICOLON);
 	advance();
 
-	return std::make_unique<ImportASTNode>(std::move(identifiers), std::move(module));
+	return std::make_unique<ImportASTNode>(std::move(identifiers), std::move(module), m_node_id);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_export()
@@ -614,7 +624,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_export()
 		auto id = m_tokens[m_pos];
 		advance(); // eat id
 
-		vars.push_back(std::make_unique<IdentifierASTNode>(id));
+		vars.push_back(std::make_unique<IdentifierASTNode>(id, m_node_id++));
 
 		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
 		{
@@ -626,7 +636,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_export()
 	check(TOKEN_TYPE::RBRACK);
 	advance(); // eat }
 
-	return std::make_unique<ExportASTNode>(std::move(vars));
+	return std::make_unique<ExportASTNode>(std::move(vars), m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
@@ -670,7 +680,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
 						has_kwargs = true;
 						kwargs_arg = std::make_unique<FunctionArgumentASTNode>(identifier,
 																																	 Token{ TOKEN_TYPE::IDENTIFIER,
-																																		new char[]{ "any" } }, false, true);
+																																		new char[]{ "any" } }, false, true, false, m_node_id++);
 						if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
 						{
 								advance(); // eat comma
@@ -697,7 +707,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
 				args_arg = std::make_unique<FunctionArgumentASTNode>(identifier,
 																														 Token{ TOKEN_TYPE::IDENTIFIER,
 																																		new char[]{ "any" } },
-																														 true, false);
+																														 true, false, false, m_node_id++);
 				if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
 				{
 						advance(); // eat comma
@@ -716,7 +726,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
 				std::make_unique<FunctionArgumentASTNode>(
 					identifier,
 				  Token{ TOKEN_TYPE::IDENTIFIER, new char[]{ "any" } },
-		  false, false, true)
+		  false, false, true, m_node_id++)
 		  );
 
 			if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
@@ -736,9 +746,9 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
 			advance(); // eat comma
 		}
 
-		args.push_back(std::move(std::make_unique<FunctionArgumentASTNode>(identifier, Token{ TOKEN_TYPE::IDENTIFIER, new char[]{ "any" } })));
+		args.push_back(std::move(std::make_unique<FunctionArgumentASTNode>(identifier, Token{ TOKEN_TYPE::IDENTIFIER, new char[]{ "any" } }, false, false, false, m_node_id++)));
 	}
-	return std::move(std::make_unique<FunctionArgumentListASTNode>(args, std::move(args_arg), std::move(kwargs_arg)));
+	return std::move(std::make_unique<FunctionArgumentListASTNode>(args, std::move(args_arg), std::move(kwargs_arg), m_node_id++));
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_function_declaration()
@@ -749,14 +759,14 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_declaration()
 	advance(); // eat identifier
 	auto fargs = parse_function_arguments();
 
-	return std::move(std::make_unique<FunctionDeclASTNode>(fname, std::move(fargs), Token{ TOKEN_TYPE::IDENTIFIER, new char[]{ "any" } }));
+	return std::move(std::make_unique<FunctionDeclASTNode>(fname, std::move(fargs), Token{ TOKEN_TYPE::IDENTIFIER, new char[]{ "any" } }, m_node_id++));
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_return() 
 {
 	advance(); // eat return;
 	auto expr = parse_semic_expr();
-	auto ret = std::make_unique<ReturnStatementASTNode>(std::move(expr));
+	auto ret = std::make_unique<ReturnStatementASTNode>(std::move(expr), m_node_id++);
 	return std::move(ret);
 }
 
@@ -786,13 +796,13 @@ std::unique_ptr<BaseASTNode> Parser::parse_ifelse_statement()
 		{
 			// this is another if statement then
 			auto false_scope = parse_ifelse_statement();
-			return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope), std::move(false_scope));
+			return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope), std::move(false_scope), m_node_id++);
 		}
 		auto false_scope = parse_scope();
-		return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope), std::move(false_scope));
+		return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope), std::move(false_scope), m_node_id++);
 	}
 	// if no else block
-	return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope));
+	return std::make_unique<IfElseExpressionASTNode>(std::move(condition), std::move(true_scope), nullptr, m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_for_loop()
@@ -809,13 +819,13 @@ std::unique_ptr<BaseASTNode> Parser::parse_for_loop()
 		auto over = parse_expr();
 		auto scope = parse_scope();
 
-		return std::make_unique<ForEachLoopASTNode>(identifier, std::move(over), std::move(scope));
+		return std::make_unique<ForEachLoopASTNode>(identifier, std::move(over), std::move(scope), m_node_id++);
 	}
 	auto declaration = std::move(parse_variable_declaration()[0]);
 	auto condition = parse_semic_expr();
 	auto increment = parse_statement_or_ident();
 	auto scope = parse_scope();
-	return std::make_unique<ForLoopASTNode>(std::move(declaration), std::move(condition), std::move(increment), std::move(scope));
+	return std::make_unique<ForLoopASTNode>(std::move(declaration), std::move(condition), std::move(increment), std::move(scope), m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_while_loop()
@@ -823,7 +833,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_while_loop()
 	advance(); // eat while token
 	auto condition = parse_expr();
 	auto scope = parse_scope();
-	return std::make_unique<WhileLoopASTNode>(std::move(condition), std::move(scope));
+	return std::make_unique<WhileLoopASTNode>(std::move(condition), std::move(scope), m_node_id++);
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_class()
@@ -845,7 +855,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_class()
 		fns.push_back(parse_function());
 	}
 	advance(); // eat }
-	return std::make_unique<ClassASTNode>(id, std::move(fns));
+	return std::make_unique<ClassASTNode>(id, std::move(fns), m_node_id++);
 }
 
 
@@ -855,7 +865,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 	// parsing a scope
     check(TOKEN_TYPE::LBRACK);
 	advance(); // eat {
-	auto scope = std::make_unique<ScopeASTNode>();
+	auto scope = std::make_unique<ScopeASTNode>(m_node_id++);
 	while (m_pos < m_tokens.size())
 	{
 		switch (m_tokens[m_pos].type)
@@ -892,7 +902,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function()
 	auto decl = parse_function_declaration();
 	auto body = parse_scope();
 
-	return std::move(std::make_unique<FunctionASTNode>(std::move(decl), std::move(body)));
+	return std::move(std::make_unique<FunctionASTNode>(std::move(decl), std::move(body), m_node_id++));
 }
 
 // this is sorta wrong, change later
@@ -900,8 +910,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 {
     try
     {
-
-        auto root = std::make_unique<RootASTNode>();
+        auto root = std::make_unique<RootASTNode>(m_node_id++);
         while (m_pos < m_tokens.size())
         {
             switch (m_tokens[m_pos].type)

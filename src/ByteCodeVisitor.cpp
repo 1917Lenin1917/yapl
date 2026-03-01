@@ -46,7 +46,7 @@ CodeObject ByteCodeVisitor::visit_RootASTNode(const RootASTNode &node)
  *
  * TODO: handle all redeclaration checks, etc.
  */
-void ByteCodeVisitor::visit_VariableASTNode(const VariableASTNode &node)
+void ByteCodeVisitor::visit(const VariableASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -69,7 +69,7 @@ void ByteCodeVisitor::visit_VariableASTNode(const VariableASTNode &node)
   m_ScopeVars.back().push_back(index);
 }
 
-void ByteCodeVisitor::visit_UnaryOpASTNode(const UnaryOpASTNode &node)
+void ByteCodeVisitor::visit(const UnaryOpASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -97,7 +97,7 @@ void ByteCodeVisitor::visit_UnaryOpASTNode(const UnaryOpASTNode &node)
   }
 }
 
-void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
+void ByteCodeVisitor::visit(const BinaryOpASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -164,7 +164,7 @@ void ByteCodeVisitor::visit_BinaryOpASTNode(const BinaryOpASTNode &node)
 
 }
 
-void ByteCodeVisitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
+void ByteCodeVisitor::visit(const IdentifierASTNode &node)
 {
   // TODO: throw compilation error if variable doesnt exist
 
@@ -211,27 +211,27 @@ void ByteCodeVisitor::visit_IdentifierASTNode(const IdentifierASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(index));
 }
 
-void ByteCodeVisitor::visit_IntegerASTNode(const IntegerASTNode &node)
+void ByteCodeVisitor::visit(const IntegerASTNode &node)
 {
   return emitConstantForNode<int, IntegerValue>(node.value);
 }
 
-void ByteCodeVisitor::visit_FloatASTNode(const FloatASTNode &node)
+void ByteCodeVisitor::visit(const FloatASTNode &node)
 {
   emitConstantForNode<float, FloatValue>(node.value);
 }
 
-void ByteCodeVisitor::visit_BooleanASTNode(const BooleanASTNode &node)
+void ByteCodeVisitor::visit(const BooleanASTNode &node)
 {
   emitConstantForNode<bool, BooleanValue>(node.value);
 }
 
-void ByteCodeVisitor::visit_StringASTNode(const StringASTNode &node)
+void ByteCodeVisitor::visit(const StringASTNode &node)
 {
   emitConstantForNode<std::string, StringValue>(node.value);
 }
 
-void ByteCodeVisitor::visit_ArrayASTNode(const ArrayASTNode &node)
+void ByteCodeVisitor::visit(const ArrayASTNode &node)
 {
   for (const auto & value : std::ranges::reverse_view(node.values))
     value->visit(*this);
@@ -241,7 +241,7 @@ void ByteCodeVisitor::visit_ArrayASTNode(const ArrayASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(node.values.size()));
 }
 
-void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNode &node)
+void ByteCodeVisitor::visit(const IfElseExpressionASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -277,7 +277,7 @@ void ByteCodeVisitor::visit_IfElseExpressionASTNode(const IfElseExpressionASTNod
   }
 }
 
-void ByteCodeVisitor::visit_ScopeASTNode(const ScopeASTNode &node)
+void ByteCodeVisitor::visit(const ScopeASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -294,7 +294,7 @@ void ByteCodeVisitor::visit_ScopeASTNode(const ScopeASTNode &node)
   m_ScopeVars.pop_back();
 }
 
-void ByteCodeVisitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
+void ByteCodeVisitor::visit(const ForLoopASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -344,7 +344,7 @@ void ByteCodeVisitor::visit_ForLoopASTNode(const ForLoopASTNode &node)
   }
 }
 
-void ByteCodeVisitor::visit_WhileLoopASTNode(const WhileLoopASTNode &node)
+void ByteCodeVisitor::visit(const WhileLoopASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -385,7 +385,7 @@ void ByteCodeVisitor::visit_WhileLoopASTNode(const WhileLoopASTNode &node)
   }
 }
 
-void ByteCodeVisitor::visit_StatementASTNode(const StatementASTNode &node)
+void ByteCodeVisitor::visit(const StatementASTNode &node)
 {
   // for now just handle assignment to variable statement
   // TODO: handle method and property assignment
@@ -399,7 +399,7 @@ void ByteCodeVisitor::visit_StatementASTNode(const StatementASTNode &node)
 
 }
 
-void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
+void ByteCodeVisitor::visit(const FunctionASTNode &node)
 {
   // push arguments to locals
   // 1. generate a new code object for the function and push it in constants pool
@@ -433,7 +433,7 @@ void ByteCodeVisitor::visit_FunctionASTNode(const FunctionASTNode &node)
   current_object.op_codes.push_back(MAKE_FUNC);
 }
 
-void ByteCodeVisitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode &node)
+void ByteCodeVisitor::visit(const ReturnStatementASTNode &node)
 {
   node.expr->visit(*this);
 
@@ -441,7 +441,7 @@ void ByteCodeVisitor::visit_ReturnStatementASTNode(const ReturnStatementASTNode 
   current_object.op_codes.push_back(RETURN);
 }
 
-void ByteCodeVisitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
+void ByteCodeVisitor::visit(const FunctionCallASTNode &node)
 {
   // Firstly, visit all regular params, then key-params
   std::size_t pos_args = 0, kw_args = 0;
@@ -477,7 +477,7 @@ void ByteCodeVisitor::visit_FunctionCallASTNode(const FunctionCallASTNode &node)
   }
 }
 
-void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentListASTNode &node)
+void ByteCodeVisitor::visit(const FunctionArgumentListASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -505,7 +505,7 @@ void ByteCodeVisitor::visit_FunctionArgumentListASTNode(const FunctionArgumentLi
   }
 }
 
-void ByteCodeVisitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
+void ByteCodeVisitor::visit(const MethodCallASTNode &node)
 {
   // Firstly, visit all regular params, then key-params
   std::size_t pos_args = 0, kw_args = 0;
@@ -552,7 +552,7 @@ void ByteCodeVisitor::visit_MethodCallASTNode(const MethodCallASTNode &node)
   }
 }
 
-void ByteCodeVisitor::visit_GetPropertyASTNode(const GetPropertyASTNode &node)
+void ByteCodeVisitor::visit(const GetPropertyASTNode &node)
 {
   // Evaluate the object whose property we're reading
   node.base_expr->visit(*this);
@@ -578,7 +578,7 @@ void ByteCodeVisitor::visit_GetPropertyASTNode(const GetPropertyASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(index));
 }
 
-void ByteCodeVisitor::visit_SetPropertyASTNode(const SetPropertyASTNode &node)
+void ByteCodeVisitor::visit(const SetPropertyASTNode &node)
 {
   // Push the new value first (mirrors visit_StatementASTNode: RHS before target)
   node.RHS->visit(*this);
@@ -607,7 +607,7 @@ void ByteCodeVisitor::visit_SetPropertyASTNode(const SetPropertyASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(index));
 }
 
-void ByteCodeVisitor::visit_ClassASTNode(const ClassASTNode &node)
+void ByteCodeVisitor::visit(const ClassASTNode &node)
 {
   const std::size_t current_object_index = m_ObjectStack.size() - 1;
 
@@ -669,7 +669,7 @@ void ByteCodeVisitor::visit_ClassASTNode(const ClassASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(node.member_functions.size()));
 }
 
-void ByteCodeVisitor::visit_ExportASTNode(const ExportASTNode &node)
+void ByteCodeVisitor::visit(const ExportASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -701,7 +701,7 @@ void ByteCodeVisitor::visit_ExportASTNode(const ExportASTNode &node)
   }
 }
 
-void ByteCodeVisitor::visit_ImportASTNode(const ImportASTNode &node)
+void ByteCodeVisitor::visit(const ImportASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();
 
@@ -738,7 +738,7 @@ void ByteCodeVisitor::visit_ImportASTNode(const ImportASTNode &node)
 // LOAD_CONST 4 ("op")
 // CALL_KW 2 1 (pos_args, kw_args)
 
-void ByteCodeVisitor::visit_KeyParamExpressionASTNode(const KeyParamExpressionASTNode &node)
+void ByteCodeVisitor::visit(const KeyParamExpressionASTNode &node)
 {
   is_kw_func = true;
 

@@ -273,18 +273,18 @@
 //penis.x = 5
 //print(penis.x)
 
-import { pad_left, pad_right, join } from 'utils'
-
-const string = '12345'
-const _pad_len = 10
-const _pad_char = '#'
-
-print(pad_left(string, _pad_char, _pad_len))
-print(pad_right(string, _pad_char, _pad_len))
-
-print(pad_left, pad_right)
-print(generate_padding)
-print(join([1, 2, 3]))
+//import { pad_left, pad_right, join } from 'utils'
+//
+//const string = '12345'
+//const _pad_len = 10
+//const _pad_char = '#'
+//
+//print(pad_left(string, _pad_char, _pad_len))
+//print(pad_right(string, _pad_char, _pad_len))
+//
+//print(pad_left, pad_right)
+//print(generate_padding)
+//print(join([1, 2, 3]))
 
 
 //const arr = [4, 3, 9, 2, 0, 1121, 8, 29, 22, 2, 2, 2, 9, 7, 4, 6, 7]
@@ -659,3 +659,13 @@ print(join([1, 2, 3]))
 //}
 //
 //print(join([1, 2, 3]))
+
+//const penis = 69;
+//print(penis);
+
+const penis = 69;
+
+fn foo() {
+  const penis = 420;
+  print(penis)
+}

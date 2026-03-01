@@ -25,6 +25,8 @@ private:
   std::vector<Token> m_tokens;
   size_t m_pos;
 
+  std::size_t m_node_id = 0;
+
 public:
   explicit Parser(const std::vector<Token>& tokens, std::string filename, const std::vector<std::string>& source_lines)
     :m_filename(std::move(filename)), m_source_lines(source_lines), m_tokens(tokens), m_pos(0) {}
