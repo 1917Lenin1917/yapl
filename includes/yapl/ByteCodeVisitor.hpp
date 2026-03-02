@@ -30,6 +30,7 @@ public:
   void visit(const IfElseExpressionASTNode &node) override;
   void visit(const ScopeASTNode &node) override;
   void visit(const ForLoopASTNode &node) override;
+  void visit(const ForEachLoopASTNode &node) override;
   void visit(const WhileLoopASTNode &node) override;
   void visit(const StatementASTNode &node) override;
   void visit(const FunctionASTNode &node) override;

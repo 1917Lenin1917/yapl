@@ -1,9 +1,5 @@
-fn make_user(username) {
-  return {
-    'username': username,
-  }
+const arr = [1, 2, 3]
+
+for item : arr {
+  print(item)
 }
-
-const user = make_user("Gay")
-print(user)
-

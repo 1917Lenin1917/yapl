@@ -359,6 +359,45 @@ void ByteCodeVisitor::visit(const ForLoopASTNode &node)
   }
 }
 
+void ByteCodeVisitor::visit(const ForEachLoopASTNode &node)
+{
+  auto& current_object = m_ObjectStack.back();
+
+  const auto var_name = std::string(node.identifier.value);
+  const auto it = std::ranges::find(current_object.locals, var_name);
+
+  std::size_t index = it != current_object.locals.end() ? it - current_object.locals.begin() : -1;
+  if (index == -1)
+  {
+    current_object.locals.push_back(var_name);
+    index = current_object.locals.size() - 1;
+  }
+
+  current_object.op_codes.push_back(LOAD_UNDEF);
+
+  current_object.op_codes.push_back(INIT_VAR);
+  current_object.op_codes.push_back(static_cast<OpCode>(index));
+
+  node.iterable_expr->visit(*this);
+  current_object.op_codes.push_back(GET_ITER);
+
+  current_object.op_codes.push_back(FOR_ITER);
+  current_object.op_codes.push_back(static_cast<OpCode>(0));
+  auto idx = current_object.op_codes.size() - 1;
+
+  current_object.op_codes.push_back(STORE_LOCAL);
+  current_object.op_codes.push_back(static_cast<OpCode>(index));
+
+  node.scope->visit(*this);
+
+  current_object = m_ObjectStack.back();
+  current_object.op_codes.at(idx) = static_cast<OpCode>(current_object.op_codes.size() - idx + 1);
+
+  current_object.op_codes.push_back(JMP);
+  current_object.op_codes.push_back(static_cast<OpCode>(idx - current_object.op_codes.size() - 2));
+
+}
+
 void ByteCodeVisitor::visit(const WhileLoopASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();

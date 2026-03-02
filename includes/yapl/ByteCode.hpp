@@ -30,6 +30,9 @@ enum OpCode : std::uint32_t {
   GET_PROPERTY,
   SET_PROPERTY,
 
+  GET_ITER,
+  FOR_ITER,
+
   INIT_VAR,   // sets `is_tdz` to false and assigns value from stack top
   DEINIT_VAR, // sets `is_tdz` to true
 

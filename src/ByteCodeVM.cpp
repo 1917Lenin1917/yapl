@@ -115,6 +115,32 @@ void ByteCodeVM::Run(CodeObject &code)
 
         break;
       }
+      case GET_ITER:
+      {
+        auto value = m_Stack.top();
+        m_Stack.pop();
+
+        auto iter = value->tp->nb_iter(value);
+        m_Stack.push(iter);
+
+        break;
+      }
+      case FOR_ITER:
+      {
+        int jmp_amount = static_cast<int>(code.op_codes[idx++]);
+        try
+        {
+          auto value = m_Stack.top();
+          auto next = value->tp->nb_next(value);
+          m_Stack.push(next);
+        }
+        catch (StopIteration&)
+        {
+          m_Stack.pop();
+          idx += jmp_amount;
+        }
+        break;
+      }
       case INIT_VAR:
       {
         const auto& frame = *m_FrameStack.back();

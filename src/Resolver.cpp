@@ -253,6 +253,8 @@ void Resolver::visit(const ForLoopASTNode& node)
   PopScope();
 }
 
+void Resolver::visit(const ForEachLoopASTNode &node) { }
+
 void Resolver::visit(const WhileLoopASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());

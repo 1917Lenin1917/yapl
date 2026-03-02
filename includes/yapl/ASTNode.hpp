@@ -579,6 +579,7 @@ public:
       scope(std::move(scope)) {}
 
   std::string print(size_t indent_size) override;
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class KeyParamExpressionASTNode final : public BaseASTNode
