@@ -177,6 +177,8 @@ public:
   void visit(const ClassASTNode &node) override;
   void visit(const ExportASTNode &node) override;
   void visit(const ImportASTNode &node) override;
+  void visit(const IndexASTNode &node) override;
+  void visit(const StatementIndexASTNode &node) override;
 
   void visit(const KeyParamExpressionASTNode &node) override;
 

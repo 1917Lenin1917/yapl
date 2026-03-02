@@ -428,6 +428,29 @@ void ByteCodeVM::Run(CodeObject &code)
         );
         break;
       }
+      case GET_INDEX:
+      {
+        auto index = m_Stack.top();
+        m_Stack.pop();
+        auto expr = m_Stack.top();
+        m_Stack.pop();
+
+        auto result = expr->OperatorIndex(index);
+        m_Stack.push(result);
+        break;
+      }
+      case SET_INDEX:
+      {
+        auto RHS = m_Stack.top();
+        m_Stack.pop();
+        auto index = m_Stack.top();
+        m_Stack.pop();
+        auto expr = m_Stack.top();
+        m_Stack.pop();
+
+        expr->OperatorIndexSet(index, RHS);
+        break;
+      }
       case POP:
       {
         m_Stack.pop();

@@ -731,6 +731,32 @@ void ByteCodeVisitor::visit(const ImportASTNode &node)
   current_object.op_codes.push_back(OpCode::POP);
 }
 
+void ByteCodeVisitor::visit(const IndexASTNode &node)
+{
+  node.base_expr->visit(*this);
+  node.index_expr->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+
+  if (m_IsSetIndex)
+  {
+    m_IsSetIndex = false;
+    return;
+  }
+
+  current_object.op_codes.push_back(OpCode::GET_INDEX);
+}
+
+void ByteCodeVisitor::visit(const StatementIndexASTNode &node)
+{
+  m_IsSetIndex = true;
+  node.identifier->visit(*this);
+  node.RHS->visit(*this);
+
+  auto& current_object = m_ObjectStack.back();
+  current_object.op_codes.push_back(OpCode::SET_INDEX);
+}
+
 // LOAD_CONST 0 (func)
 // LOAD_CONST 1 (1)
 // LOAD_CONST 2 (2)

@@ -46,6 +46,9 @@ enum OpCode : std::uint32_t {
 
   JMP,
   JMP_IF_FALSE,
+
+  GET_INDEX,
+  SET_INDEX,
 };
 
 enum UnaryOp {

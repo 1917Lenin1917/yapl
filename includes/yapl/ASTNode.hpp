@@ -125,6 +125,7 @@ public:
     : BaseASTNode(id, location), base_expr(std::move(base_expr)), index_expr(std::move(index_expr)) {}
 
   std::string print(size_t indent_size) override;
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class ArrayASTNode final : public BaseASTNode
@@ -282,6 +283,7 @@ public:
     : BaseASTNode(id, location), identifier(std::move(identifier)), RHS(std::move(rhs)) {}
 
   std::string print(size_t indent_size) override;
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class FunctionArgumentASTNode final : public BaseASTNode

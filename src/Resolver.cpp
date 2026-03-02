@@ -495,6 +495,14 @@ void Resolver::visit(const ImportASTNode& node)
   }
 }
 
+void Resolver::visit(const IndexASTNode &node)
+{
+}
+
+void Resolver::visit(const StatementIndexASTNode &node)
+{
+}
+
 void Resolver::visit(const KeyParamExpressionASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());

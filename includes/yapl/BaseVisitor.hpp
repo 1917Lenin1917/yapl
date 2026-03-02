@@ -33,6 +33,8 @@ class SetPropertyASTNode;
 class ClassASTNode;
 class ExportASTNode;
 class ImportASTNode;
+class IndexASTNode;
+class StatementIndexASTNode;
 
 class Visitor
 {
@@ -66,6 +68,8 @@ public:
   virtual void visit(const ClassASTNode &node) = 0;
   virtual void visit(const ExportASTNode &node) = 0;
   virtual void visit(const ImportASTNode &node) = 0;
+  virtual void visit(const IndexASTNode &node) = 0;
+  virtual void visit(const StatementIndexASTNode &node) = 0;
 
   virtual void visit(const KeyParamExpressionASTNode &node) = 0;
 

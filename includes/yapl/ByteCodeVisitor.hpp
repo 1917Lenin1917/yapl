@@ -41,6 +41,8 @@ public:
   void visit(const ClassASTNode &node) override;
   void visit(const ExportASTNode &node) override;
   void visit(const ImportASTNode &node) override;
+  void visit(const IndexASTNode &node) override;
+  void visit(const StatementIndexASTNode &node) override;
 
   void visit(const KeyParamExpressionASTNode &node) override;
 
@@ -76,8 +78,6 @@ public:
   }
   /*
   Objec visit_DictASTNode(const DictASTNode &node) override;
-  Objec visit_IndexASTNode(const IndexASTNode &node) override;
-  Objec visit_StatementIndexASTNode(const StatementIndexASTNode &node) override;
   Objec visit_ForEachLoopASTNode(const ForEachLoopASTNode &node) override;
   Objec visit_StarredExpressionASTNode(const StarredExpressionASTNode &node) override;
   */
@@ -89,6 +89,7 @@ private:
   bool is_kw_func = false;
   // TODO: change?
   std::vector<std::vector<std::size_t>> m_ScopeVars;
+  bool m_IsSetIndex = false;
 };
 
 

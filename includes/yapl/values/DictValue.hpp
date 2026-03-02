@@ -80,6 +80,11 @@ static void init_dict_tp()
     return mk_str(res);
   };
 
+  DictTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
+  {
+    return mk_dict();
+  };
+
   init_base_methods(DictTypeObject);
   init_dict_methods(DictTypeObject);
 }
