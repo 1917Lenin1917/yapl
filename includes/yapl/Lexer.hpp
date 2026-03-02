@@ -13,6 +13,14 @@
 namespace yapl {
 
 
+enum class BraceKind
+{
+    BLOCK,
+    OBJECT,
+    IMPORT_LIST,
+    EXPORT_LIST,
+};
+
 class Lexer
 {
 private:
@@ -29,6 +37,9 @@ private:
 
     bool pending_export = false;
     bool inside_export_list = false;
+
+    bool last_closed_brace_was_expression = false;
+    std::vector<BraceKind> m_BraceStack;
 public:
     explicit Lexer(const std::string_view text)
         : m_text(text), m_pos(-1) {}

@@ -161,6 +161,7 @@ public:
   void visit(const BooleanASTNode &node) override;
   void visit(const StringASTNode &node) override;
   void visit(const ArrayASTNode &node) override;
+  void visit(const DictASTNode &node) override;
 
   void visit(const IfElseExpressionASTNode &node) override;
   void visit(const ScopeASTNode &node) override;

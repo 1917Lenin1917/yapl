@@ -5,6 +5,7 @@
 #pragma once
 
 namespace yapl {
+class DictASTNode;
 
 class FunctionArgumentListASTNode;
 class FunctionCallASTNode;
@@ -52,6 +53,7 @@ public:
   virtual void visit(const BooleanASTNode &node) = 0;
   virtual void visit(const StringASTNode &node) = 0;
   virtual void visit(const ArrayASTNode &node) = 0;
+  virtual void visit(const DictASTNode &node) = 0;
 
   virtual void visit(const IfElseExpressionASTNode &node) = 0;
   virtual void visit(const ScopeASTNode &node) = 0;

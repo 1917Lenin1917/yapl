@@ -188,6 +188,10 @@ void Resolver::visit(const ArrayASTNode &node)
     value->visit(*this);
 }
 
+void Resolver::visit(const DictASTNode &node)
+{
+}
+
 void Resolver::visit(const IfElseExpressionASTNode& node)
 {
   BindNodeToScope(node.id, CurrentScopeId());

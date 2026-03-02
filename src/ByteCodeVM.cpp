@@ -98,6 +98,23 @@ void ByteCodeVM::Run(CodeObject &code)
 
         break;
       }
+      case MAKE_DICT:
+      {
+        std::size_t amount = code.op_codes[idx++];
+
+        auto dict = mk_dict();
+        for (std::size_t i = 0; i < amount; i++)
+        {
+          auto value = m_Stack.top();
+          m_Stack.pop();
+          auto key = m_Stack.top();
+          m_Stack.pop();
+          dict->value[key] = value;
+        }
+        m_Stack.push(dict);
+
+        break;
+      }
       case INIT_VAR:
       {
         const auto& frame = *m_FrameStack.back();

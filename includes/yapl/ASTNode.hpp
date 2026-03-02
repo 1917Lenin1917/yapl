@@ -156,6 +156,7 @@ public:
     : BaseASTNode(id, location), keys(std::move(keys)), values(std::move(values)) {}
 
   std::string print(size_t indent_size) override;
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class ClassASTNode final : public BaseASTNode

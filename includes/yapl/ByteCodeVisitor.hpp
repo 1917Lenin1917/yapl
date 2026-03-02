@@ -25,6 +25,7 @@ public:
   void visit(const BooleanASTNode &node) override;
   void visit(const StringASTNode &node) override;
   void visit(const ArrayASTNode &node) override;
+  void visit(const DictASTNode &node) override;
 
   void visit(const IfElseExpressionASTNode &node) override;
   void visit(const ScopeASTNode &node) override;
@@ -77,7 +78,6 @@ public:
     current_object.op_codes.push_back(static_cast<OpCode>(index));
   }
   /*
-  Objec visit_DictASTNode(const DictASTNode &node) override;
   Objec visit_ForEachLoopASTNode(const ForEachLoopASTNode &node) override;
   Objec visit_StarredExpressionASTNode(const StarredExpressionASTNode &node) override;
   */

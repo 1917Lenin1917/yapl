@@ -241,6 +241,21 @@ void ByteCodeVisitor::visit(const ArrayASTNode &node)
   current_object.op_codes.push_back(static_cast<OpCode>(node.values.size()));
 }
 
+void ByteCodeVisitor::visit(const DictASTNode &node)
+{
+  std::size_t len = node.keys.size();
+
+  for (std::size_t i = 0; i < len; i++)
+  {
+    node.keys[i]->visit(*this);
+    node.values[i]->visit(*this);
+  }
+
+  auto& current_object = m_ObjectStack.back();
+  current_object.op_codes.push_back(MAKE_DICT);
+  current_object.op_codes.push_back(static_cast<OpCode>(len));
+}
+
 void ByteCodeVisitor::visit(const IfElseExpressionASTNode &node)
 {
   auto& current_object = m_ObjectStack.back();

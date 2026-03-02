@@ -51,9 +51,13 @@ void Lexer::check_insert_semicolon(std::vector<Token>& tokens)
         last_token.type == TOKEN_TYPE::LPAREN ||
         last_token.type == TOKEN_TYPE::LBRACK ||
         last_token.type == TOKEN_TYPE::LSQBRACK ||
-        last_token.type == TOKEN_TYPE::RBRACK ||
         last_token.type == TOKEN_TYPE::SEMICOLON ||
         last_token.type == TOKEN_TYPE::COMMA)
+    {
+        return;
+    }
+
+    if (last_token.type == TOKEN_TYPE::RBRACK && !last_closed_brace_was_expression)
     {
         return;
     }
@@ -214,12 +218,22 @@ std::vector<Token> Lexer::make_tokens()
             case ')': { paren_depth--; tokens.emplace_back(TOKEN_TYPE::RPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case '{':
             {
+                last_closed_brace_was_expression = false;
+
                 if (pending_import) {
                     inside_import_list = true;
                     pending_import = false;
+                    m_BraceStack.push_back(BraceKind::IMPORT_LIST);
                 } else if (pending_export) {
                     inside_export_list = true;
                     pending_export = false;
+                    m_BraceStack.push_back(BraceKind::EXPORT_LIST);
+                } else if (!tokens.empty() &&
+                           (tokens.back().type == TOKEN_TYPE::ASSIGN ||
+                            tokens.back().type == TOKEN_TYPE::RETURN)) {
+                    m_BraceStack.push_back(BraceKind::OBJECT);
+                } else {
+                    m_BraceStack.push_back(BraceKind::BLOCK);
                 }
 
                 brace_depth++;
@@ -230,8 +244,18 @@ std::vector<Token> Lexer::make_tokens()
             {
                 check_insert_semicolon(tokens);
 
-                inside_import_list = false;
-                inside_export_list = false;
+                auto closed_kind = BraceKind::BLOCK;
+                if (!m_BraceStack.empty()) {
+                    closed_kind = m_BraceStack.back();
+                    m_BraceStack.pop_back();
+                }
+
+                if (closed_kind == BraceKind::IMPORT_LIST)
+                    inside_import_list = false;
+                else if (closed_kind == BraceKind::EXPORT_LIST)
+                    inside_export_list = false;
+
+                last_closed_brace_was_expression = (closed_kind == BraceKind::OBJECT);
 
                 brace_depth--;
                 tokens.emplace_back(TOKEN_TYPE::RBRACK, nullptr, current_line, current_col_pos, current_col_pos);
@@ -413,22 +437,19 @@ Token Lexer::make_identifier_or_keyword()
 
     const auto tk = std::string_view{ m_text.data() + start, m_pos - start + 1 };
     if (const auto it = kKeywordTable.find(tk); it != kKeywordTable.end()) {
-        if (it->second == TOKEN_TYPE::IMPORT)
+        if (it->second == TOKEN_TYPE::IMPORT) {
             pending_import = true;
-        else if (it->second == TOKEN_TYPE::EXPORT)
+        } else if (it->second == TOKEN_TYPE::EXPORT) {
             pending_export = true;
-
-        if (pending_export) {
-            if (it->second == TOKEN_TYPE::FN ||
-                it->second == TOKEN_TYPE::LET ||
-                it->second == TOKEN_TYPE::CONST ||
-                it->second == TOKEN_TYPE::CLASS)
-            {
-                pending_export = false;
-            }
+        } else if (pending_export &&
+                   (it->second == TOKEN_TYPE::FN ||
+                    it->second == TOKEN_TYPE::LET ||
+                    it->second == TOKEN_TYPE::CONST ||
+                    it->second == TOKEN_TYPE::CLASS)) {
+            pending_export = false;
         }
 
-        return Token{ it->second, nullptr, current_line,start_col_pos,current_col_pos };
+        return Token{ it->second, nullptr, current_line, start_col_pos, current_col_pos };
     }
 
     if (tk == "true" || tk == "false")

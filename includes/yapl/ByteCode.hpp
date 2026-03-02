@@ -20,6 +20,7 @@ enum OpCode : std::uint32_t {
   MAKE_ARR,
   MAKE_TYPE,
   MAKE_FUNC,
+  MAKE_DICT,
 
   KW_CALL, // call when we have key arguments like op="+"
   CALL,

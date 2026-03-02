@@ -1,16 +1,9 @@
-import { join } from 'utils'
-
-fn fib(num) {
-  if num == 0 { return 0 }
-  if num == 1 { return 1 }
-  return fib(num - 1) + fib(num - 2)
+fn make_user(username) {
+  return {
+    'username': username,
+  }
 }
 
-const results = []
-for let i = 0; i < 10; i += 1; {
-  const result = fib(i)
-  results.append(result)
-}
+const user = make_user("Gay")
+print(user)
 
-const joined_array = join(results, sep=", ")
-print(joined_array)

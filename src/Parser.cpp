@@ -955,6 +955,23 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_export()
     ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_node_id++, location_from_token(export_token)));
   }
 
+  if (next_token.type == TOKEN_TYPE::CLASS)
+  {
+    auto fn = parse_class();
+    auto name = static_cast<ClassASTNode*>(fn.get())->name;
+    vars.push_back(
+      std::make_unique<IdentifierASTNode>(
+      name,
+      m_node_id++,
+      location_from_token(name))
+    );
+
+    ret.push_back(std::move(fn));
+    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_node_id++, location_from_token(export_token)));
+
+    return ret;
+  }
+
   check(TOKEN_TYPE::LBRACK);
   advance();
 
