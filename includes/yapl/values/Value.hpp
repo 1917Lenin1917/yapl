@@ -14,6 +14,7 @@
 #include "TypeObject.hpp"
 
 namespace yapl {
+class DictValue;
 
 
 #define mk_int(v) std::make_shared<IntegerValue>(v)
@@ -175,4 +176,6 @@ static VPtr NotImplemented{};
 
 void init_base_methods(TypeObject* tp);
 
+
+std::tuple<std::shared_ptr<ArrayValue>, std::shared_ptr<DictValue>> get_args_kwargs(ByteCodeVM& VM);
 }

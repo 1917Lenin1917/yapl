@@ -161,7 +161,8 @@ int run_vm_mode(const std::filesystem::path &full_path)
   const auto filename = full_path.filename();
 
   CodeObject code_object;
-  bool is_valid = is_valid_cache(full_path);
+  // bool is_valid = is_valid_cache(full_path);
+  bool is_valid = false;
 
   if (!is_valid)
   {

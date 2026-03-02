@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "yapl/Parser.hpp"
 #include "yapl/Token.hpp"
@@ -909,16 +910,53 @@ std::unique_ptr<BaseASTNode> Parser::parse_import()
 	);
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_export()
+std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_export()
 {
   const auto export_token = m_tokens[m_pos];
   check(TOKEN_TYPE::EXPORT);
   advance();
 
+  std::vector<std::unique_ptr<BaseASTNode>> vars;
+  std::vector<std::unique_ptr<BaseASTNode>> ret;
+
+  auto next_token = current_token();
+  if (next_token.type == TOKEN_TYPE::FN)
+  {
+    auto fn = parse_function();
+    auto name = static_cast<FunctionDeclASTNode*>(static_cast<FunctionASTNode*>(fn.get())->decl.get())->name;
+    vars.push_back(
+      std::make_unique<IdentifierASTNode>(
+      name,
+      m_node_id++,
+      location_from_token(name))
+    );
+
+    ret.push_back(std::move(fn));
+    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_node_id++, location_from_token(export_token)));
+
+    return ret;
+  }
+
+  if (next_token.type == TOKEN_TYPE::CONST || next_token.type == TOKEN_TYPE::LET)
+  {
+    auto vars = parse_variable_declaration();
+    for (auto& var : vars)
+    {
+      auto name = static_cast<VariableASTNode*>(var.get())->name;
+      vars.push_back(
+        std::make_unique<IdentifierASTNode>(
+        name,
+        m_node_id++,
+        location_from_token(name)
+        )
+      );
+      ret.push_back(std::move(var));
+    }
+    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_node_id++, location_from_token(export_token)));
+  }
+
   check(TOKEN_TYPE::LBRACK);
   advance();
-
-  std::vector<std::unique_ptr<BaseASTNode>> vars;
 
   while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
   {
@@ -946,11 +984,13 @@ std::unique_ptr<BaseASTNode> Parser::parse_export()
 
   auto location = location_from_tokens(export_token, closing_brace);
 
-  return std::make_unique<ExportASTNode>(
+  ret.push_back(std::move(std::make_unique<ExportASTNode>(
     std::move(vars),
     m_node_id++,
     location
-  );
+  )));
+
+  return ret;
 }
 
 std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
@@ -1529,7 +1569,9 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 
         case TOKEN_TYPE::EXPORT:
         {
-          root->nodes.push_back(parse_export());
+          auto vars = parse_export();
+          for (auto &var : vars)
+            root->nodes.push_back(std::move(var));
           break;
         }
 

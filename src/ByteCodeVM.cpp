@@ -612,7 +612,8 @@ void ByteCodeVM::LoadModule(const std::string& module_name)
   const auto full_path = base_path / filename;
 
   CodeObject co;
-  if (!is_valid_cache(full_path))
+  // if (!is_valid_cache(full_path))
+  if (true)
   {
     std::ifstream t(full_path);
     std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());

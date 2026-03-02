@@ -10,7 +10,8 @@ namespace yapl {
 
 void Lexer::check_insert_semicolon(std::vector<Token>& tokens)
 {
-    if (inside_import) return;
+    if (inside_import_list) return;
+    if (inside_export_list) return;
 
     if (paren_depth != 0) return;
     if (sq_br_depth != 0) return;
@@ -211,11 +212,27 @@ std::vector<Token> Lexer::make_tokens()
             }
             case '(': { paren_depth++; tokens.emplace_back(TOKEN_TYPE::LPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
             case ')': { paren_depth--; tokens.emplace_back(TOKEN_TYPE::RPAREN, nullptr, current_line, current_col_pos, current_col_pos); break; }
-            case '{': { brace_depth++; tokens.emplace_back(TOKEN_TYPE::LBRACK, nullptr, current_line, current_col_pos, current_col_pos); break; }
+            case '{':
+            {
+                if (pending_import) {
+                    inside_import_list = true;
+                    pending_import = false;
+                } else if (pending_export) {
+                    inside_export_list = true;
+                    pending_export = false;
+                }
+
+                brace_depth++;
+                tokens.emplace_back(TOKEN_TYPE::LBRACK, nullptr, current_line, current_col_pos, current_col_pos);
+                break;
+            }
             case '}':
             {
                 check_insert_semicolon(tokens);
-                inside_import = false;
+
+                inside_import_list = false;
+                inside_export_list = false;
+
                 brace_depth--;
                 tokens.emplace_back(TOKEN_TYPE::RBRACK, nullptr, current_line, current_col_pos, current_col_pos);
                 break;
@@ -396,11 +413,24 @@ Token Lexer::make_identifier_or_keyword()
 
     const auto tk = std::string_view{ m_text.data() + start, m_pos - start + 1 };
     if (const auto it = kKeywordTable.find(tk); it != kKeywordTable.end()) {
-        if (it->second == TOKEN_TYPE::IMPORT || it->second == TOKEN_TYPE::EXPORT)
-            inside_import = true;
+        if (it->second == TOKEN_TYPE::IMPORT)
+            pending_import = true;
+        else if (it->second == TOKEN_TYPE::EXPORT)
+            pending_export = true;
+
+        if (pending_export) {
+            if (it->second == TOKEN_TYPE::FN ||
+                it->second == TOKEN_TYPE::LET ||
+                it->second == TOKEN_TYPE::CONST ||
+                it->second == TOKEN_TYPE::CLASS)
+            {
+                pending_export = false;
+            }
+        }
 
         return Token{ it->second, nullptr, current_line,start_col_pos,current_col_pos };
     }
+
     if (tk == "true" || tk == "false")
     {
         char* value = new char[m_pos - start + 2];

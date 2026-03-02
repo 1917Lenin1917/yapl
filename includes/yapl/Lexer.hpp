@@ -23,7 +23,12 @@ private:
     int paren_depth = 0;
     int brace_depth = 0;
     int sq_br_depth = 0;
-    bool inside_import = false;
+
+    bool pending_import = false;
+    bool inside_import_list = false;
+
+    bool pending_export = false;
+    bool inside_export_list = false;
 public:
     explicit Lexer(const std::string_view text)
         : m_text(text), m_pos(-1) {}

@@ -5,6 +5,8 @@
 #include <utility>
 
 #include "yapl/values/Value.hpp"
+
+#include "yapl/ByteCodeVM.hpp"
 #include "yapl/values/StringValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
 #include "yapl/values/TypeObjectValue.hpp"
@@ -97,5 +99,18 @@ void init_base_methods(TypeObject* tp)
     };
 }
 
+
+std::tuple<std::shared_ptr<ArrayValue>, std::shared_ptr<DictValue>> get_args_kwargs(ByteCodeVM& VM)
+{
+    auto _kwargs = VM.m_Stack.top();
+    auto kwargs = std::static_pointer_cast<DictValue>(_kwargs);
+    VM.m_Stack.pop();
+
+    auto _args = VM.m_Stack.top();
+    auto args = std::static_pointer_cast<ArrayValue>(_args);
+    VM.m_Stack.pop();
+
+    return { args, kwargs };
+}
 
 }

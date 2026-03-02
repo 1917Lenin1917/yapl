@@ -48,70 +48,47 @@ void ArrayValue::OperatorIndexSet(const std::shared_ptr<Value> &idx, std::shared
 	value[dynamic_cast<IntegerValue*>(idx.get())->value] = new_val;
 }
 
+void size(ByteCodeVM& VM)
+{
+	const auto [args, kwargs] = get_args_kwargs(VM);
+
+	auto self = as_arr(args->value[0].get());
+	VM.m_Stack.push(mk_int(self->value.size()));
+}
+
+void append(ByteCodeVM& VM)
+{
+	const auto [args, kwargs] = get_args_kwargs(VM);
+
+	auto self = as_arr(args->value[0].get());
+	self->value.push_back(args->value[1]);
+}
+
+void get(ByteCodeVM& VM)
+{
+	const auto [args, kwargs] = get_args_kwargs(VM);
+
+	auto self = as_arr(args->value[0].get());
+	auto idx = as_int(args->value[1].get());
+	VM.m_Stack.push(self->value[idx->value]);
+}
+
+void set(ByteCodeVM& VM)
+{
+	const auto [args, kwargs] = get_args_kwargs(VM);
+
+	auto self = as_arr(args->value[0].get());
+	auto idx = as_int(args->value[1].get());
+	auto val = args->value[2];
+	self->value[idx->value] = val;
+}
+
 void init_array_methods(TypeObject* tp)
 {
-	const auto size_lambda = [](ByteCodeVM& VM)
-	{
-		auto _kwargs = VM.m_Stack.top();
-		auto kwargs = static_cast<DictValue*>(_kwargs.get());
-		VM.m_Stack.pop();
-
-		auto _args = VM.m_Stack.top();
-		VM.m_Stack.pop();
-		auto args = as_arr(_args.get());
-
-		auto self = as_arr(args->value[0].get());
-		VM.m_Stack.push(mk_int(self->value.size()));
-	};
-	tp->methods["size"] = mk_builtin("size", size_lambda);
-
-	const auto append_lambda = [](ByteCodeVM& VM)
-	{
-		auto _kwargs = VM.m_Stack.top();
-		auto kwargs = static_cast<DictValue*>(_kwargs.get());
-		VM.m_Stack.pop();
-
-		auto _args = VM.m_Stack.top();
-		VM.m_Stack.pop();
-		auto args = as_arr(_args.get());
-
-		auto self = as_arr(args->value[0].get());
-		self->value.push_back(args->value[1]);
-	};
-	tp->methods["append"] = mk_builtin("append", append_lambda);
-
-	const auto get_lambda = [](ByteCodeVM& VM)
-	{
-		auto _kwargs = VM.m_Stack.top();
-		auto kwargs = static_cast<DictValue*>(_kwargs.get());
-		VM.m_Stack.pop();
-
-		auto _args = VM.m_Stack.top();
-		VM.m_Stack.pop();
-		auto args = as_arr(_args.get());
-
-		auto self = as_arr(args->value[0].get());
-		auto idx = as_int(args->value[1].get());
-		VM.m_Stack.push(self->value[idx->value]);
-	};
-	tp->methods["get"] = mk_builtin("get", get_lambda);
-
-	const auto set_lambda = [](ByteCodeVM& VM)
-	{
-		auto _kwargs = VM.m_Stack.top();
-		auto kwargs = static_cast<DictValue*>(_kwargs.get());
-		VM.m_Stack.pop();
-
-		auto _args = VM.m_Stack.top();
-		VM.m_Stack.pop();
-		auto args = as_arr(_args.get());
-
-		auto self = as_arr(args->value[0].get());
-		auto idx = as_int(args->value[1].get());
-		auto val = args->value[2];
-		self->value[idx->value] = val;
-	};
-	tp->methods["set"] = mk_builtin("set", set_lambda);
+	tp->methods["size"] = mk_builtin("size", size);
+	tp->methods["append"] = mk_builtin("append", append);
+	tp->methods["get"] = mk_builtin("get", get);
+	tp->methods["set"] = mk_builtin("set", set);
 
 	tp->nb_getattr = [](const VPtr& _self, const std::string& attr_name) -> VPtr
 	{

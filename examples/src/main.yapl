@@ -1,3 +1,16 @@
-const penis = 10;
+import { join } from 'utils'
 
-print(penis);
+fn fib(num) {
+  if num == 0 { return 0 }
+  if num == 1 { return 1 }
+  return fib(num - 1) + fib(num - 2)
+}
+
+const results = []
+for let i = 0; i < 10; i += 1; {
+  const result = fib(i)
+  results.append(result)
+}
+
+const joined_array = join(results, sep=", ")
+print(joined_array)
