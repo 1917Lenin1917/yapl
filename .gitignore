@@ -6,3 +6,5 @@ cmake-build-*
 *.cmake
 Makefile
 *.yaplcache
+
+docs/build
