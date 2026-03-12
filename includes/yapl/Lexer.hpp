@@ -12,7 +12,6 @@
 
 namespace yapl {
 
-
 enum class BraceKind
 {
     BLOCK,
@@ -23,40 +22,45 @@ enum class BraceKind
 
 class Lexer
 {
-private:
-    std::string_view m_text;
-    size_t m_pos;
-    int current_line = 1;
-    int current_col_pos = 0;
-    int paren_depth = 0;
-    int brace_depth = 0;
-    int sq_br_depth = 0;
-
-    bool pending_import = false;
-    bool inside_import_list = false;
-
-    bool pending_export = false;
-    bool inside_export_list = false;
-
-    bool last_closed_brace_was_expression = false;
-    std::vector<BraceKind> m_BraceStack;
 public:
-    explicit Lexer(const std::string_view text)
-        : m_text(text), m_pos(-1) {}
+  explicit Lexer(const std::string_view text)
+      : m_Text(text) {}
 
-    std::vector<Token> make_tokens();
+  auto Tokenize() -> std::vector<Token>;
 
 private:
-    void check_insert_semicolon(std::vector<Token>& tokens);
-    Token make_number();
-    Token make_string();
-    Token make_format_string();
-    Token make_identifier_or_keyword();
+  auto CheckInsertSemicolon() -> void;
+  auto MakeNumber() -> void;
+  auto MakeString() -> void;
+  auto MakeFormatString() -> void;
+  auto MakeIdentifierOrKeyword() -> void;
+  auto MakeOperator(TOKEN_TYPE regular, TOKEN_TYPE equal) -> void;
+
+private:
+  std::vector<Token> m_Tokens;
+
+  std::string_view m_Text;
+  std::size_t m_Pos = -1;
+  std::size_t m_LinePos = 0;
+  std::size_t m_ColPos = -1;
+  std::size_t m_ParenDepth = 0;
+  std::size_t m_BraceDepth = 0;
+  std::size_t m_SqBraceDepth = 0;
+
+  bool m_PendingImport = false;
+  bool m_InsideImportList = false;
+
+  bool m_PendingExport = false;
+  bool m_InsideExportList = false;
+
+  bool m_LastClosedBraceWasExpression = false;
+  std::vector<BraceKind> m_BraceStack;
 
 };
 
-bool is_numeric(char c);
-bool is_letter(char c);
+auto is_numeric(char c) -> bool;
+auto is_letter(char c) -> bool;
+auto is_bool(std::string_view s) -> bool;
 
 }
 

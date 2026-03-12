@@ -5,6 +5,7 @@
 #pragma once
 
 namespace yapl {
+class BaseASTNode;
 class ForEachLoopASTNode;
 class DictASTNode;
 
@@ -37,6 +38,7 @@ class ExportASTNode;
 class ImportASTNode;
 class IndexASTNode;
 class StatementIndexASTNode;
+class FunctionDeclASTNode;
 
 class Visitor
 {
@@ -63,6 +65,7 @@ public:
   virtual void visit(const WhileLoopASTNode &node) = 0;
   virtual void visit(const StatementASTNode &node) = 0;
   virtual void visit(const FunctionASTNode &node) = 0;
+  virtual void visit(const FunctionDeclASTNode &node) = 0;
   virtual void visit(const ReturnStatementASTNode &node) = 0;
   virtual void visit(const FunctionCallASTNode& node) = 0;
   virtual void visit(const FunctionArgumentListASTNode &node) = 0;

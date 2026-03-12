@@ -11,11 +11,15 @@
 #include <yapl/values/ArrayValue.hpp>
 #include <yapl/values/UserDefinedValue.hpp>
 
+#include "yapl/Module.hpp"
 #include "yapl/Utils.hpp"
 #include "yapl/values/CodeObjectValue.hpp"
+#include "yapl/values/DictValue.hpp"
 #include "yapl/values/UndefinedValue.hpp"
 #include "yapl/values/FunctionValue.hpp"
 #include "yapl/values/ModuleValue.hpp"
+#include "yapl/values/TypeObjectValue.hpp"
+#include "yapl/values/BuiltinFunctionValue.hpp"
 
 
 #ifdef __linux__
@@ -34,6 +38,60 @@
 
 namespace yapl {
 
+void print(ByteCodeVM& VM)
+{
+  std::string sep = " ";
+  std::string end = "\n";
+
+	const auto [args, kwargs] = get_args_kwargs(VM);
+  const auto sep_str = mk_str("sep");
+  const auto end_str = mk_str("end");
+
+  if (kwargs->value.contains(sep_str)) sep = static_cast<StringValue*>(kwargs->value.at(sep_str).get())->value;
+  if (kwargs->value.contains(end_str)) end = static_cast<StringValue*>(kwargs->value.at(end_str).get())->value;
+
+  for (std::size_t i = 0; i < args->value.size(); i++)
+  {
+    std::cout << args->value[i]->print();
+    if (i != args->value.size() - 1) std::cout << sep;
+  }
+  std::cout << end;
+}
+
+void input(ByteCodeVM& VM)
+{
+	const auto [args, kwargs] = get_args_kwargs(VM);
+
+  std::string input;
+  std::cin >> input;
+
+  VM.m_Stack.push(mk_str(input));
+}
+
+
+ByteCodeVM::ByteCodeVM()
+{
+  const auto frame = std::make_shared<Frame>();
+  frame->globals = frame;
+
+  modules["__builtins__"] = frame;
+
+  m_FrameStack.push_back(frame);
+
+  auto fn = mk_builtin("print", print);
+
+  frame->names["print"] = std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__main__", "print", false);
+  frame->names[IntegerTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(IntegerTypeObject), "__main__", IntegerTypeObject->name, false);
+  frame->names[FloatTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(FloatTypeObject), "__main__", FloatTypeObject->name, false);
+  frame->names[ArrayTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(ArrayTypeObject), "__main__", ArrayTypeObject->name, false);
+  frame->names[BooleanTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(BooleanTypeObject), "__main__", BooleanTypeObject->name, false);
+  frame->names[StringTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(StringTypeObject), "__main__", StringTypeObject->name, false);
+  frame->names[TypeObjectTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(TypeObjectTypeObject), "__main__", TypeObjectTypeObject->name, false);
+  frame->names[DictTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(DictTypeObject), "__main__", DictTypeObject->name, false);
+  frame->names[FunctionTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(FunctionTypeObject), "__main__", FunctionTypeObject->name, false);
+  frame->names[SizeIteratorTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(SizeIteratorTypeObject), "__main__", SizeIteratorTypeObject->name, false);
+}
+
 static std::shared_ptr<Variable> FindInFrame(Frame& frame, const std::string& name)
 {
   if (frame.names.contains(name)) return frame.names.at(name);
@@ -44,7 +102,7 @@ static std::shared_ptr<Variable> FindInFrame(Frame& frame, const std::string& na
   return nullptr;
 }
 
-void ByteCodeVM::Run(CodeObject &code)
+void ByteCodeVM::Run(const CodeObject &code)
 {
   std::size_t idx = 0;
 
@@ -189,8 +247,7 @@ void ByteCodeVM::Run(CodeObject &code)
         }
 
         auto var = FindInFrame(frame, name);
-        if (!var && frame.globals) var = FindInFrame(*frame.globals, name);
-        if (!var && m_Globals.contains(name)) var = m_Globals.at(name);
+        if (!var) var = FindInFrame(*frame.globals, name);
 
         m_Stack.push(var ? var->value : mk_undefined());
         break;
@@ -226,8 +283,7 @@ void ByteCodeVM::Run(CodeObject &code)
         const auto& name = code.names[names_index];
 
         auto var = FindInFrame(frame, name);
-        if (!var && frame.globals) var = FindInFrame(*frame.globals, name);
-        if (!var && m_Globals.contains(name)) var = m_Globals.at(name);
+        if (!var) var = FindInFrame(*frame.globals, name);
 
         const auto value = m_Stack.top();
         m_Stack.pop();
@@ -515,11 +571,6 @@ void ByteCodeVM::Run(CodeObject &code)
   }
 }
 
-void ByteCodeVM::Run()
-{
-  Run(m_CodeObject);
-}
-
 void ByteCodeVM::HandleUnaryOp(UnaryOp compare_type)
 {
   const auto value = m_Stack.top();
@@ -604,7 +655,11 @@ void ByteCodeVM::InvokeFunction(
     return;
   }
 
-  const auto fn = static_cast<FunctionValue*>(function_object.get());
+  const auto fn = dynamic_cast<FunctionValue*>(function_object.get());
+  if (!fn)
+  {
+    throw std::runtime_error(std::format("Object {} is not callable.", function_object->print()));
+  }
   auto code_object = fn->code_object;
 
   call_frame.globals = fn->globals;
@@ -674,74 +729,25 @@ void ByteCodeVM::InvokeFunction(
 
 void ByteCodeVM::LoadModule(const std::string& module_name)
 {
-  const auto filename = module_name + ".yapl";
-  const auto full_path = base_path / filename;
-
-  CodeObject co;
-  // if (!is_valid_cache(full_path))
-  if (true)
+  Module module{ base_path, module_name };
+  if (module.IsCacheValid())
   {
-    std::ifstream t(full_path);
-    std::string text((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
-    Lexer lexer {text};
-    auto tokens = lexer.make_tokens();
-
-    auto lines = get_lines_from_text(text);
-    Parser parser {tokens, filename, lines};
-    auto ast = parser.parse_root();
-    auto ast_as_root = static_cast<RootASTNode*>(ast.get());
-
-    ByteCodeVisitor visitor;
-
-    co = visitor.visit_RootASTNode(*ast_as_root);
-
-    auto co_bytes = co.Serialize();
-    auto bytes = serialize_module(co_bytes, full_path);
-    auto cache_path = base_path / ".cache";
-    std::filesystem::create_directories(cache_path);
-
-    std::ofstream cache(cache_path / (module_name + ".yaplcache"), std::ios::binary);
-    cache.write(
-      reinterpret_cast<const char*>(bytes.data()),
-      static_cast<std::streamsize>(bytes.size())
-    );
+    module.DeserializeCache();
   }
   else
   {
-    auto cache_path = base_path / ".cache" / (module_name + ".yaplcache");
-    std::ifstream fin(cache_path, std::ios::binary);
-    fin.seekg(33, std::ios::beg);
-
-    fin.seekg(0, std::ios::end);
-    const std::streamsize size = fin.tellg();
-    fin.seekg(33, std::ios::beg);
-
-    std::vector<std::byte> bytes(size - 33);
-    fin.read(reinterpret_cast<char*>(bytes.data()), size);
-
-    std::size_t offset = 0;
-    co = CodeObject::Deserialize(bytes, offset);
+    module.Tokenize();
+    module.Parse();
+    module.Resolve();
+    module.Generate();
+    module.SerializeCache();
   }
 
-  std::vector<std::shared_ptr<Variable>> locals;
-  locals.reserve(co.locals.size());
-  for (const auto& name : co.locals)
-  {
-    locals.push_back(std::make_shared<Variable>(true, VALUE_TYPE::UNDEFINED, nullptr, module_name, name));
-  }
+  auto module_frame = module.Run(*this, modules["__builtins__"]);
 
-  auto module_frame = std::make_shared<Frame>();
-  module_frame->code_object = std::make_shared<CodeObject>(co);
-  module_frame->locals = std::move(locals);
-  module_frame->globals = module_frame;
+  modules[module.name] = module_frame;
 
-  m_FrameStack.push_back(module_frame);
-  Run(co);
-  m_FrameStack.pop_back();
-
-  modules[module_name] = module_frame;
-
-  auto frame_value = mk_module(module_frame);
+  const auto frame_value = mk_module(module_frame);
   m_Stack.push(frame_value);
 }
 

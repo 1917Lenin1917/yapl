@@ -6,10 +6,11 @@
 
 namespace yapl {
 
-std::string ttype_to_string(TOKEN_TYPE tt)
+std::string print_token_type(const TOKEN_TYPE tt)
 {
-switch (tt)
-{
+  switch (tt)
+  {
+    case TOKEN_TYPE::DEFAULT:   { return "DEFAULT"; }
     // LITERALS
     case TOKEN_TYPE::INTEGER:   { return "INTEGER"; }
     case TOKEN_TYPE::FLOAT:     { return "FLOAT"; }
@@ -19,10 +20,15 @@ switch (tt)
 
     // OPERATORS
     case TOKEN_TYPE::PLUS:      { return "PLUS"; }
+    case TOKEN_TYPE::PLUSEQ:    { return "PLUSEQ"; }
     case TOKEN_TYPE::MINUS:     { return "MINUS"; }
+    case TOKEN_TYPE::MINUSEQ:   { return "MINUSEQ"; }
     case TOKEN_TYPE::TIMES:     { return "TIMES"; }
+    case TOKEN_TYPE::TIMESEQ:   { return "TIMESEQ"; }
     case TOKEN_TYPE::MOD:       { return "MOD"; }
+    case TOKEN_TYPE::MODEQ:     { return "MODEQ"; }
     case TOKEN_TYPE::SLASH:     { return "SLASH"; }
+    case TOKEN_TYPE::SLASHEQ:   { return "SLASHEQ"; }
     case TOKEN_TYPE::PERIOD:    { return "PERIOD"; }
     case TOKEN_TYPE::NOT:       { return "NOT"; }
     case TOKEN_TYPE::ASSIGN:    { return "ASSIGN"; }
@@ -64,15 +70,15 @@ switch (tt)
     // UNIQUE
     case TOKEN_TYPE::IDENTIFIER:{ return "IDENTIFIER"; }
     case TOKEN_TYPE::TT_EOF:    { return "EOF"; }
-
-    default: { return "Unhandled token!"; }
-}
+  }
+  return "Unhandled token!";
 }
 
 std::string print_token(const Token &token)
 {
-    if (token.value != nullptr)
-        return std::format("{}:{}", ttype_to_string(token.type), token.value);
-    return ttype_to_string(token.type);
+  if (!token.value.empty())
+    return std::format("{}:{}", print_token_type(token.type), token.value);
+  return print_token_type(token.type);
 }
+
 }

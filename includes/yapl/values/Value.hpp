@@ -16,7 +16,6 @@
 namespace yapl {
 class DictValue;
 
-
 #define mk_int(v) std::make_shared<IntegerValue>(v)
 #define as_int(v) static_cast<IntegerValue*>(v)
 

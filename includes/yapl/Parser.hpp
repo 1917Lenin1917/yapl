@@ -14,97 +14,99 @@ class BaseASTNode;
 
 class Parser
 {
-private:
-  std::string m_filename;
-  std::vector<std::string> m_source_lines;
-
-  std::vector<Token> m_tokens;
-  size_t m_pos;
-
-  std::size_t m_node_id = 0;
-
-private:
-  const Token &current_token() const;
-  const Token &previous_token() const;
-
-  SourcePosition make_position(std::size_t line, std::size_t character) const;
-  SourcePosition token_start(const Token &token) const;
-  SourcePosition token_end(const Token &token) const;
-
-  SourceLocation location_from_token(const Token &token) const;
-  SourceLocation location_from_tokens(const Token &start_token, const Token &end_token) const;
-  SourceLocation location_from_nodes(const BaseASTNode &start_node, const BaseASTNode &end_node) const;
-  SourceLocation location_from_token_to_node(const Token &start_token, const BaseASTNode &end_node) const;
-  SourceLocation location_from_node_to_token(const BaseASTNode &start_node, const Token &end_token) const;
-
 public:
   explicit Parser(const std::vector<Token>& tokens, std::string filename, const std::vector<std::string>& source_lines)
-    : m_filename(std::move(filename)), m_source_lines(source_lines), m_tokens(tokens), m_pos(0) {}
+    : m_Filename(std::move(filename)), m_SourceLines(source_lines), m_Tokens(tokens), m_Pos(0) {}
 
-  void advance(TOKEN_TYPE expected_token);
-  void check(TOKEN_TYPE expected_token);
+  auto Parse() -> ASTPtr;
 
-  std::unique_ptr<BaseASTNode> parse_literal();
-  std::unique_ptr<BaseASTNode> parse_function_call(Token identifier);
-  std::unique_ptr<BaseASTNode> parse_method_or_property_call(Token identifier);
-  std::unique_ptr<BaseASTNode> parse_indexing(Token identifier);
-  std::unique_ptr<BaseASTNode> parse_identifier();
-  std::unique_ptr<BaseASTNode> parse_array();
-  std::unique_ptr<BaseASTNode> parse_dict();
-  std::unique_ptr<BaseASTNode> parse_class();
-  std::unique_ptr<BaseASTNode> parse_primary_expr();
-  std::unique_ptr<BaseASTNode> parse_unary();
-  std::unique_ptr<BaseASTNode> parse_paren_expr();
-  std::unique_ptr<BaseASTNode> parse_expr();
-  std::unique_ptr<BaseASTNode> parse_semic_expr();
-  std::unique_ptr<BaseASTNode> parse_return();
-  std::unique_ptr<BaseASTNode> parse_binop_rhs(int expr_prec, std::unique_ptr<BaseASTNode> lhs);
-  std::vector<std::unique_ptr<BaseASTNode>> parse_variable_declaration();
+private:
+  std::string m_Filename;
+  std::vector<std::string> m_SourceLines;
 
-  std::unique_ptr<BaseASTNode> parse_method_call(std::unique_ptr<BaseASTNode> identifier);
-  std::unique_ptr<BaseASTNode> parse_property_get(std::unique_ptr<BaseASTNode> identifier);
-  std::unique_ptr<BaseASTNode> parse_for_loop();
-  std::unique_ptr<BaseASTNode> parse_while_loop();
-  std::unique_ptr<BaseASTNode> parse_property_or_method_chain(std::unique_ptr<BaseASTNode> identifier);
+  std::vector<Token> m_Tokens;
+  std::size_t m_Pos;
 
-  std::unique_ptr<BaseASTNode> parse_statement_or_ident();
-  std::unique_ptr<BaseASTNode> parse_import();
-  std::vector<std::unique_ptr<BaseASTNode>> parse_export();
-  std::unique_ptr<BaseASTNode> parse_function_arguments();
-  std::unique_ptr<BaseASTNode> parse_function_declaration();
-  std::unique_ptr<BaseASTNode> parse_ifelse_statement();
-  std::unique_ptr<BaseASTNode> parse_scope();
-  std::unique_ptr<BaseASTNode> parse_starred_expr_or_expr();
-  std::unique_ptr<BaseASTNode> parse_function();
-  std::unique_ptr<BaseASTNode> parse_root();
+  std::size_t m_NodeId = 0;
 
-  static int get_token_precedence(const Token& t)
-  {
-    switch (t.type)
-    {
-      case TOKEN_TYPE::NOT: { return 1000; }
+private:
+  [[nodiscard]] auto CurrentToken() const -> const Token&;
+  [[nodiscard]] auto PreviousToken() const -> const Token&;
+  [[nodiscard]] auto NextToken() const -> const Token&;
 
-      case TOKEN_TYPE::TIMES:
-      case TOKEN_TYPE::SLASH:
-      case TOKEN_TYPE::MOD: { return 900; }
+  auto Advance(TOKEN_TYPE expected_token) -> void;
+  auto Check(TOKEN_TYPE expected_token) const -> void;
 
-      case TOKEN_TYPE::PLUS:
-      case TOKEN_TYPE::MINUS: { return 800; }
 
-      case TOKEN_TYPE::LT:
-      case TOKEN_TYPE::LQ:
-      case TOKEN_TYPE::GT:
-      case TOKEN_TYPE::GQ: { return 700; }
+  [[nodiscard]] static Position MakePosition(std::size_t line, std::size_t character) ;
+  [[nodiscard]] static Position TokenStart(const Token &token) ;
+  [[nodiscard]] static Position TokenEnd(const Token &token) ;
 
-      case TOKEN_TYPE::EQ:
-      case TOKEN_TYPE::NEQ: { return 600; }
+  [[nodiscard]] static Range LocationFromToken(const Token &token) ;
+  [[nodiscard]] static Range LocationFromTokens(const Token &start_token, const Token &end_token) ;
+  [[nodiscard]] static Range LocationFromNodes(const BaseASTNode &start_node, const BaseASTNode &end_node);
+  [[nodiscard]] static Range LocationFromTokenToNode(const Token &start_token, const BaseASTNode &end_node);
+  [[nodiscard]] static Range LocationFromNodeToToken(const BaseASTNode &start_node, const Token &end_token);
 
-      case TOKEN_TYPE::AND: { return 500; }
-      case TOKEN_TYPE::OR: { return 400; }
+  auto Literal() -> ASTPtr;
+  auto FunctionCall(const Token& identifier) -> ASTPtr;
+  auto PropertyGetOrMethodCall(const Token& identifier) -> ASTPtr;
+  auto Indexing(const Token& identifier) -> ASTPtr;
+  auto Identifier() -> ASTPtr;
+  auto Array() -> ASTPtr;
+  auto Dict() -> ASTPtr;
+  auto Class() -> ASTPtr;
+  auto PrimaryExpression() -> ASTPtr;
+  auto Unary() -> ASTPtr;
+  auto ParenExpression() -> ASTPtr;
+  auto Expression() -> ASTPtr;
+  auto SemicolonExpression() -> ASTPtr;
+  auto Return() -> ASTPtr;
+  auto BinOpRHS(int expr_prec, std::unique_ptr<BaseASTNode> lhs) -> ASTPtr;
+  auto VariableDeclaration() -> std::vector<ASTPtr>;
 
-      default: { return -1; }
-    }
-  }
+  auto MethodCall(std::unique_ptr<BaseASTNode> identifier) -> ASTPtr;
+  auto PropertyGet(std::unique_ptr<BaseASTNode> identifier) -> ASTPtr;
+  auto ForLoop() -> ASTPtr;
+  auto WhileLoop() -> ASTPtr;
+  auto PropertyOrMethodChain(std::unique_ptr<BaseASTNode> identifier) -> ASTPtr;
+
+  auto StatementOrIdentifier() -> ASTPtr;
+  auto Import() -> ASTPtr;
+  auto Export() -> std::vector<ASTPtr>;
+  auto FunctionArguments() -> ASTPtr;
+  auto FunctionDeclaration() -> ASTPtr;
+  auto IfElseStatement() -> ASTPtr;
+  auto Scope() -> ASTPtr;
+  auto StarredExpressionOrExpression() -> ASTPtr;
+  auto Function() -> ASTPtr;
 };
 
+static int get_token_precedence(const Token& token)
+{
+  switch (token.type)
+  {
+    case TOKEN_TYPE::NOT: { return 1000; }
+
+    case TOKEN_TYPE::TIMES:
+    case TOKEN_TYPE::SLASH:
+    case TOKEN_TYPE::MOD: { return 900; }
+
+    case TOKEN_TYPE::PLUS:
+    case TOKEN_TYPE::MINUS: { return 800; }
+
+    case TOKEN_TYPE::LT:
+    case TOKEN_TYPE::LQ:
+    case TOKEN_TYPE::GT:
+    case TOKEN_TYPE::GQ: { return 700; }
+
+    case TOKEN_TYPE::EQ:
+    case TOKEN_TYPE::NEQ: { return 600; }
+
+    case TOKEN_TYPE::AND: { return 500; }
+    case TOKEN_TYPE::OR: { return 400; }
+
+    default: { return -1; }
+  }
+}
 }

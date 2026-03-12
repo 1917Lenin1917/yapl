@@ -9,6 +9,8 @@
 #include <iostream>
 #include <cstring>
 
+#include "Position.hpp"
+
 namespace yapl {
 
 enum class TOKEN_TYPE
@@ -61,7 +63,6 @@ enum class TOKEN_TYPE
   ELSE,
   FOR,
   FN,
-  VAR,
   LET,
   CONST,
   RETURN,
@@ -78,18 +79,12 @@ enum class TOKEN_TYPE
 
 struct Token
 {
-  char* value = nullptr;
   TOKEN_TYPE type = TOKEN_TYPE::DEFAULT;
+  std::string value;
 
-  int line = -1;
-  int col_start = -1;
-  int col_end = -1;
-
-  explicit Token(TOKEN_TYPE t, char* val = nullptr, int l = -1, int cstart = -1, int cend = -1)
-          :value(val), type(t), line(l), col_start(cstart), col_end(cend) {}
+  Range range;
 };
 
-std::string ttype_to_string(TOKEN_TYPE tt);
-
+std::string print_token_type(TOKEN_TYPE tt);
 std::string print_token(const Token& token);
 }

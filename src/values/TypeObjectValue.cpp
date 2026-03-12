@@ -4,9 +4,11 @@
 
 #include <memory>
 
+#include "yapl/ByteCodeVM.hpp"
+
 #include "yapl/values/TypeObjectValue.hpp"
 #include "yapl/values/ArrayValue.hpp"
-#include "yapl/ByteCodeVM.hpp"
+#include "yapl/values/DictValue.hpp"
 
 namespace yapl {
 

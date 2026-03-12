@@ -10,6 +10,7 @@
 
 #include "Hasher.hpp"
 #include "Serialization.hpp"
+#include "values/CodeObjectValue.hpp"
 constexpr std::uint8_t MODULE_VERSION = 1;
 
 namespace yapl {
@@ -58,5 +59,19 @@ inline std::vector<std::string> get_lines_from_text(const std::string& text)
     }
     return res;
 }
+
+inline void recursively_print_code_objects(const CodeObject &code_object)
+{
+  print_code_object(code_object);
+  std::cout << "\n\n";
+  for (const auto &constant : code_object.constants)
+  {
+    if (const auto code_object_value = dynamic_cast<CodeObjectValue*>(constant.get()))
+    {
+      recursively_print_code_objects(*code_object_value->code_object);
+    }
+  }
+}
+
 
 }

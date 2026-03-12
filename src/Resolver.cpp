@@ -7,47 +7,10 @@
 #include "yapl/values/TypeObjectValue.hpp"
 
 namespace yapl {
-
-namespace {
-
-Position ToPosition(const SourcePosition& position)
+std::string ResolutionResult::SerializeJSON() const
 {
-  return Position{
-    .line = position.line,
-    .character = position.character
-  };
+  return "TBD";
 }
-
-Location ToLocation(const SourceLocation& location)
-{
-  return Location{
-    .start = ToPosition(location.start),
-    .end = ToPosition(location.end)
-  };
-}
-
-Location ToLocation(const BaseASTNode& node)
-{
-  return ToLocation(node.location);
-}
-
-Location ToLocation(const Token& token)
-{
-  return Location{
-    .start = Position{
-      .line = static_cast<std::size_t>(token.line),
-      .character = static_cast<std::size_t>(token.col_start)
-    },
-    .end = Position{
-      .line = static_cast<std::size_t>(token.line),
-      .character = static_cast<std::size_t>(token.col_end)
-    }
-  };
-}
-
-}
-
-Resolver::Resolver() = default;
 
 ResolutionResult Resolver::Resolve(const RootASTNode& ast_node)
 {
@@ -349,6 +312,10 @@ void Resolver::visit(const FunctionASTNode& node)
   PopScope();
 }
 
+void Resolver::visit(const FunctionDeclASTNode &node)
+{
+}
+
 void Resolver::visit(const ReturnStatementASTNode &node)
 {
   BindNodeToScope(node.id, CurrentScopeId());
@@ -520,7 +487,7 @@ void Resolver::ReportDuplicateDeclaration(const Token& name_token, const Symbol&
   m_Result.diagnostics.push_back(Diagnostic{
     .severity = DiagnosticSeverity::ERROR,
     .code = DiagnosticCode::DUPLICATE_DECLARATION,
-    .message = std::format("Name {} is already declared at {}:{}", name_token.value, prev_symbol.declaration_location.start.line, prev_symbol.declaration_location.start.character),
+    .message = std::format("Name {} is already declared at {}:{}", name_token.value, prev_symbol.declaration_location.range.start.line, prev_symbol.declaration_location.range.start.character),
     .location = ToLocation(name_token),
   });
 }
@@ -530,7 +497,7 @@ void Resolver::ReportShadowingDeclaration(const Token& name_token, const Symbol&
   m_Result.diagnostics.push_back(Diagnostic{
     .severity = DiagnosticSeverity::WARNING,
     .code = DiagnosticCode::SHADOWING_DECLARATION,
-    .message = std::format("Name {} shadows an outer declaration at {}:{}", name_token.value, prev_symbol.declaration_location.start.line, prev_symbol.declaration_location.start.character),
+    .message = std::format("Name {} shadows an outer declaration at {}:{}", name_token.value, prev_symbol.declaration_location.range.start.line, prev_symbol.declaration_location.range.start.character),
     .location = ToLocation(name_token),
   });
 }
@@ -859,6 +826,7 @@ std::size_t Resolver::CurrentScopeId() const
 void Resolver::SeedBuiltins()
 {
   DeclareBuiltinSymbol("print", SymbolKind::FUNCTION);
+  DeclareBuiltinSymbol("input", SymbolKind::FUNCTION);
   DeclareBuiltinSymbol(IntegerTypeObject->name, SymbolKind::TYPE);
   DeclareBuiltinSymbol(FloatTypeObject->name, SymbolKind::TYPE);
   DeclareBuiltinSymbol(ArrayTypeObject->name, SymbolKind::TYPE);
@@ -868,6 +836,79 @@ void Resolver::SeedBuiltins()
   DeclareBuiltinSymbol(DictTypeObject->name, SymbolKind::TYPE);
   DeclareBuiltinSymbol(FunctionTypeObject->name, SymbolKind::TYPE);
   DeclareBuiltinSymbol(SizeIteratorTypeObject->name, SymbolKind::TYPE);
+}
+
+Location Resolver::ToLocation(const BaseASTNode &ast) const
+{
+  return Location{ .file_id = m_FileId, .range = ast.range };
+}
+
+Location Resolver::ToLocation(const Token &node) const
+{
+  return Location{ .file_id = m_FileId, .range = node.range };
+}
+
+std::string to_string(const DiagnosticSeverity value)
+{
+  switch (value) {
+    case DiagnosticSeverity::INFO: return "INFO";
+    case DiagnosticSeverity::WARNING: return "WARNING";
+    case DiagnosticSeverity::ERROR: return "ERROR";
+  }
+  return "ERROR";
+}
+
+std::string to_string(const DiagnosticCode value) {
+  switch (value) {
+    case DiagnosticCode::UNKNOWN_IDENTIFIER: return "UNKNOWN_IDENTIFIER";
+    case DiagnosticCode::DUPLICATE_DECLARATION: return "DUPLICATE_DECLARATION";
+    case DiagnosticCode::SHADOWING_DECLARATION: return "SHADOWING_DECLARATION";
+    case DiagnosticCode::CONST_REASSIGNMENT: return "CONST_REASSIGNMENT";
+    case DiagnosticCode::INVALID_RETURN: return "INVALID_RETURN";
+    case DiagnosticCode::INVALID_BREAK: return "INVALID_BREAK";
+    case DiagnosticCode::INVALID_CONTINUE: return "INVALID_CONTINUE";
+    case DiagnosticCode::INVALID_MODULE_SCOPE: return "INVALID_MODULE_SCOPE";
+    case DiagnosticCode::USE_BEFORE_DECLARATION: return "USE_BEFORE_DECLARATION";
+    case DiagnosticCode::USE_BEFORE_INITIALIZATION: return "USE_BEFORE_INITIALIZATION";
+    case DiagnosticCode::NOT_CALLABLE: return "NOT_CALLABLE";
+    case DiagnosticCode::ARITY_MISMATCH: return "ARITY_MISMATCH";
+    case DiagnosticCode::INTERNAL_RESOLVER_ERROR: return "INTERNAL_RESOLVER_ERROR";
+  }
+  return "INTERNAL_RESOLVER_ERROR";
+}
+
+std::string to_string(const SymbolKind value) {
+  switch (value) {
+    case SymbolKind::CONSTANT: return "CONSTANT";
+    case SymbolKind::MUTABLE: return "MUTABLE";
+    case SymbolKind::FUNCTION: return "FUNCTION";
+    case SymbolKind::IMPORT: return "IMPORT";
+    case SymbolKind::PARAMETER: return "PARAMETER";
+    case SymbolKind::TYPE: return "TYPE";
+  }
+  return "TYPE";
+}
+
+std::string to_string(const ScopeKind value) {
+  switch (value) {
+    case ScopeKind::GLOBAL: return "GLOBAL";
+    case ScopeKind::MODULE: return "MODULE";
+    case ScopeKind::FUNCTION: return "FUNCTION";
+    case ScopeKind::CLASS: return "CLASS";
+    case ScopeKind::BLOCK: return "BLOCK";
+  }
+  return "BLOCK";
+}
+
+std::string to_string(const ReferenceKind value) {
+  switch (value) {
+    case ReferenceKind::READ: return "READ";
+    case ReferenceKind::WRITE: return "WRITE";
+    case ReferenceKind::CALL: return "CALL";
+    case ReferenceKind::IMPORT: return "IMPORT";
+    case ReferenceKind::EXPORT: return "EXPORT";
+  }
+  return "READ";
 }
 
 }

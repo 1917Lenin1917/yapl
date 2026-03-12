@@ -6,9 +6,14 @@
 
 #include "yapl/ByteCodeVM.hpp"
 #include "yapl/Serialization.hpp"
+
+#include "yapl/exceptions/RuntimeError.hpp"
+
 #include "yapl/values/SizeIterator.hpp"
 #include "yapl/values/IntegerValue.hpp"
-#include "yapl/exceptions/RuntimeError.hpp"
+#include "yapl/values/BuiltinFunctionValue.hpp"
+#include "yapl/values/DictValue.hpp"
+#include "yapl/values/ArrayValue.hpp"
 
 namespace yapl {
 class DictValue;

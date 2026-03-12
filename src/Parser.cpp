@@ -13,448 +13,449 @@
 
 namespace yapl {
 
-void Parser::advance(TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT)
+auto Parser::CurrentToken() const -> const Token&
 {
-  m_pos++;
-  check(expected_token);
+  return m_Tokens[m_Pos];
 }
 
-void Parser::check(TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT)
+auto Parser::PreviousToken() const -> const Token&
 {
-    if (expected_token == TOKEN_TYPE::DEFAULT)
-        return;
-
-    const auto& current_token = m_tokens[m_pos];
-    if (current_token.type == expected_token)
-        return;
-
-    // If token is not what we expected, throw a SyntaxError exception
-    // TODO: handle TT_EOF token better.
-    throw SyntaxError(
-            m_filename,
-            current_token.line,
-            current_token.col_start,
-            current_token.col_end,
-            m_source_lines[current_token.line-1],
-            std::format("Expected token {} but got token {}", ttype_to_string(expected_token), ttype_to_string(current_token.type))
-    );
+  return m_Tokens[m_Pos - 1];
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_literal()
+auto Parser::NextToken() const -> const Token&
 {
-  auto token = m_tokens[m_pos];
-  auto location = location_from_token(token);
-  advance();
+  return m_Tokens[m_Pos + 1];
+}
+
+auto Parser::Advance(const TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT) -> void
+{
+  m_Pos++;
+  Check(expected_token);
+}
+
+auto Parser::Check(const TOKEN_TYPE expected_token = TOKEN_TYPE::DEFAULT) const -> void
+{
+  if (expected_token == TOKEN_TYPE::DEFAULT) return;
+
+  const auto& current_token = CurrentToken();
+  if (current_token.type == expected_token) return;
+
+  throw SyntaxError(
+  m_Filename,
+  current_token.range,
+  m_SourceLines,
+  std::format(
+      "Expected token {} but got token {}",
+      print_token_type(expected_token),
+      print_token_type(current_token.type)
+    )
+  );
+}
+
+auto Parser::Literal() -> ASTPtr
+{
+  const auto& token = CurrentToken();
+  auto location = LocationFromToken(token);
+  Advance();
 
   switch (token.type) {
-    case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerASTNode>(token, m_node_id++, location);
+    case TOKEN_TYPE::INTEGER: return std::make_unique<IntegerASTNode>(token, m_NodeId++, location);
     case TOKEN_TYPE::STRING:
-    case TOKEN_TYPE::FSTRING: return std::make_unique<StringASTNode>(token, m_node_id++, location);
-    case TOKEN_TYPE::FLOAT: return std::make_unique<FloatASTNode>(token, m_node_id++, location);
-    case TOKEN_TYPE::BOOL: return std::make_unique<BooleanASTNode>(token, m_node_id++, location);
+    case TOKEN_TYPE::FSTRING: return std::make_unique<StringASTNode>(token, m_NodeId++, location);
+    case TOKEN_TYPE::FLOAT: return std::make_unique<FloatASTNode>(token, m_NodeId++, location);
+    case TOKEN_TYPE::BOOL: return std::make_unique<BooleanASTNode>(token, m_NodeId++, location);
     default:
       throw SyntaxError(
-        m_filename,
-        token.line,
-        token.col_start,
-        token.col_end,
-        m_source_lines[token.line - 1],
-        std::format("Unexpected token {} when parsing literal.", ttype_to_string(token.type))
+        m_Filename,
+        token.range,
+        m_SourceLines,
+        std::format(
+          "Unexpected token {} when parsing literal.",
+          print_token_type(token.type)
+        )
       );
   }
 }
 
 
-std::unique_ptr<BaseASTNode> Parser::parse_starred_expr_or_expr()
+auto Parser::StarredExpressionOrExpression() -> ASTPtr
 {
-  if (m_tokens[m_pos].type == TOKEN_TYPE::TIMES)
+  if (CurrentToken().type == TOKEN_TYPE::TIMES)
   {
-    const auto star_token = m_tokens[m_pos];
-    advance();
+    const auto star_token = CurrentToken();
+    Advance();
 
-    auto expression = parse_expr();
-    auto location = location_from_token_to_node(star_token, *expression);
+    auto expression = Expression();
+    auto location = LocationFromTokenToNode(star_token, *expression);
 
     return std::make_unique<StarredExpressionASTNode>(
       std::move(expression),
-      m_node_id++,
+      m_NodeId++,
       location
     );
   }
 
-  return parse_expr();
+  return Expression();
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_function_call(Token identifier)
+auto Parser::FunctionCall(const Token& identifier) -> ASTPtr
 {
   std::vector<std::unique_ptr<BaseASTNode>> args;
-  auto start = token_start(identifier);
+  auto start = TokenStart(identifier);
+  Advance();
 
-  advance();
-
-  while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
+  while (CurrentToken().type != TOKEN_TYPE::RPAREN)
   {
-    if (m_tokens[m_pos].type == TOKEN_TYPE::IDENTIFIER && m_tokens[m_pos + 1].type == TOKEN_TYPE::ASSIGN)
+    if (CurrentToken().type == TOKEN_TYPE::IDENTIFIER && NextToken().type == TOKEN_TYPE::ASSIGN)
     {
-      Token argument_name = m_tokens[m_pos];
-      advance();
-      advance();
+      const auto& argument_name = CurrentToken();
+      Advance();
+      Advance();
 
-      auto expression = parse_expr();
-      auto location = SourceLocation{
-        .start = token_start(argument_name),
-        .end = expression->location.end
+      auto expression = Expression();
+      auto location = Range{
+        .start = TokenStart(argument_name),
+        .end = expression->range.end
       };
 
       args.push_back(
         std::make_unique<KeyParamExpressionASTNode>(
           argument_name,
           std::move(expression),
-          m_node_id++,
+          m_NodeId++,
           location
         )
       );
     }
     else
     {
-      args.push_back(parse_starred_expr_or_expr());
+      args.push_back(StarredExpressionOrExpression());
     }
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
-      advance();
+    if (CurrentToken().type == TOKEN_TYPE::COMMA)
+      Advance();
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::TT_EOF)
+    if (CurrentToken().type == TOKEN_TYPE::TT_EOF)
     {
       throw SyntaxError(
-        m_filename,
-        identifier.line,
-        identifier.col_start,
-        identifier.col_end,
-        m_source_lines[identifier.line - 1],
-        std::format("Expected {} after function call.", ttype_to_string(TOKEN_TYPE::RPAREN))
+        m_Filename,
+        LocationFromTokenToNode(identifier, *args.back()),
+        m_SourceLines,
+        std::format("Expected {} after function call.", print_token_type(TOKEN_TYPE::RPAREN))
       );
     }
   }
 
-  auto closing_paren = m_tokens[m_pos];
-  advance();
+  auto closing_paren = CurrentToken();
+  Advance();
 
   auto identifier_node = std::make_unique<IdentifierASTNode>(
     identifier,
-    m_node_id++,
-    location_from_token(identifier)
+    m_NodeId++,
+    LocationFromToken(identifier)
   );
 
-  auto call_location = SourceLocation{
+  auto call_location = Range{
     .start = start,
-    .end = token_end(closing_paren)
+    .end = TokenEnd(closing_paren)
   };
 
   return std::make_unique<FunctionCallASTNode>(
     std::move(identifier_node),
     args,
-    m_node_id++,
+    m_NodeId++,
     call_location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_method_or_property_call(Token identifier)
+auto Parser::PropertyGetOrMethodCall(const Token& identifier) -> ASTPtr
 {
-  advance();
+  Advance();
 
-  auto name = m_tokens[m_pos];
-  advance();
+  auto name = CurrentToken();
+  Advance();
 
   auto identifier_node = std::make_unique<IdentifierASTNode>(
     identifier,
-    m_node_id++,
-    location_from_token(identifier)
+    m_NodeId++,
+    LocationFromToken(identifier)
   );
 
-  if (m_tokens[m_pos].type != TOKEN_TYPE::LPAREN)
+  if (CurrentToken().type != TOKEN_TYPE::LPAREN)
   {
-    auto location = SourceLocation{
-      .start = identifier_node->location.start,
-      .end = token_end(name)
+    auto location = Range{
+      .start = identifier_node->range.start,
+      .end = TokenEnd(name)
     };
 
     return std::make_unique<GetPropertyASTNode>(
       std::move(identifier_node),
       name,
-      m_node_id++,
+      m_NodeId++,
       location
     );
   }
 
   std::vector<std::unique_ptr<BaseASTNode>> args;
 
-  advance();
+  Advance();
 
-  while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
+  while (CurrentToken().type != TOKEN_TYPE::RPAREN)
   {
-    args.push_back(parse_expr());
-    if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+    args.push_back(Expression());
+    if (CurrentToken().type == TOKEN_TYPE::COMMA)
     {
-      advance();
+      Advance();
     }
   }
 
-  auto closing_paren = m_tokens[m_pos];
-  advance();
+  auto closing_paren = CurrentToken();
+  Advance();
 
-  auto location = SourceLocation{
-    .start = identifier_node->location.start,
-    .end = token_end(closing_paren)
+  auto location = Range{
+    .start = identifier_node->range.start,
+    .end = TokenEnd(closing_paren)
   };
 
   return std::make_unique<MethodCallASTNode>(
     std::move(identifier_node),
     name,
     args,
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_indexing(Token identifier)
+auto Parser::Indexing(const Token& identifier) -> ASTPtr
 {
   auto identifier_node = std::make_unique<IdentifierASTNode>(
     identifier,
-    m_node_id++,
-    location_from_token(identifier)
+    m_NodeId++,
+    LocationFromToken(identifier)
   );
 
-  advance();
+  Advance();
 
-  auto index_expr = parse_expr();
+  auto index_expr = Expression();
 
-  check(TOKEN_TYPE::RSQBRACK);
-  auto closing_bracket = m_tokens[m_pos];
-  advance();
+  Check(TOKEN_TYPE::RSQBRACK);
+  auto closing_bracket = CurrentToken();
+  Advance();
 
-  auto location = SourceLocation{
-    .start = identifier_node->location.start,
-    .end = token_end(closing_bracket)
+  auto location = Range{
+    .start = identifier_node->range.start,
+    .end = TokenEnd(closing_bracket)
   };
 
   return std::make_unique<IndexASTNode>(
     std::move(identifier_node),
     std::move(index_expr),
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_identifier()
+auto Parser::Identifier() -> ASTPtr
 {
-  auto identifier = m_tokens[m_pos];
-  auto identifier_location = location_from_token(identifier);
-  advance();
+  auto identifier = CurrentToken();
+  auto identifier_location = LocationFromToken(identifier);
+  Advance();
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
-    return parse_function_call(identifier);
+  switch (CurrentToken().type)
+  {
+    case TOKEN_TYPE::LPAREN: return FunctionCall(identifier);
+    case TOKEN_TYPE::LSQBRACK: return Indexing(identifier);
+    case TOKEN_TYPE::PERIOD: return PropertyOrMethodChain(std::make_unique<IdentifierASTNode>(identifier, m_NodeId++, identifier_location));
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK)
-    return parse_indexing(identifier);
-
-  if (m_tokens[m_pos].type == TOKEN_TYPE::PERIOD)
-    return parse_property_or_method_chain(
-      std::make_unique<IdentifierASTNode>(identifier, m_node_id++, identifier_location)
-    );
-
-  return std::make_unique<IdentifierASTNode>(identifier, m_node_id++, identifier_location);
+    default: return std::make_unique<IdentifierASTNode>(identifier, m_NodeId++, identifier_location);
+  }
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_array()
+auto Parser::Array() -> ASTPtr
 {
-  auto open_bracket = m_tokens[m_pos];
-  advance();
+  auto open_bracket = CurrentToken();
+  Advance();
 
   std::vector<std::unique_ptr<BaseASTNode>> values;
-  while (m_tokens[m_pos].type != TOKEN_TYPE::RSQBRACK)
+  while (CurrentToken().type != TOKEN_TYPE::RSQBRACK)
   {
-    auto expr = parse_expr();
+    auto expr = Expression();
     values.push_back(std::move(expr));
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::RSQBRACK)
+    if (CurrentToken().type == TOKEN_TYPE::RSQBRACK)
       break;
 
-    check(TOKEN_TYPE::COMMA);
-    advance();
+    Check(TOKEN_TYPE::COMMA);
+    Advance();
   }
 
-  auto close_bracket = m_tokens[m_pos];
-  advance();
+  auto close_bracket = CurrentToken();
+  Advance();
 
-  auto location = location_from_tokens(open_bracket, close_bracket);
-  return std::make_unique<ArrayASTNode>(values, m_node_id++, location);
+  auto location = LocationFromTokens(open_bracket, close_bracket);
+  return std::make_unique<ArrayASTNode>(values, m_NodeId++, location);
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_dict()
+auto Parser::Dict() -> ASTPtr
 {
-  auto open_brace = m_tokens[m_pos];
-  advance();
+  const auto& open_brace = CurrentToken();
+  Advance();
 
   std::vector<std::unique_ptr<BaseASTNode>> keys;
   std::vector<std::unique_ptr<BaseASTNode>> values;
 
-  while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
+  while (CurrentToken().type != TOKEN_TYPE::RBRACK)
   {
-    auto key = parse_expr();
+    auto key = Expression();
 
-    check(TOKEN_TYPE::COLON);
-    advance();
+    Check(TOKEN_TYPE::COLON);
+    Advance();
 
-    auto value = parse_expr();
+    auto value = Expression();
 
     keys.push_back(std::move(key));
     values.push_back(std::move(value));
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::RBRACK)
+    if (CurrentToken().type == TOKEN_TYPE::RBRACK)
       break;
 
-    check(TOKEN_TYPE::COMMA);
-    advance();
+    Check(TOKEN_TYPE::COMMA);
+    Advance();
   }
 
-  auto close_brace = m_tokens[m_pos];
-  advance();
+  const auto& close_brace = CurrentToken();
+  Advance();
 
-  auto location = location_from_tokens(open_brace, close_brace);
-  return std::make_unique<DictASTNode>(std::move(keys), std::move(values), m_node_id++, location);
+  auto location = LocationFromTokens(open_brace, close_brace);
+  return std::make_unique<DictASTNode>(std::move(keys), std::move(values), m_NodeId++, location);
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_primary_expr()
+auto Parser::PrimaryExpression() -> ASTPtr
 {
-	switch (m_tokens[m_pos].type)
+	switch (CurrentToken().type)
 	{
 		default:
 		{
-            const auto& current_token = m_tokens[m_pos];
-            throw SyntaxError(
-                    m_filename,
-                    current_token.line,
-                    current_token.col_start,
-                    current_token.col_end,
-                    m_source_lines[current_token.line-1],
-                    std::format("Unexpected token {} while parsing an expression.", ttype_to_string(current_token.type))
-            );
+      const auto& current_token = CurrentToken();
+      throw SyntaxError(
+        m_Filename,
+        current_token.range,
+        m_SourceLines,
+        std::format("Unexpected token {} while parsing an expression.", print_token_type(current_token.type))
+      );
 		}
 		case TOKEN_TYPE::INTEGER:
 		case TOKEN_TYPE::FLOAT:
 		case TOKEN_TYPE::STRING:
 		case TOKEN_TYPE::FSTRING:
-		case TOKEN_TYPE::BOOL: { return parse_literal(); }
-		case TOKEN_TYPE::IDENTIFIER: { return parse_identifier(); }
-		case TOKEN_TYPE::LPAREN: { return parse_paren_expr(); }
-		case TOKEN_TYPE::LSQBRACK: { return parse_array(); }
-		case TOKEN_TYPE::LBRACK: { return parse_dict(); }
+		case TOKEN_TYPE::BOOL:       { return Literal(); }
+		case TOKEN_TYPE::IDENTIFIER: { return Identifier(); }
+		case TOKEN_TYPE::LPAREN:     { return ParenExpression(); }
+		case TOKEN_TYPE::LSQBRACK:   { return Array(); }
+		case TOKEN_TYPE::LBRACK:     { return Dict(); }
 		case TOKEN_TYPE::PLUS:
 		case TOKEN_TYPE::MINUS:
-		case TOKEN_TYPE::NOT: { return parse_unary(); }
+		case TOKEN_TYPE::NOT:        { return Unary(); }
 	}
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_unary()
+auto Parser::Unary() -> ASTPtr
 {
-  auto op = m_tokens[m_pos];
-  advance();
+  const auto& op = CurrentToken();
+  Advance();
 
-  std::unique_ptr<BaseASTNode> expr;
-  if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
-    expr = parse_paren_expr();
-  else
-    expr = parse_primary_expr();
+  std::unique_ptr<BaseASTNode> expr = CurrentToken().type == TOKEN_TYPE::LPAREN ? ParenExpression() : PrimaryExpression();
 
-  auto location = location_from_token_to_node(op, *expr);
-  return std::make_unique<UnaryOpASTNode>(op, std::move(expr), m_node_id++, location);
+  auto location = LocationFromTokenToNode(op, *expr);
+  return std::make_unique<UnaryOpASTNode>(op, std::move(expr), m_NodeId++, location);
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_paren_expr()
+auto Parser::ParenExpression() -> ASTPtr
 {
-	auto open_paren = m_tokens[m_pos];
-	advance();
+	const auto& open_paren = CurrentToken();
+	Advance();
 
-	auto expr = parse_expr();
+	auto expr = Expression();
 	if (expr == nullptr)
 		return nullptr;
 
-	check(TOKEN_TYPE::RPAREN);
-	advance();
+	Check(TOKEN_TYPE::RPAREN);
+	Advance();
 
-	if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK)
+	if (CurrentToken().type == TOKEN_TYPE::LSQBRACK)
 	{
-		advance();
+		Advance();
 
-		auto index_expr = parse_expr();
+		auto index_expr = Expression();
 
-		check(TOKEN_TYPE::RSQBRACK);
-		auto closing_bracket = m_tokens[m_pos];
-		advance();
+		Check(TOKEN_TYPE::RSQBRACK);
+		const auto& closing_bracket = CurrentToken();
+		Advance();
 
-		auto location = SourceLocation{
-			.start = token_start(open_paren),
-			.end = token_end(closing_bracket)
+		auto location = Range{
+			.start = TokenStart(open_paren),
+			.end = TokenEnd(closing_bracket)
 		};
 
 		return std::make_unique<IndexASTNode>(
 			std::move(expr),
 			std::move(index_expr),
-			m_node_id++,
+			m_NodeId++,
 			location
 		);
 	}
 
-	if (m_tokens[m_pos].type == TOKEN_TYPE::PERIOD)
+	if (CurrentToken().type == TOKEN_TYPE::PERIOD)
 	{
-		advance();
+		Advance();
 
-		auto name = m_tokens[m_pos];
-		check(TOKEN_TYPE::IDENTIFIER);
-		advance();
+		const auto& name = CurrentToken();
+		Check(TOKEN_TYPE::IDENTIFIER);
+		Advance();
 
-		if (m_tokens[m_pos].type != TOKEN_TYPE::LPAREN)
+		if (CurrentToken().type != TOKEN_TYPE::LPAREN)
 		{
-			auto location = SourceLocation{
-				.start = token_start(open_paren),
-				.end = token_end(name)
+			auto location = Range{
+				.start = TokenStart(open_paren),
+				.end = TokenEnd(name)
 			};
 
 			return std::make_unique<GetPropertyASTNode>(
 				std::move(expr),
 				name,
-				m_node_id++,
+				m_NodeId++,
 				location
 			);
 		}
 
 		std::vector<std::unique_ptr<BaseASTNode>> args;
 
-		check(TOKEN_TYPE::LPAREN);
-		advance();
+		Check(TOKEN_TYPE::LPAREN);
+		Advance();
 
-		while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
+		while (CurrentToken().type != TOKEN_TYPE::RPAREN)
 		{
-			args.push_back(parse_expr());
-			if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+			args.push_back(Expression());
+			if (CurrentToken().type == TOKEN_TYPE::COMMA)
 			{
-				advance();
+				Advance();
 			}
 		}
 
-		auto closing_paren = m_tokens[m_pos];
-		advance();
+		const auto& closing_paren = CurrentToken();
+		Advance();
 
-		auto location = SourceLocation{
-			.start = token_start(open_paren),
-			.end = token_end(closing_paren)
+		auto location = Range{
+			.start = TokenStart(open_paren),
+			.end = TokenEnd(closing_paren)
 		};
 
 		return std::make_unique<MethodCallASTNode>(
 			std::move(expr),
 			name,
 			args,
-			m_node_id++,
+			m_NodeId++,
 			location
 		);
 	}
@@ -462,94 +463,91 @@ std::unique_ptr<BaseASTNode> Parser::parse_paren_expr()
 	return expr;
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_expr()
+auto Parser::Expression() -> ASTPtr
 {
-	auto LHS = parse_primary_expr();
+	auto LHS = PrimaryExpression();
 
 	if (LHS == nullptr)
 		return nullptr;
 
-	return std::move(parse_binop_rhs(0, std::move(LHS)));
+	return std::move(BinOpRHS(0, std::move(LHS)));
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_semic_expr()
+auto Parser::SemicolonExpression() -> ASTPtr
 {
-	auto expr = parse_expr();
+	auto expr = Expression();
 
-	check(TOKEN_TYPE::SEMICOLON);
-	advance(); //eat ;
+	Check(TOKEN_TYPE::SEMICOLON);
+	Advance(); //eat ;
+
 	return expr;
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_binop_rhs(int expr_prec, std::unique_ptr<BaseASTNode> lhs)
+auto Parser::BinOpRHS(int expr_prec, std::unique_ptr<BaseASTNode> lhs) -> ASTPtr
 {
   while (true)
   {
-    auto token_prec = get_token_precedence(m_tokens[m_pos]);
-    if (token_prec < expr_prec)
-      return lhs;
+    auto token_prec = get_token_precedence(CurrentToken());
+    if (token_prec < expr_prec) return lhs;
 
-    auto op = m_tokens[m_pos];
-    advance();
+    const auto& op = CurrentToken();
+    Advance();
 
-    auto rhs = parse_primary_expr();
-    if (!rhs)
-      return nullptr;
+    auto rhs = PrimaryExpression();
+    if (!rhs) return nullptr;
 
-    int next_prec = get_token_precedence(m_tokens[m_pos]);
+    int next_prec = get_token_precedence(CurrentToken());
     if (token_prec < next_prec)
     {
-      rhs = parse_binop_rhs(token_prec + 1, std::move(rhs));
-      if (!rhs)
-        return nullptr;
+      rhs = BinOpRHS(token_prec + 1, std::move(rhs));
+      if (!rhs) return nullptr;
     }
 
-    auto location = SourceLocation{
-      .start = lhs->location.start,
-      .end = rhs->location.end
+    auto location = Range{
+      .start = lhs->range.start,
+      .end = rhs->range.end
     };
 
-    lhs = std::make_unique<BinaryOpASTNode>(op, std::move(lhs), std::move(rhs), m_node_id++, location);
+    lhs = std::make_unique<BinaryOpASTNode>(op, std::move(lhs), std::move(rhs), m_NodeId++, location);
   }
 }
 
-std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
+auto Parser::VariableDeclaration() -> std::vector<ASTPtr>
 {
   std::vector<std::unique_ptr<BaseASTNode>> ret_val;
-  auto decl_token = m_tokens[m_pos];
-  advance();
+  auto decl_token = CurrentToken();
+  Advance();
 
   while (true)
   {
-    if (m_tokens[m_pos].type != TOKEN_TYPE::IDENTIFIER)
+    const auto& current_token = CurrentToken();
+    if (current_token.type != TOKEN_TYPE::IDENTIFIER)
     {
       throw SyntaxError(
-        m_filename,
-        decl_token.line,
-        decl_token.col_start,
-        m_tokens[m_pos].col_end,
-        m_source_lines[decl_token.line - 1],
+        m_Filename,
+        LocationFromTokens(decl_token, current_token),
+        m_SourceLines,
         std::format(
           "Expected identifier after variable declaration, but instead got {}",
-          ttype_to_string(m_tokens[m_pos].type)
+          print_token_type(current_token.type)
         )
       );
     }
 
-    auto name_identifier = m_tokens[m_pos];
-    advance();
+    const auto& name_identifier = CurrentToken();
+    Advance();
 
     if (decl_token.type == TOKEN_TYPE::CONST)
-      check(TOKEN_TYPE::ASSIGN);
+      Check(TOKEN_TYPE::ASSIGN);
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
+    if (CurrentToken().type == TOKEN_TYPE::ASSIGN)
     {
-      advance();
+      Advance();
 
-      auto expr = parse_expr();
-      auto location = SourceLocation{
-        .start = token_start(decl_token),
-        .end = expr->location.end
+      auto expr = Expression();
+      auto location = Range{
+        .start = TokenStart(decl_token),
+        .end = expr->range.end
       };
 
       ret_val.push_back(
@@ -557,36 +555,34 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
           decl_token,
           name_identifier,
           std::move(expr),
-          m_node_id++,
+          m_NodeId++,
           location
         )
       );
 
-      if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+      if (CurrentToken().type == TOKEN_TYPE::COMMA)
       {
-        advance();
+        Advance();
         continue;
       }
 
-      if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
+      if (CurrentToken().type == TOKEN_TYPE::SEMICOLON)
       {
-        advance();
+        Advance();
         return ret_val;
       }
 
       throw SyntaxError(
-        m_filename,
-        decl_token.line,
-        decl_token.col_start,
-        decl_token.col_start,
-        m_source_lines[decl_token.line - 1],
+        m_Filename,
+        decl_token.range,
+        m_SourceLines,
         std::format("Expected semicolon after variable declaration")
       );
     }
 
-    auto location = SourceLocation{
-      .start = token_start(decl_token),
-      .end = token_end(name_identifier)
+    auto location = Range{
+      .start = TokenStart(decl_token),
+      .end = TokenEnd(name_identifier)
     };
 
     ret_val.push_back(
@@ -594,177 +590,176 @@ std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_variable_declaration()
         decl_token,
         name_identifier,
         nullptr,
-        m_node_id++,
+        m_NodeId++,
         location
       )
     );
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+    if (CurrentToken().type == TOKEN_TYPE::COMMA)
     {
-      advance();
+      Advance();
       continue;
     }
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
+    if (CurrentToken().type == TOKEN_TYPE::SEMICOLON)
     {
-      advance();
+      Advance();
       return ret_val;
     }
 
     throw SyntaxError(
-      m_filename,
-      decl_token.line,
-      decl_token.col_start,
-      name_identifier.col_end,
-      m_source_lines[decl_token.line - 1],
+      m_Filename,
+      LocationFromTokens(decl_token, name_identifier),
+      m_SourceLines,
       std::format("Expected semicolon after variable declaration")
     );
   }
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_method_call(std::unique_ptr<BaseASTNode> identifier)
+auto Parser::MethodCall(std::unique_ptr<BaseASTNode> identifier) -> ASTPtr
 {
-  auto name = m_tokens[m_pos];
-  advance();
+  auto name = CurrentToken();
+  Advance();
 
-  check(TOKEN_TYPE::LPAREN);
-  advance();
+  Check(TOKEN_TYPE::LPAREN);
+  Advance();
 
   std::vector<std::unique_ptr<BaseASTNode>> args;
-  while (m_tokens[m_pos].type != TOKEN_TYPE::RPAREN)
+  while (CurrentToken().type != TOKEN_TYPE::RPAREN)
   {
-    args.push_back(parse_expr());
-    if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
-      advance();
+    args.push_back(Expression());
+    if (CurrentToken().type == TOKEN_TYPE::COMMA)
+      Advance();
   }
 
-  auto closing_paren = m_tokens[m_pos];
-  advance();
+  auto closing_paren = CurrentToken();
+  Advance();
 
-  auto location = SourceLocation{
-    .start = identifier->location.start,
-    .end = token_end(closing_paren)
+  auto location = Range{
+    .start = identifier->range.start,
+    .end = TokenEnd(closing_paren)
   };
 
   return std::make_unique<MethodCallASTNode>(
     std::move(identifier),
     name,
     args,
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_property_get(std::unique_ptr<BaseASTNode> identifier)
+auto Parser::PropertyGet(std::unique_ptr<BaseASTNode> identifier) -> ASTPtr
 {
-  auto name = m_tokens[m_pos];
-  advance();
+  auto name = CurrentToken();
+  Advance();
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
+  if (CurrentToken().type == TOKEN_TYPE::ASSIGN)
   {
-    advance();
-    auto expr = parse_expr();
+    Advance();
+    auto expr = Expression();
 
-    auto location = SourceLocation{
-      .start = identifier->location.start,
-      .end = expr->location.end
+    auto location = Range{
+      .start = identifier->range.start,
+      .end = expr->range.end
     };
 
     return std::make_unique<SetPropertyASTNode>(
       std::move(identifier),
       name,
       std::move(expr),
-      m_node_id++,
+      m_NodeId++,
       location
     );
   }
 
-  auto location = SourceLocation{
-    .start = identifier->location.start,
-    .end = token_end(name)
+  auto location = Range{
+    .start = identifier->range.start,
+    .end = TokenEnd(name)
   };
 
   return std::make_unique<GetPropertyASTNode>(
     std::move(identifier),
     name,
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_property_or_method_chain(std::unique_ptr<BaseASTNode> identifier)
+auto Parser::PropertyOrMethodChain(std::unique_ptr<BaseASTNode> identifier) -> ASTPtr
 {
-	if (m_tokens[m_pos].type != TOKEN_TYPE::PERIOD)
+	if (CurrentToken().type != TOKEN_TYPE::PERIOD)
 		return identifier;
 
-	check(TOKEN_TYPE::PERIOD);
-	advance();
+	Check(TOKEN_TYPE::PERIOD);
+	Advance();
 
 	// Line.make().print()
 
-	check(TOKEN_TYPE::IDENTIFIER); // make
-	advance();
-	if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
+	Check(TOKEN_TYPE::IDENTIFIER); // make
+	Advance();
+	if (CurrentToken().type == TOKEN_TYPE::LPAREN)
 	{
-		m_pos--;
-		auto method = parse_method_call(std::move(identifier));
-		return parse_property_or_method_chain(std::move(method));
+		m_Pos--;
+		auto method = MethodCall(std::move(identifier));
+		return PropertyOrMethodChain(std::move(method));
 	}
-	m_pos--;
-	auto property = parse_property_get(std::move(identifier));
-	return parse_property_or_method_chain(std::move(property));
+	m_Pos--;
+	auto property = PropertyGet(std::move(identifier));
+	return PropertyOrMethodChain(std::move(property));
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
+auto Parser::StatementOrIdentifier() -> ASTPtr
 {
-  const auto &identifier = m_tokens[m_pos];
-  auto identifier_location = location_from_token(identifier);
-  advance();
+  const auto &identifier = CurrentToken();
+  auto identifier_location = LocationFromToken(identifier);
+  Advance();
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::LPAREN)
+  if (CurrentToken().type == TOKEN_TYPE::LPAREN)
   {
-    auto expr = parse_function_call(identifier);
-    check(TOKEN_TYPE::SEMICOLON);
-    advance();
+    auto expr = FunctionCall(identifier);
+    Check(TOKEN_TYPE::SEMICOLON);
+    Advance();
     return expr;
   }
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::PERIOD)
+  if (CurrentToken().type == TOKEN_TYPE::PERIOD)
   {
-    auto chain = parse_property_or_method_chain(
-      std::make_unique<IdentifierASTNode>(identifier, m_node_id++, identifier_location)
+    auto chain = PropertyOrMethodChain(
+      std::make_unique<IdentifierASTNode>(identifier, m_NodeId++, identifier_location)
     );
-    check(TOKEN_TYPE::SEMICOLON);
-    advance();
+    Check(TOKEN_TYPE::SEMICOLON);
+    Advance();
     return chain;
   }
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
+  if (CurrentToken().type == TOKEN_TYPE::ASSIGN)
   {
-    advance();
+    Advance();
 
-    auto expr = parse_semic_expr();
+    auto expr = SemicolonExpression();
 
-    auto lhs = std::make_unique<IdentifierASTNode>(identifier, m_node_id++, identifier_location);
-    auto location = SourceLocation{
-      .start = lhs->location.start,
-      .end = expr->location.end
+    auto lhs = std::make_unique<IdentifierASTNode>(identifier, m_NodeId++, identifier_location);
+    auto location = Range{
+      .start = lhs->range.start,
+      .end = expr->range.end
     };
 
     return std::make_unique<StatementASTNode>(
       std::move(lhs),
       std::move(expr),
-      m_node_id++,
+      m_NodeId++,
       location
     );
   }
 
+  const auto& current_token = CurrentToken();
   if (
-    m_tokens[m_pos].type == TOKEN_TYPE::PLUSEQ ||
-    m_tokens[m_pos].type == TOKEN_TYPE::MINUSEQ ||
-    m_tokens[m_pos].type == TOKEN_TYPE::TIMESEQ ||
-    m_tokens[m_pos].type == TOKEN_TYPE::MODEQ ||
-    m_tokens[m_pos].type == TOKEN_TYPE::SLASHEQ
+    current_token.type == TOKEN_TYPE::PLUSEQ ||
+    current_token.type == TOKEN_TYPE::MINUSEQ ||
+    current_token.type == TOKEN_TYPE::TIMESEQ ||
+    current_token.type == TOKEN_TYPE::MODEQ ||
+    current_token.type == TOKEN_TYPE::SLASHEQ
   )
   {
     static std::unordered_map<TOKEN_TYPE, TOKEN_TYPE> tt_to_tt = {
@@ -775,246 +770,243 @@ std::unique_ptr<BaseASTNode> Parser::parse_statement_or_ident()
       {TOKEN_TYPE::SLASHEQ, TOKEN_TYPE::SLASH},
     };
 
-    const auto assignment_token = m_tokens[m_pos];
-    auto new_token = tt_to_tt[assignment_token.type];
-    advance();
+    const auto assignment_token = CurrentToken();
+    const auto& new_token = tt_to_tt[assignment_token.type];
+    Advance();
 
-    auto expr = parse_semic_expr();
+    auto expr = SemicolonExpression();
 
     auto lhs_for_binary = std::make_unique<IdentifierASTNode>(
       identifier,
-      m_node_id++,
+      m_NodeId++,
       identifier_location
     );
 
-    Token op_token{new_token};
-    op_token.line = assignment_token.line;
-    op_token.col_start = assignment_token.col_start;
-    op_token.col_end = assignment_token.col_end;
+    Token op_token{.type = new_token, .range = assignment_token.range };
 
-    auto expanded_location = SourceLocation{
-      .start = lhs_for_binary->location.start,
-      .end = expr->location.end
+    auto expanded_location = Range{
+      .start = lhs_for_binary->range.start,
+      .end = expr->range.end
     };
 
     auto expanded_expr = std::make_unique<BinaryOpASTNode>(
       op_token,
       std::move(lhs_for_binary),
       std::move(expr),
-      m_node_id++,
+      m_NodeId++,
       expanded_location
     );
 
     auto lhs_for_statement = std::make_unique<IdentifierASTNode>(
       identifier,
-      m_node_id++,
+      m_NodeId++,
       identifier_location
     );
 
-    auto statement_location = SourceLocation{
-      .start = lhs_for_statement->location.start,
-      .end = expanded_expr->location.end
+    auto statement_location = Range{
+      .start = lhs_for_statement->range.start,
+      .end = expanded_expr->range.end
     };
 
     return std::make_unique<StatementASTNode>(
       std::move(lhs_for_statement),
       std::move(expanded_expr),
-      m_node_id++,
+      m_NodeId++,
       statement_location
     );
   }
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::LSQBRACK)
+  if (CurrentToken().type == TOKEN_TYPE::LSQBRACK)
   {
-    m_pos--;
-    auto index_expr = parse_identifier();
+    m_Pos--;
+    auto index_expr = Identifier();
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
+    if (CurrentToken().type == TOKEN_TYPE::ASSIGN)
     {
-      advance();
+      Advance();
 
-      auto expr = parse_semic_expr();
-      auto location = SourceLocation{
-        .start = index_expr->location.start,
-        .end = expr->location.end
+      auto expr = SemicolonExpression();
+      auto location = Range{
+        .start = index_expr->range.start,
+        .end = expr->range.end
       };
 
       return std::make_unique<StatementIndexASTNode>(
         std::move(index_expr),
         std::move(expr),
-        m_node_id++,
+        m_NodeId++,
         location
       );
     }
 
-    check(TOKEN_TYPE::SEMICOLON);
-    advance();
+    Check(TOKEN_TYPE::SEMICOLON);
+    Advance();
     return index_expr;
   }
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::SEMICOLON)
+  if (CurrentToken().type == TOKEN_TYPE::SEMICOLON)
   {
-    advance();
-    return std::make_unique<IdentifierASTNode>(identifier, m_node_id++, identifier_location);
+    Advance();
+    return std::make_unique<IdentifierASTNode>(identifier, m_NodeId++, identifier_location);
   }
 
-  m_pos--;
-  return parse_semic_expr();
+  m_Pos--;
+  return SemicolonExpression();
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_import()
+auto Parser::Import() -> ASTPtr
 {
-	const auto import_token = m_tokens[m_pos];
-	check(TOKEN_TYPE::IMPORT);
-	advance();
+	const auto import_token = CurrentToken();
+	Check(TOKEN_TYPE::IMPORT);
+	Advance();
 
-	check(TOKEN_TYPE::LBRACK);
-	advance();
+	Check(TOKEN_TYPE::LBRACK);
+	Advance();
 
 	std::vector<Token> identifiers;
 
-	while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
+	while (CurrentToken().type != TOKEN_TYPE::RBRACK)
 	{
-		check(TOKEN_TYPE::IDENTIFIER);
-		auto id = m_tokens[m_pos];
+		Check(TOKEN_TYPE::IDENTIFIER);
+		const auto& id = CurrentToken();
 		identifiers.push_back(id);
-		advance();
+		Advance();
 
-		if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+		if (CurrentToken().type == TOKEN_TYPE::COMMA)
 		{
-			advance();
+			Advance();
 		}
 	}
 
-	advance();
+	Advance();
 
-	check(TOKEN_TYPE::FROM);
-	advance();
+	Check(TOKEN_TYPE::FROM);
+	Advance();
 
-	check(TOKEN_TYPE::STRING);
-	auto module = parse_literal();
+	Check(TOKEN_TYPE::STRING);
+	auto module = Literal();
 
-	check(TOKEN_TYPE::SEMICOLON);
-	advance();
+	Check(TOKEN_TYPE::SEMICOLON);
+	Advance();
 
-	auto location = SourceLocation{
-		.start = token_start(import_token),
-		.end = module->location.end
+	auto location = Range{
+		.start = TokenStart(import_token),
+		.end = module->range.end
 	};
 
 	return std::make_unique<ImportASTNode>(
 		std::move(identifiers),
 		std::move(module),
-		m_node_id++,
+		m_NodeId++,
 		location
 	);
 }
 
-std::vector<std::unique_ptr<BaseASTNode>> Parser::parse_export()
+auto Parser::Export() -> std::vector<ASTPtr>
 {
-  const auto export_token = m_tokens[m_pos];
-  check(TOKEN_TYPE::EXPORT);
-  advance();
+  const auto export_token = CurrentToken();
+  Check(TOKEN_TYPE::EXPORT);
+  Advance();
 
   std::vector<std::unique_ptr<BaseASTNode>> vars;
   std::vector<std::unique_ptr<BaseASTNode>> ret;
 
-  auto next_token = current_token();
+  const auto& next_token = CurrentToken();
   if (next_token.type == TOKEN_TYPE::FN)
   {
-    auto fn = parse_function();
+    auto fn = Function();
     auto name = static_cast<FunctionDeclASTNode*>(static_cast<FunctionASTNode*>(fn.get())->decl.get())->name;
     vars.push_back(
       std::make_unique<IdentifierASTNode>(
       name,
-      m_node_id++,
-      location_from_token(name))
+      m_NodeId++,
+      LocationFromToken(name))
     );
 
     ret.push_back(std::move(fn));
-    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_node_id++, location_from_token(export_token)));
+    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_NodeId++, LocationFromToken(export_token)));
 
     return ret;
   }
 
   if (next_token.type == TOKEN_TYPE::CONST || next_token.type == TOKEN_TYPE::LET)
   {
-    auto vars = parse_variable_declaration();
-    for (auto& var : vars)
+    auto _vars = VariableDeclaration();
+    for (auto& var : _vars)
     {
       auto name = static_cast<VariableASTNode*>(var.get())->name;
       vars.push_back(
         std::make_unique<IdentifierASTNode>(
         name,
-        m_node_id++,
-        location_from_token(name)
+        m_NodeId++,
+        LocationFromToken(name)
         )
       );
       ret.push_back(std::move(var));
     }
-    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_node_id++, location_from_token(export_token)));
+    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_NodeId++, LocationFromToken(export_token)));
   }
 
   if (next_token.type == TOKEN_TYPE::CLASS)
   {
-    auto fn = parse_class();
+    auto fn = Class();
     auto name = static_cast<ClassASTNode*>(fn.get())->name;
     vars.push_back(
       std::make_unique<IdentifierASTNode>(
       name,
-      m_node_id++,
-      location_from_token(name))
+      m_NodeId++,
+      LocationFromToken(name))
     );
 
     ret.push_back(std::move(fn));
-    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_node_id++, location_from_token(export_token)));
+    ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_NodeId++, LocationFromToken(export_token)));
 
     return ret;
   }
 
-  check(TOKEN_TYPE::LBRACK);
-  advance();
+  Check(TOKEN_TYPE::LBRACK);
+  Advance();
 
-  while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
+  while (CurrentToken().type != TOKEN_TYPE::RBRACK)
   {
-    check(TOKEN_TYPE::IDENTIFIER);
-    auto id = m_tokens[m_pos];
-    advance();
+    Check(TOKEN_TYPE::IDENTIFIER);
+    auto id = CurrentToken();
+    Advance();
 
     vars.push_back(
       std::make_unique<IdentifierASTNode>(
         id,
-        m_node_id++,
-        location_from_token(id)
+        m_NodeId++,
+        LocationFromToken(id)
       )
     );
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+    if (CurrentToken().type == TOKEN_TYPE::COMMA)
     {
-      advance();
+      Advance();
     }
   }
 
-  check(TOKEN_TYPE::RBRACK);
-  auto closing_brace = m_tokens[m_pos];
-  advance();
+  Check(TOKEN_TYPE::RBRACK);
+  auto closing_brace = CurrentToken();
+  Advance();
 
-  auto location = location_from_tokens(export_token, closing_brace);
+  auto location = LocationFromTokens(export_token, closing_brace);
 
   ret.push_back(std::move(std::make_unique<ExportASTNode>(
     std::move(vars),
-    m_node_id++,
+    m_NodeId++,
     location
   )));
 
   return ret;
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
+auto Parser::FunctionArguments() -> ASTPtr
 {
-  const auto open_paren = m_tokens[m_pos];
-  check(TOKEN_TYPE::LPAREN);
-  advance();
+  const auto& open_paren = CurrentToken();
+  Check(TOKEN_TYPE::LPAREN);
+  Advance();
 
   std::vector<std::unique_ptr<FunctionArgumentASTNode>> args;
   std::unique_ptr<FunctionArgumentASTNode> args_arg;
@@ -1022,69 +1014,65 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
   bool has_args = false;
   bool has_kwargs = false;
 
-  while (m_pos < m_tokens.size())
+  while (m_Pos < m_Tokens.size())
   {
-    if (m_tokens[m_pos].type == TOKEN_TYPE::RPAREN)
+    const auto& current_token = CurrentToken();
+    if (current_token.type == TOKEN_TYPE::RPAREN)
     {
-      const auto closing_paren = m_tokens[m_pos];
-      advance();
+      Advance();
 
-      auto location = location_from_tokens(open_paren, closing_paren);
+      auto location = LocationFromTokens(open_paren, current_token);
 
       return std::make_unique<FunctionArgumentListASTNode>(
         args,
         std::move(args_arg),
         std::move(kwargs_arg),
-        m_node_id++,
+        m_NodeId++,
         location
       );
     }
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::TIMES)
+    if (current_token.type == TOKEN_TYPE::TIMES)
     {
-      const auto first_star = m_tokens[m_pos];
-
-      if (m_tokens[m_pos + 1].type == TOKEN_TYPE::TIMES)
+      if (NextToken().type == TOKEN_TYPE::TIMES)
       {
         if (has_kwargs)
         {
           throw SyntaxError(
-            m_filename,
-            m_tokens[m_pos + 1].line,
-            m_tokens[m_pos].col_start,
-            m_tokens[m_pos + 1].col_start,
-            m_source_lines[m_tokens[m_pos + 1].line - 1],
+            m_Filename,
+            LocationFromNodeToToken(*kwargs_arg, NextToken()),
+            m_SourceLines,
             "Cannot have multiple **kwargs"
           );
         }
 
-        advance();
-        advance();
+        Advance();
+        Advance();
 
-        check(TOKEN_TYPE::IDENTIFIER);
-        Token identifier = m_tokens[m_pos];
-        advance();
+        Check(TOKEN_TYPE::IDENTIFIER);
+        const auto& identifier = CurrentToken();
+        Advance();
 
         has_kwargs = true;
 
-        auto location = SourceLocation{
-          .start = token_start(first_star),
-          .end = token_end(identifier)
+        auto location = Range{
+          .start = TokenStart(current_token),
+          .end = TokenEnd(identifier)
         };
 
         kwargs_arg = std::make_unique<FunctionArgumentASTNode>(
           identifier,
-          Token{TOKEN_TYPE::IDENTIFIER, new char[]{"any"}},
+          Token{ .type = TOKEN_TYPE::IDENTIFIER, .value = "any" },
           false,
           true,
           false,
-          m_node_id++,
+          m_NodeId++,
           location
         );
 
-        if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+        if (CurrentToken().type == TOKEN_TYPE::COMMA)
         {
-          advance();
+          Advance();
         }
 
         continue;
@@ -1093,26 +1081,24 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
       if (has_args)
       {
         throw SyntaxError(
-          m_filename,
-          m_tokens[m_pos].line,
-          m_tokens[m_pos].col_start,
-          m_tokens[m_pos].col_start,
-          m_source_lines[m_tokens[m_pos].line - 1],
+          m_Filename,
+          LocationFromNodeToToken(*args_arg, NextToken()),
+          m_SourceLines,
           "Cannot have multiple *args"
         );
       }
 
-      advance();
+      Advance();
 
-      check(TOKEN_TYPE::IDENTIFIER);
-      Token identifier = m_tokens[m_pos];
-      advance();
+      Check(TOKEN_TYPE::IDENTIFIER);
+      const auto& identifier = CurrentToken();
+      Advance();
 
       has_args = true;
 
-      auto location = SourceLocation{
-        .start = token_start(first_star),
-        .end = token_end(identifier)
+      auto location = Range{
+        .start = TokenStart(current_token),
+        .end = TokenEnd(identifier)
       };
 
       args_arg = std::make_unique<FunctionArgumentASTNode>(
@@ -1121,61 +1107,61 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
         true,
         false,
         false,
-        m_node_id++,
+        m_NodeId++,
         location
       );
 
-      if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+      if (CurrentToken().type == TOKEN_TYPE::COMMA)
       {
-        advance();
+        Advance();
       }
 
       continue;
     }
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::ASSIGN)
+    if (CurrentToken().type == TOKEN_TYPE::ASSIGN)
     {
-      const auto assign_token = m_tokens[m_pos];
-      advance();
+      const auto& assign_token = CurrentToken();
+      Advance();
 
-      Token identifier = m_tokens[m_pos];
-      check(TOKEN_TYPE::IDENTIFIER);
-      advance();
+      const auto& identifier = CurrentToken();
+      Check(TOKEN_TYPE::IDENTIFIER);
+      Advance();
 
-      auto location = SourceLocation{
-        .start = token_start(assign_token),
-        .end = token_end(identifier)
+      auto location = Range{
+        .start = TokenStart(assign_token),
+        .end = TokenEnd(identifier)
       };
 
       args.push_back(
         std::make_unique<FunctionArgumentASTNode>(
           identifier,
-          Token{TOKEN_TYPE::IDENTIFIER, new char[]{"any"}},
+          Token{ .type = TOKEN_TYPE::IDENTIFIER, .value = "any"},
           false,
           false,
           true,
-          m_node_id++,
+          m_NodeId++,
           location
         )
       );
 
-      if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+      if (CurrentToken().type == TOKEN_TYPE::COMMA)
       {
-        advance();
+        Advance();
       }
 
       continue;
     }
 
-    Token identifier = m_tokens[m_pos];
-    check(TOKEN_TYPE::IDENTIFIER);
-    advance();
+    const auto& identifier = CurrentToken();
+    Check(TOKEN_TYPE::IDENTIFIER);
+    Advance();
 
-    auto location = location_from_token(identifier);
+    auto location = LocationFromToken(identifier);
 
-    if (m_tokens[m_pos].type == TOKEN_TYPE::COMMA)
+    if (CurrentToken().type == TOKEN_TYPE::COMMA)
     {
-      advance();
+      Advance();
     }
 
     args.push_back(
@@ -1185,7 +1171,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
         false,
         false,
         false,
-        m_node_id++,
+        m_NodeId++,
         location
       )
     );
@@ -1194,158 +1180,156 @@ std::unique_ptr<BaseASTNode> Parser::parse_function_arguments()
   return nullptr;
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_function_declaration()
+auto Parser::FunctionDeclaration() -> ASTPtr
 {
-  const auto fn_token = m_tokens[m_pos];
-  advance();
+  const auto& fn_token = CurrentToken();
+  Advance();
 
-  auto fname = m_tokens[m_pos];
-  check(TOKEN_TYPE::IDENTIFIER);
-  advance();
+  const auto& fname = CurrentToken();
+  Check(TOKEN_TYPE::IDENTIFIER);
+  Advance();
 
-  auto fargs = parse_function_arguments();
+  auto fargs = FunctionArguments();
 
-  auto location = SourceLocation{
-    .start = token_start(fn_token),
-    .end = fargs->location.end
+  auto location = Range{
+    .start = TokenStart(fn_token),
+    .end = fargs->range.end
   };
 
   return std::make_unique<FunctionDeclASTNode>(
     fname,
     std::move(fargs),
-    Token{TOKEN_TYPE::IDENTIFIER, new char[]{"any"}},
-    m_node_id++,
+    Token{ .type = TOKEN_TYPE::IDENTIFIER, .value = "any" },
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_return()
+auto Parser::Return() -> ASTPtr
 {
-  auto return_token = m_tokens[m_pos];
-  advance();
+  const auto& return_token = CurrentToken();
+  Advance();
 
-  auto expr = parse_semic_expr();
-  auto location = location_from_token_to_node(return_token, *expr);
+  auto expr = SemicolonExpression();
+  auto location = LocationFromTokenToNode(return_token, *expr);
 
-  return std::make_unique<ReturnStatementASTNode>(std::move(expr), m_node_id++, location);
+  return std::make_unique<ReturnStatementASTNode>(std::move(expr), m_NodeId++, location);
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_ifelse_statement()
+auto Parser::IfElseStatement() -> ASTPtr
 {
-  const auto &if_token = m_tokens[m_pos];
-  advance();
+  const auto &if_token = CurrentToken();
+  Advance();
 
-  auto condition = parse_expr();
+  auto condition = Expression();
 
-  if (m_tokens[m_pos].type != TOKEN_TYPE::LBRACK)
+  if (CurrentToken().type != TOKEN_TYPE::LBRACK)
   {
-    const auto &current_token = m_tokens[m_pos];
+    const auto &current_token = CurrentToken();
     throw SyntaxError(
-      m_filename,
-      if_token.line,
-      if_token.col_start,
-      current_token.col_end,
-      m_source_lines[if_token.line - 1],
+      m_Filename,
+      LocationFromTokens(if_token, current_token),
+      m_SourceLines,
       std::format(
         "Expected token {} after if-statement condition",
-        ttype_to_string(TOKEN_TYPE::LBRACK)
+        print_token_type(TOKEN_TYPE::LBRACK)
       )
     );
   }
 
-  auto true_scope = parse_scope();
+  auto true_scope = Scope();
 
-  if (m_pos < m_tokens.size() && m_tokens[m_pos].type == TOKEN_TYPE::ELSE)
+  if (m_Pos < m_Tokens.size() && CurrentToken().type == TOKEN_TYPE::ELSE)
   {
-    advance();
+    Advance();
 
-    if (m_pos < m_tokens.size() && m_tokens[m_pos].type == TOKEN_TYPE::IF)
+    if (m_Pos < m_Tokens.size() && CurrentToken().type == TOKEN_TYPE::IF)
     {
-      auto false_scope = parse_ifelse_statement();
+      auto false_scope = IfElseStatement();
 
-      auto location = SourceLocation{
-        .start = token_start(if_token),
-        .end = false_scope->location.end
+      auto location = Range{
+        .start = TokenStart(if_token),
+        .end = false_scope->range.end
       };
 
       return std::make_unique<IfElseExpressionASTNode>(
         std::move(condition),
         std::move(true_scope),
         std::move(false_scope),
-        m_node_id++,
+        m_NodeId++,
         location
       );
     }
 
-    auto false_scope = parse_scope();
+    auto false_scope = Scope();
 
-    auto location = SourceLocation{
-      .start = token_start(if_token),
-      .end = false_scope->location.end
+    auto location = Range{
+      .start = TokenStart(if_token),
+      .end = false_scope->range.end
     };
 
     return std::make_unique<IfElseExpressionASTNode>(
       std::move(condition),
       std::move(true_scope),
       std::move(false_scope),
-      m_node_id++,
+      m_NodeId++,
       location
     );
   }
 
-  auto location = SourceLocation{
-    .start = token_start(if_token),
-    .end = true_scope->location.end
+  auto location = Range{
+    .start = TokenStart(if_token),
+    .end = true_scope->range.end
   };
 
   return std::make_unique<IfElseExpressionASTNode>(
     std::move(condition),
     std::move(true_scope),
     nullptr,
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_for_loop()
+auto Parser::ForLoop() -> ASTPtr
 {
-  const auto for_token = m_tokens[m_pos];
-  advance();
+  const auto& for_token = CurrentToken();
+  Advance();
 
-  if (m_tokens[m_pos].type == TOKEN_TYPE::IDENTIFIER)
+  if (CurrentToken().type == TOKEN_TYPE::IDENTIFIER)
   {
-    auto identifier = m_tokens[m_pos];
-    advance();
+    const auto& identifier = CurrentToken();
+    Advance();
 
-    check(TOKEN_TYPE::COLON);
-    advance();
+    Check(TOKEN_TYPE::COLON);
+    Advance();
 
-    auto over = parse_expr();
-    auto scope = parse_scope();
+    auto over = Expression();
+    auto scope = Scope();
 
-    auto location = SourceLocation{
-      .start = token_start(for_token),
-      .end = scope->location.end
+    auto location = Range{
+      .start = TokenStart(for_token),
+      .end = scope->range.end
     };
 
     return std::make_unique<ForEachLoopASTNode>(
       identifier,
       std::move(over),
       std::move(scope),
-      m_node_id++,
+      m_NodeId++,
       location
     );
   }
 
-  auto declarations = parse_variable_declaration();
+  auto declarations = VariableDeclaration();
   auto declaration = std::move(declarations[0]);
-  auto condition = parse_semic_expr();
-  auto increment = parse_statement_or_ident();
-  auto scope = parse_scope();
+  auto condition = SemicolonExpression();
+  auto increment = StatementOrIdentifier();
+  auto scope = Scope();
 
-  auto location = SourceLocation{
-    .start = token_start(for_token),
-    .end = scope->location.end
+  auto location = Range{
+    .start = TokenStart(for_token),
+    .end = scope->range.end
   };
 
   return std::make_unique<ForLoopASTNode>(
@@ -1353,97 +1337,97 @@ std::unique_ptr<BaseASTNode> Parser::parse_for_loop()
     std::move(condition),
     std::move(increment),
     std::move(scope),
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_while_loop()
+auto Parser::WhileLoop() -> ASTPtr
 {
-  const auto while_token = m_tokens[m_pos];
-  advance();
+  const auto& while_token = CurrentToken();
+  Advance();
 
-  auto condition = parse_expr();
-  auto scope = parse_scope();
+  auto condition = Expression();
+  auto scope = Scope();
 
-  auto location = SourceLocation{
-    .start = token_start(while_token),
-    .end = scope->location.end
+  auto location = Range{
+    .start = TokenStart(while_token),
+    .end = scope->range.end
   };
 
   return std::make_unique<WhileLoopASTNode>(
     std::move(condition),
     std::move(scope),
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_class()
+auto Parser::Class() -> ASTPtr
 {
-  const auto class_token = m_tokens[m_pos];
-  advance();
+  const auto& class_token = CurrentToken();
+  Advance();
 
-  check(TOKEN_TYPE::IDENTIFIER);
-  auto id = m_tokens[m_pos];
-  advance();
+  Check(TOKEN_TYPE::IDENTIFIER);
+  const auto& id = CurrentToken();
+  Advance();
 
-  check(TOKEN_TYPE::LBRACK);
-  advance();
+  Check(TOKEN_TYPE::LBRACK);
+  Advance();
 
   std::vector<std::unique_ptr<BaseASTNode>> fns;
 
-  while (m_tokens[m_pos].type != TOKEN_TYPE::RBRACK)
+  while (CurrentToken().type != TOKEN_TYPE::RBRACK)
   {
-    fns.push_back(parse_function());
+    fns.push_back(Function());
   }
 
-  const auto closing_brace = m_tokens[m_pos];
-  advance();
+  const auto& closing_brace = CurrentToken();
+  Advance();
 
-  auto location = location_from_tokens(class_token, closing_brace);
+  auto location = LocationFromTokens(class_token, closing_brace);
 
   return std::make_unique<ClassASTNode>(
     id,
     std::move(fns),
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_scope()
+auto Parser::Scope() -> ASTPtr
 {
-  check(TOKEN_TYPE::LBRACK);
-  auto open_brace = m_tokens[m_pos];
-  advance();
+  Check(TOKEN_TYPE::LBRACK);
+  const auto& open_brace = CurrentToken();
+  Advance();
 
   auto scope = std::make_unique<ScopeASTNode>(
-    m_node_id++,
-    location_from_token(open_brace)
+    m_NodeId++,
+    LocationFromToken(open_brace)
   );
 
-  while (m_pos < m_tokens.size())
+  while (m_Pos < m_Tokens.size())
   {
-    switch (m_tokens[m_pos].type)
+    switch (CurrentToken().type)
     {
       case TOKEN_TYPE::RBRACK:
       {
-        auto close_brace = m_tokens[m_pos];
-        advance();
-        scope->location = location_from_tokens(open_brace, close_brace);
+        const auto& close_brace = CurrentToken();
+        Advance();
+        scope->range = LocationFromTokens(open_brace, close_brace);
         return scope;
       }
 
       case TOKEN_TYPE::RETURN:
       {
-        scope->nodes.push_back(parse_return());
+        scope->nodes.push_back(Return());
         break;
       }
 
       case TOKEN_TYPE::CONST:
       case TOKEN_TYPE::LET:
       {
-        auto vars = parse_variable_declaration();
+        auto vars = VariableDeclaration();
         for (auto &var : vars)
           scope->nodes.push_back(std::move(var));
         break;
@@ -1451,31 +1435,31 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
 
       case TOKEN_TYPE::IDENTIFIER:
       {
-        scope->nodes.push_back(parse_statement_or_ident());
+        scope->nodes.push_back(StatementOrIdentifier());
         break;
       }
 
       case TOKEN_TYPE::IF:
       {
-        scope->nodes.push_back(parse_ifelse_statement());
+        scope->nodes.push_back(IfElseStatement());
         break;
       }
 
       case TOKEN_TYPE::WHILE:
       {
-        scope->nodes.push_back(parse_while_loop());
+        scope->nodes.push_back(WhileLoop());
         break;
       }
 
       case TOKEN_TYPE::FOR:
       {
-        scope->nodes.push_back(parse_for_loop());
+        scope->nodes.push_back(ForLoop());
         break;
       }
 
       default:
       {
-        scope->nodes.push_back(parse_semic_expr());
+        scope->nodes.push_back(SemicolonExpression());
         break;
       }
     }
@@ -1484,50 +1468,50 @@ std::unique_ptr<BaseASTNode> Parser::parse_scope()
   return scope;
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_function()
+auto Parser::Function() -> ASTPtr
 {
-  auto decl = parse_function_declaration();
-  auto body = parse_scope();
+  auto decl = FunctionDeclaration();
+  auto body = Scope();
 
-  auto location = SourceLocation{
-    .start = decl->location.start,
-    .end = body->location.end
+  auto location = Range{
+    .start = decl->range.start,
+    .end = body->range.end
   };
 
   return std::make_unique<FunctionASTNode>(
     std::move(decl),
     std::move(body),
-    m_node_id++,
+    m_NodeId++,
     location
   );
 }
 
-std::unique_ptr<BaseASTNode> Parser::parse_root()
+auto Parser::Parse() -> ASTPtr
 {
   try
   {
-    const auto start_token = m_tokens[m_pos];
+    const auto start_token = CurrentToken();
     auto root = std::make_unique<RootASTNode>(
-      m_node_id++,
-      location_from_token(start_token)
+      m_NodeId++,
+      LocationFromToken(start_token)
     );
 
-    while (m_pos < m_tokens.size())
+    while (m_Pos < m_Tokens.size())
     {
-      switch (m_tokens[m_pos].type)
+      switch (CurrentToken().type)
       {
         case TOKEN_TYPE::TT_EOF:
         {
           if (!root->nodes.empty())
           {
-            root->location = SourceLocation{
-              .start = token_start(start_token),
-              .end = root->nodes.back()->location.end
+            root->range = Range{
+              .start = TokenStart(start_token),
+              .end = root->nodes.back()->range.end
             };
           }
           else
           {
-            root->location = location_from_token(start_token);
+            root->range = LocationFromToken(start_token);
           }
 
           return root;
@@ -1536,7 +1520,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
         case TOKEN_TYPE::CONST:
         case TOKEN_TYPE::LET:
         {
-          auto vars = parse_variable_declaration();
+          auto vars = VariableDeclaration();
           for (auto &var : vars)
             root->nodes.push_back(std::move(var));
           break;
@@ -1544,49 +1528,49 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 
         case TOKEN_TYPE::IDENTIFIER:
         {
-          root->nodes.push_back(parse_statement_or_ident());
+          root->nodes.push_back(StatementOrIdentifier());
           break;
         }
 
         case TOKEN_TYPE::FN:
         {
-          root->nodes.push_back(parse_function());
+          root->nodes.push_back(Function());
           break;
         }
 
         case TOKEN_TYPE::IF:
         {
-          root->nodes.push_back(parse_ifelse_statement());
+          root->nodes.push_back(IfElseStatement());
           break;
         }
 
         case TOKEN_TYPE::WHILE:
         {
-          root->nodes.push_back(parse_while_loop());
+          root->nodes.push_back(WhileLoop());
           break;
         }
 
         case TOKEN_TYPE::FOR:
         {
-          root->nodes.push_back(parse_for_loop());
+          root->nodes.push_back(ForLoop());
           break;
         }
 
         case TOKEN_TYPE::CLASS:
         {
-          root->nodes.push_back(parse_class());
+          root->nodes.push_back(Class());
           break;
         }
 
         case TOKEN_TYPE::IMPORT:
         {
-          root->nodes.push_back(parse_import());
+          root->nodes.push_back(Import());
           break;
         }
 
         case TOKEN_TYPE::EXPORT:
         {
-          auto vars = parse_export();
+          auto vars = Export();
           for (auto &var : vars)
             root->nodes.push_back(std::move(var));
           break;
@@ -1594,7 +1578,7 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 
         default:
         {
-          root->nodes.push_back(parse_semic_expr());
+          root->nodes.push_back(SemicolonExpression());
           break;
         }
       }
@@ -1602,14 +1586,14 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
 
     if (!root->nodes.empty())
     {
-      root->location = SourceLocation{
-        .start = token_start(start_token),
-        .end = root->nodes.back()->location.end
+      root->range = Range{
+        .start = TokenStart(start_token),
+        .end = root->nodes.back()->range.end
       };
     }
-    else if (!m_tokens.empty())
+    else if (!m_Tokens.empty())
     {
-      root->location = location_from_token(start_token);
+      root->range = LocationFromToken(start_token);
     }
 
     return root;
@@ -1621,71 +1605,59 @@ std::unique_ptr<BaseASTNode> Parser::parse_root()
   }
 }
 
-const Token &Parser::current_token() const
-{
-	return m_tokens[m_pos];
-}
 
-const Token &Parser::previous_token() const
+auto Parser::MakePosition(const std::size_t line, const std::size_t character) -> Position
 {
-	return m_tokens[m_pos - 1];
-}
-
-SourcePosition Parser::make_position(std::size_t line, std::size_t character) const
-{
-	return SourcePosition{
+	return Position{
 		.line = line,
 		.character = character
 	};
 }
 
-SourcePosition Parser::token_start(const Token &token) const
+auto Parser::TokenStart(const Token &token) -> Position
 {
-	return make_position(token.line, token.col_start);
+	return token.range.start;
 }
 
-SourcePosition Parser::token_end(const Token &token) const
+auto Parser::TokenEnd(const Token &token) -> Position
 {
-	return make_position(token.line, token.col_end);
+  return token.range.end;
 }
 
-SourceLocation Parser::location_from_token(const Token &token) const
+auto Parser::LocationFromToken(const Token &token) -> Range
 {
-	return SourceLocation{
-		.start = token_start(token),
-		.end = token_end(token)
+	return token.range;
+}
+
+auto Parser::LocationFromTokens(const Token &start_token, const Token &end_token) -> Range
+{
+	return Range{
+		.start = TokenStart(start_token),
+		.end = TokenEnd(end_token)
 	};
 }
 
-SourceLocation Parser::location_from_tokens(const Token &start_token, const Token &end_token) const
+auto Parser::LocationFromNodes(const BaseASTNode &start_node, const BaseASTNode &end_node) -> Range
 {
-	return SourceLocation{
-		.start = token_start(start_token),
-		.end = token_end(end_token)
+	return Range{
+		.start = start_node.range.start,
+		.end = end_node.range.end
 	};
 }
 
-SourceLocation Parser::location_from_nodes(const BaseASTNode &start_node, const BaseASTNode &end_node) const
+auto Parser::LocationFromTokenToNode(const Token &start_token, const BaseASTNode &end_node) -> Range
 {
-	return SourceLocation{
-		.start = start_node.location.start,
-		.end = end_node.location.end
+	return Range{
+		.start = TokenStart(start_token),
+		.end = end_node.range.end
 	};
 }
 
-SourceLocation Parser::location_from_token_to_node(const Token &start_token, const BaseASTNode &end_node) const
+auto Parser::LocationFromNodeToToken(const BaseASTNode &start_node, const Token &end_token) -> Range
 {
-	return SourceLocation{
-		.start = token_start(start_token),
-		.end = end_node.location.end
-	};
-}
-
-SourceLocation Parser::location_from_node_to_token(const BaseASTNode &start_node, const Token &end_token) const
-{
-	return SourceLocation{
-		.start = start_node.location.start,
-		.end = token_end(end_token)
+	return Range{
+		.start = start_node.range.start,
+		.end = TokenEnd(end_token)
 	};
 }
 

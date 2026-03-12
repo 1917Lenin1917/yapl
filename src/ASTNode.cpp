@@ -2,11 +2,10 @@
 // Created by lenin on 17.11.2024.
 //
 
-#include "yapl/ASTNode.hpp"
-
-
-#include <algorithm>
 #include <memory>
+
+#include "yapl/ASTNode.hpp"
+#include "yapl/ByteCodeVisitor.hpp"
 
 namespace yapl {
 
@@ -408,6 +407,11 @@ std::string ClassASTNode::print(size_t indent_size)
         res += REPEAT((indent_size+1)*2, ' ') + "}\n";
         res += REPEAT(indent_size*2, ' ') + "}\n";
         return res;
+    }
+
+    void RootASTNode::visit(ByteCodeVisitor &visitor) const
+    {
+      visitor.visit_RootASTNode(*this);
     }
 
     std::string ForEachLoopASTNode::print(size_t indent_size)

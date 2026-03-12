@@ -1,232 +1,366 @@
-//
-// Created by lenin on 13.11.2024.
-//
+#include <array>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+
 #include "yapl/Lexer.hpp"
 #include "yapl/Token.hpp"
 
-#include <array>
-
 using enum yapl::TOKEN_TYPE;
 
-void check_token_types(std::string_view src,
-                       std::span<const yapl::TOKEN_TYPE> expected)
-{
-    yapl::Lexer lex{src};
-    auto toks = lex.make_tokens();
+namespace {
 
-    REQUIRE(toks.size() == expected.size());
-    for (std::size_t i = 0; i < expected.size(); ++i)
-        CHECK(toks[i].type == expected[i]);
+auto tokenize(std::string_view source) -> std::vector<yapl::Token>
+{
+    yapl::Lexer lexer{source};
+    return lexer.Tokenize();
 }
 
-void check_token_types_and_values(std::string_view src,
-                       std::span<yapl::Token> expected)
+void check_token_types(std::string_view source, std::span<const yapl::TOKEN_TYPE> expectedTypes)
 {
-    yapl::Lexer lex{src};
-    auto toks = lex.make_tokens();
+    const auto tokens = tokenize(source);
 
-    REQUIRE(toks.size() == expected.size());
-    for (std::size_t i = 0; i < expected.size(); ++i)
+    REQUIRE(tokens.size() == expectedTypes.size());
+    for (std::size_t i = 0; i < expectedTypes.size(); ++i)
+        CHECK(tokens[i].type == expectedTypes[i]);
+}
+
+void check_token_types_and_values(std::string_view source, std::span<const yapl::Token> expectedTokens)
+{
+    const auto tokens = tokenize(source);
+
+    REQUIRE(tokens.size() == expectedTokens.size());
+    for (std::size_t i = 0; i < expectedTokens.size(); ++i)
     {
-        CHECK(toks[i].type == expected[i].type);
-        CHECK(std::string(toks[i].value) == std::string(expected[i].value));
+        CHECK(tokens[i].type == expectedTokens[i].type);
+        CHECK(std::string(tokens[i].value) == std::string(expectedTokens[i].value));
     }
 }
-TEST_CASE("Test empty text", "[lexer]")
+
+} // namespace
+
+TEST_CASE("Lexer tokenizes empty input", "[lexer]")
 {
-    check_token_types("", std::array{ TT_EOF });
+    check_token_types("", std::array{TT_EOF});
 }
 
-TEST_CASE("Test keywords and operators", "[lexer]")
+TEST_CASE("Lexer tokenizes whitespace-only input", "[lexer]")
 {
-    check_token_types("+ - * % / . , ! = == != < <= > >= => or and if else for fn var let const return while ;",
-                      std::array{ PLUS, MINUS, TIMES, MOD, SLASH, PERIOD, COMMA,
-                                          NOT, ASSIGN, EQ, NEQ, LT, LQ, GT, GQ, ARROW,
-                                          OR, AND, IF, ELSE, FOR, FN, VAR, LET, CONST,
-                                          RETURN, WHILE, SEMICOLON, TT_EOF });
+    check_token_types(" \t\r   \t", std::array{TT_EOF});
 }
 
-TEST_CASE("Test literals", "[lexer]")
+TEST_CASE("Lexer tokenizes all current keywords", "[lexer]")
 {
-    yapl::Lexer lexer{ R"(69 42.12 "string" 'another string' true false "string with special chars \n\\")" };
-    auto tokens = lexer.make_tokens();
-
-    REQUIRE(tokens[0].type == yapl::TOKEN_TYPE::INTEGER);
-    REQUIRE(tokens[0].value == std::string("69"));
-
-    REQUIRE(tokens[1].type == yapl::TOKEN_TYPE::FLOAT);
-    REQUIRE(tokens[1].value == std::string("42.12"));
-
-    REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::STRING);
-    REQUIRE(tokens[2].value == std::string("string"));
-
-    REQUIRE(tokens[3].type == yapl::TOKEN_TYPE::STRING);
-    REQUIRE(tokens[3].value == std::string("another string"));
-
-    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::BOOL);
-    REQUIRE(tokens[4].value == std::string("true"));
-
-    REQUIRE(tokens[5].type == yapl::TOKEN_TYPE::BOOL);
-    REQUIRE(tokens[5].value == std::string("false"));
-
-    REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::STRING);
-    REQUIRE(tokens[6].value == std::string("string with special chars \n\\"));
-
-    REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::SEMICOLON);
-    REQUIRE(tokens[8].type == yapl::TOKEN_TYPE::TT_EOF);
+    check_token_types(
+        "or and if else for while class fn let const return import export from",
+        std::array{
+            OR, AND, IF, ELSE, FOR, WHILE, CLASS, FN, LET, CONST, RETURN, IMPORT, EXPORT, FROM, SEMICOLON, TT_EOF
+        }
+    );
 }
 
-TEST_CASE("Test identifiers", "[lexer]")
+TEST_CASE("Lexer tokenizes identifiers and booleans", "[lexer]")
 {
-    yapl::Lexer lexer{ "apple another_identifier with_numbers_42_and_underscores CamelCase" };
-    auto tokens = lexer.make_tokens();
+    const std::array expected{
+        yapl::Token{ .type = IDENTIFIER, .value = "apple" },
+        yapl::Token{ .type = IDENTIFIER, .value = "_hidden" },
+        yapl::Token{ .type = IDENTIFIER, .value = "with_numbers_42" },
+        yapl::Token{ .type = IDENTIFIER, .value = "CamelCase" },
+        yapl::Token{ .type = BOOL, .value = "true" },
+        yapl::Token{ .type = BOOL, .value = "false" },
+        yapl::Token{ .type = SEMICOLON },
+        yapl::Token{ .type = TT_EOF },
+    };
 
-
-    REQUIRE(tokens[0].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(tokens[0].value == std::string("apple"));
-
-    REQUIRE(tokens[1].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(tokens[1].value == std::string("another_identifier"));
-
-    REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(tokens[2].value == std::string("with_numbers_42_and_underscores"));
-
-    REQUIRE(tokens[3].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(tokens[3].value == std::string("CamelCase"));
-
-    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::SEMICOLON);
-    REQUIRE(tokens[5].type == yapl::TOKEN_TYPE::TT_EOF);
+    check_token_types_and_values("apple _hidden with_numbers_42 CamelCase true false", expected);
 }
 
-TEST_CASE("Test keywords", "[lexer]")
+TEST_CASE("Lexer tokenizes punctuation and bracket tokens", "[lexer]")
 {
-    yapl::Lexer lexer{ "if else for while fn let const return" };
-    auto tokens = lexer.make_tokens();
-
-    REQUIRE(tokens[0].type == yapl::TOKEN_TYPE::IF);
-    REQUIRE(tokens[1].type == yapl::TOKEN_TYPE::ELSE);
-    REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::FOR);
-    REQUIRE(tokens[3].type == yapl::TOKEN_TYPE::WHILE);
-    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::FN);
-    REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::LET);
-    REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::CONST);
-    REQUIRE(tokens[8].type == yapl::TOKEN_TYPE::RETURN);
-
-    REQUIRE(tokens[9].type == yapl::TOKEN_TYPE::SEMICOLON);
-    REQUIRE(tokens[10].type == yapl::TOKEN_TYPE::TT_EOF);
+    check_token_types(
+        "( ) { } [ ] ; : ,",
+        std::array{
+            LPAREN, RPAREN,
+            LBRACK, RBRACK,
+            LSQBRACK, RSQBRACK,
+            SEMICOLON, COLON, COMMA,
+            TT_EOF
+        }
+    );
 }
 
-TEST_CASE("Test single-line comment removal", "[lexer]")
+TEST_CASE("Lexer tokenizes single-character operators", "[lexer]")
 {
-    yapl::Lexer lexer{ "first_line;\nidentifier; // blah-blah-blah comment\nnext_line_identifier;" };
-    auto tokens = lexer.make_tokens();
-
-    REQUIRE(tokens[0].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(tokens[0].value == std::string("first_line"));
-
-    REQUIRE(tokens[1].type == yapl::TOKEN_TYPE::SEMICOLON);
-
-    REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(tokens[2].value == std::string("identifier"));
-
-    REQUIRE(tokens[3].type == yapl::TOKEN_TYPE::SEMICOLON);
-
-    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(tokens[4].value == std::string("next_line_identifier"));
-
-    REQUIRE(tokens[5].type == yapl::TOKEN_TYPE::SEMICOLON);
-
-    REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::TT_EOF);
+    check_token_types(
+        "+ - * % / ! < > =",
+        std::array{
+            PLUS, MINUS, TIMES, MOD, SLASH, NOT, LT, GT, ASSIGN, SEMICOLON, TT_EOF
+        }
+    );
 }
 
-TEST_CASE("Test line and col numbers", "[lexer]")
+TEST_CASE("Lexer tokenizes equals-form operators", "[lexer]")
 {
-    yapl::Lexer lexer{ "first_line_identifier;\nsecond; third; //comment\n fourth;" };
-    auto tokens = lexer.make_tokens();
-
-    REQUIRE(tokens[0].line == 1);
-    REQUIRE(tokens[0].col_start == 1);
-    REQUIRE(tokens[0].col_end == 21);
-
-    REQUIRE(tokens[2].line == 2);
-    REQUIRE(tokens[2].col_start == 1);
-    REQUIRE(tokens[2].col_end == 6);
-
-    REQUIRE(tokens[4].line == 2);
-    REQUIRE(tokens[4].col_start == 9);
-    REQUIRE(tokens[4].col_end == 13);
-
-    REQUIRE(tokens[6].line == 3);
-    REQUIRE(tokens[6].col_start == 2);
-    REQUIRE(tokens[6].col_end == 7);
+    check_token_types(
+        "+= -= *= %= /= != <= >= ==",
+        std::array{
+            PLUSEQ, MINUSEQ, TIMESEQ, MODEQ, SLASHEQ, NEQ, LQ, GQ, EQ, SEMICOLON, TT_EOF
+        }
+    );
 }
 
-TEST_CASE("Test semicolon insertion", "[lexer]")
+TEST_CASE("Lexer tokenizes integers and floats", "[lexer]")
 {
-    SECTION("Simple expression")
-        check_token_types("10",
-                          std::array{INTEGER, SEMICOLON, TT_EOF});
+    const std::array expected{
+        yapl::Token{ .type = INTEGER, .value = "0" },
+        yapl::Token{ .type = INTEGER, .value = "69" },
+        yapl::Token{ .type = FLOAT, .value = "42.12" },
+        yapl::Token{ .type = FLOAT, .value = "1." },
+        yapl::Token{ .type = SEMICOLON },
+        yapl::Token{ .type = TT_EOF },
+    };
 
-    SECTION("Unfinished expression")
-        check_token_types("10 +",
-                          std::array{INTEGER, PLUS, TT_EOF});
-
-    SECTION("Multi-line expression")
-        check_token_types("6 +\n9",
-                          std::array{INTEGER, PLUS, INTEGER, SEMICOLON, TT_EOF});
-
-    SECTION("Unclosed scope")
-        check_token_types("if a < b {",
-                          std::array{IF, IDENTIFIER, LT, IDENTIFIER, LBRACK, TT_EOF});
-
-    SECTION("If scope on another line")
-        check_token_types("if a < b\n{}",
-                          std::array{IF, IDENTIFIER, LT, IDENTIFIER, LBRACK, RBRACK, TT_EOF});
-
-    SECTION("If scope on another line")
-        check_token_types("if a < b\n{\nprint(penis)\n}",
-                          std::array{IF, IDENTIFIER, LT, IDENTIFIER, LBRACK, IDENTIFIER, LPAREN, IDENTIFIER, RPAREN, SEMICOLON, RBRACK, TT_EOF});
+    check_token_types_and_values("0 69 42.12 1.", expected);
 }
 
-TEST_CASE("Test basic lexer tokens", "[lexer]")
+TEST_CASE("Lexer tokenizes quoted strings", "[lexer]")
 {
-    yapl::Lexer lexer{ "69 * (400 + 20) / 48.2" };
-    auto tokens = lexer.make_tokens();
+    const std::array expected{
+        yapl::Token{ .type = STRING, .value = "hello" },
+        yapl::Token{ .type = STRING, .value = "world" },
+        yapl::Token{ .type = SEMICOLON },
+        yapl::Token{ .type = TT_EOF },
+    };
+
+    check_token_types_and_values(R"("hello" 'world')", expected);
+}
+
+TEST_CASE("Lexer tokenizes string escapes", "[lexer]")
+{
+    const std::array expected{
+        yapl::Token{ .type = STRING, .value = "line1\nline2\\" },
+        yapl::Token{ .type = SEMICOLON },
+        yapl::Token{ .type = TT_EOF },
+    };
+
+    check_token_types_and_values(R"("line1\nline2\\")", expected);
+}
+
+TEST_CASE("Lexer tokenizes format strings as FSTRING", "[lexer]")
+{
+    const std::array expected{
+        yapl::Token{ .type = FSTRING, .value = "hello {name}" },
+        yapl::Token{ .type = SEMICOLON },
+        yapl::Token{ .type = TT_EOF },
+    };
+
+    check_token_types_and_values("`hello {name}`", expected);
+}
+
+TEST_CASE("Lexer skips single-line comments", "[lexer]")
+{
+    const std::array expected{
+        IDENTIFIER, SEMICOLON,
+        IDENTIFIER, SEMICOLON,
+        IDENTIFIER, SEMICOLON,
+        TT_EOF
+    };
+
+    check_token_types(
+        "first;\nsecond; // comment here\nthird",
+        expected
+    );
+}
+
+TEST_CASE("Lexer inserts semicolon at end of simple expression", "[lexer]")
+{
+    check_token_types("10", std::array{INTEGER, SEMICOLON, TT_EOF});
+}
+
+TEST_CASE("Lexer does not insert semicolon after unfinished expression", "[lexer]")
+{
+    check_token_types("10 +", std::array{INTEGER, PLUS, TT_EOF});
+}
+
+TEST_CASE("Lexer does not insert semicolon in parenthesized multiline expression", "[lexer]")
+{
+    check_token_types(
+        "(1 +\n2)",
+        std::array{LPAREN, INTEGER, PLUS, INTEGER, RPAREN, SEMICOLON, TT_EOF}
+    );
+}
+
+TEST_CASE("Lexer does not insert semicolon in square-bracket multiline expression", "[lexer]")
+{
+    check_token_types(
+        "[1,\n2]",
+        std::array{LSQBRACK, INTEGER, COMMA, INTEGER, RSQBRACK, SEMICOLON, TT_EOF}
+    );
+}
+
+TEST_CASE("Lexer does not insert semicolon before block opener on next line", "[lexer]")
+{
+    check_token_types(
+        "if condition\n{}",
+        std::array{IF, IDENTIFIER, LBRACK, RBRACK, TT_EOF}
+    );
+}
+
+TEST_CASE("Lexer does not insert semicolon before property access on next line", "[lexer]")
+{
+    check_token_types(
+        "foo\n.bar",
+        std::array{IDENTIFIER, PERIOD, IDENTIFIER, SEMICOLON, TT_EOF}
+    );
+}
+
+TEST_CASE("Lexer does not insert semicolon before assignment on next line", "[lexer]")
+{
+    check_token_types(
+        "foo\n= 1",
+        std::array{IDENTIFIER, ASSIGN, INTEGER, SEMICOLON, TT_EOF}
+    );
+}
+
+TEST_CASE("Lexer does not insert semicolons inside import list braces", "[lexer]")
+{
+    check_token_types(
+        "import {\na,\nb\n} from \"mod\"",
+        std::array{
+            IMPORT, LBRACK, IDENTIFIER, COMMA, IDENTIFIER, RBRACK, FROM, STRING, SEMICOLON, TT_EOF
+        }
+    );
+}
+
+TEST_CASE("Lexer does not insert semicolons inside export list braces", "[lexer]")
+{
+    check_token_types(
+        "export {\na,\nb\n}",
+        std::array{
+            EXPORT, LBRACK, IDENTIFIER, COMMA, IDENTIFIER, RBRACK, TT_EOF
+        }
+    );
+}
+
+TEST_CASE("Lexer clears pending export for declaration export forms", "[lexer]")
+{
+    check_token_types(
+        "export fn foo() {}",
+        std::array{
+            EXPORT, FN, IDENTIFIER, LPAREN, RPAREN, LBRACK, RBRACK, TT_EOF
+        }
+    );
+}
+
+TEST_CASE("Lexer does not auto-insert semicolon after block closing brace", "[lexer]")
+{
+    check_token_types(
+        "if cond {\nvalue\n}\nnext",
+        std::array{
+            IF, IDENTIFIER, LBRACK, IDENTIFIER, SEMICOLON, RBRACK, IDENTIFIER, SEMICOLON, TT_EOF
+        }
+    );
+}
+
+TEST_CASE("Lexer auto-inserts semicolon after object-expression closing brace", "[lexer]")
+{
+    check_token_types(
+        "return { answer: 42 }\nnext",
+        std::array{
+            RETURN, LBRACK, IDENTIFIER, COLON, INTEGER, RBRACK, SEMICOLON, IDENTIFIER, SEMICOLON, TT_EOF
+        }
+    );
+}
+
+TEST_CASE("Lexer tokenizes a representative function", "[lexer]")
+{
+    check_token_types(
+        "fn foo() { return 123; }",
+        std::array{
+            FN, IDENTIFIER, LPAREN, RPAREN, LBRACK, RETURN, INTEGER, SEMICOLON, RBRACK, TT_EOF
+        }
+    );
+}
+
+TEST_CASE("Lexer tokenizes a representative expression", "[lexer]")
+{
+    const auto tokens = tokenize("69 * (400 + 20) / 48.2");
+
     REQUIRE(tokens.size() == 11);
-    REQUIRE((tokens[0].type == yapl::TOKEN_TYPE::INTEGER && strcmp(tokens[0].value, "69") == 0));
-    REQUIRE(tokens[1].type == yapl::TOKEN_TYPE::TIMES);
-    REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::LPAREN);
-    REQUIRE((tokens[3].type == yapl::TOKEN_TYPE::INTEGER && strcmp(tokens[3].value, "400") == 0));
-    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::PLUS);
-    REQUIRE((tokens[5].type == yapl::TOKEN_TYPE::INTEGER && strcmp(tokens[5].value, "20") == 0));
-    REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::RPAREN);
-    REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::SLASH);
-    REQUIRE((tokens[8].type == yapl::TOKEN_TYPE::FLOAT && strcmp(tokens[8].value, "48.2") == 0));
-    REQUIRE(tokens[9].type == yapl::TOKEN_TYPE::SEMICOLON);
-    REQUIRE(tokens[10].type == yapl::TOKEN_TYPE::TT_EOF);
+
+    REQUIRE(tokens[0].type == INTEGER);
+    REQUIRE(tokens[0].value == "69");
+
+    REQUIRE(tokens[1].type == TIMES);
+    REQUIRE(tokens[2].type == LPAREN);
+
+    REQUIRE(tokens[3].type == INTEGER);
+    REQUIRE(tokens[3].value == "400");
+
+    REQUIRE(tokens[4].type == PLUS);
+
+    REQUIRE(tokens[5].type == INTEGER);
+    REQUIRE(tokens[5].value == "20");
+
+    REQUIRE(tokens[6].type == RPAREN);
+    REQUIRE(tokens[7].type == SLASH);
+
+    REQUIRE(tokens[8].type == FLOAT);
+    REQUIRE(tokens[8].value == "48.2");
+
+    REQUIRE(tokens[9].type == SEMICOLON);
+    REQUIRE(tokens[10].type == TT_EOF);
 }
 
-TEST_CASE("Test basic function declaration", "[lexer]")
+TEST_CASE("Lexer stores identifier ranges", "[lexer]")
 {
-    yapl::Lexer lexer{ "fn foo() { return 123; }" };
-    auto tokens = lexer.make_tokens();
-    REQUIRE(tokens.size() == 10);
-    REQUIRE(tokens[0].type == yapl::TOKEN_TYPE::FN);
+    const auto tokens = tokenize("alpha beta");
 
-    REQUIRE(tokens[1].type == yapl::TOKEN_TYPE::IDENTIFIER);
-    REQUIRE(strcmp(tokens[1].value, "foo") == 0);
+    REQUIRE(tokens.size() == 4);
 
-    REQUIRE(tokens[2].type == yapl::TOKEN_TYPE::LPAREN);
-    REQUIRE(tokens[3].type == yapl::TOKEN_TYPE::RPAREN);
+    REQUIRE(tokens[0].type == IDENTIFIER);
+    CHECK(tokens[0].range.start.line == 0);
+    CHECK(tokens[0].range.start.character == 0);
+    CHECK(tokens[0].range.end.line == 0);
+    CHECK(tokens[0].range.end.character == 4);
 
-    REQUIRE(tokens[4].type == yapl::TOKEN_TYPE::LBRACK);
-    REQUIRE(tokens[5].type == yapl::TOKEN_TYPE::RETURN);
-    REQUIRE(tokens[6].type == yapl::TOKEN_TYPE::INTEGER);
-    REQUIRE(strcmp(tokens[6].value, "123") == 0);
-    REQUIRE(tokens[7].type == yapl::TOKEN_TYPE::SEMICOLON);
-    REQUIRE(tokens[8].type == yapl::TOKEN_TYPE::RBRACK);
+    REQUIRE(tokens[1].type == IDENTIFIER);
+    CHECK(tokens[1].range.start.line == 0);
+    CHECK(tokens[1].range.start.character == 6);
+    CHECK(tokens[1].range.end.line == 0);
+    CHECK(tokens[1].range.end.character == 9);
+}
 
-    REQUIRE(tokens[9].type == yapl::TOKEN_TYPE::TT_EOF);
+TEST_CASE("Lexer stores multiline ranges", "[lexer]")
+{
+    const auto tokens = tokenize("first\nsecond");
+
+    REQUIRE(tokens.size() == 5);
+
+    REQUIRE(tokens[0].type == IDENTIFIER);
+    CHECK(tokens[0].range.start.line == 0);
+    CHECK(tokens[0].range.start.character == 0);
+    CHECK(tokens[0].range.end.line == 0);
+    CHECK(tokens[0].range.end.character == 4);
+
+    REQUIRE(tokens[2].type == IDENTIFIER);
+    CHECK(tokens[2].range.start.line == 1);
+    CHECK(tokens[2].range.start.character == 0);
+    CHECK(tokens[2].range.end.line == 1);
+    CHECK(tokens[2].range.end.character == 5);
+}
+
+TEST_CASE("Lexer tokenizes period without creating LPAREN", "[lexer]")
+{
+    const auto tokens = tokenize("foo.bar");
+
+    REQUIRE(tokens.size() == 5);
+    CHECK(tokens[0].type == IDENTIFIER);
+    CHECK(tokens[1].type == PERIOD);
+    CHECK(tokens[2].type == IDENTIFIER);
+    CHECK(tokens[3].type == SEMICOLON);
+    CHECK(tokens[4].type == TT_EOF);
 }

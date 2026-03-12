@@ -1,5 +1,4 @@
-const arr = [1, 2, 3]
-
-for item : arr {
-  print(item)
-}
+const a = 20;
+a = 20;
+let a = 10;
+print(a)

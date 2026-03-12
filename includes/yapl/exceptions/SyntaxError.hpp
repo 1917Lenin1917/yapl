@@ -8,30 +8,44 @@
 #include <string>
 #include <utility>
 #include <format>
+#include <vector>
+
+#include "yapl/Position.hpp"
 
 namespace yapl {
+
 class SyntaxError : public std::exception
 {
-private:
-    std::string m_filename;
-    int line, col_start, col_end;
-    std::string source_line;
-    std::string description;
-
-    std::string what_buffer;
-
-    void build_message();
 public:
-    SyntaxError(std::string filename, int line, int col_start, int col_end, std::string source_line, std::string description = "")
-        :m_filename(std::move(filename)), line(line), col_start(col_start), col_end(col_end), source_line(std::move(source_line)), description(std::move(description))
-    {
-        build_message();
-    }
+  SyntaxError(
+    std::string filename,
+    const Range &range,
+    const std::span<const std::string> sourceLines,
+    std::string description = ""
+  )
+    : m_Filename(std::move(filename)),
+      m_Range(range),
+      m_Description(std::move(description))
+  {
+    CopyRelevantLines(sourceLines);
+    BuildMessage();
+  }
 
-    [[nodiscard]] const char * what() const noexcept override
-    {
-        return what_buffer.c_str();
-    }
+  [[nodiscard]] const char* what() const noexcept override
+  {
+    return m_WhatBuffer.c_str();
+  }
+
+private:
+  std::string m_Filename;
+  Range m_Range;
+  std::string m_Description;
+  std::vector<std::string> m_RelevantLines;
+  std::size_t m_FirstStoredLine = 1;
+  std::string m_WhatBuffer;
+
+  void CopyRelevantLines(std::span<const std::string> sourceLines);
+  void BuildMessage();
 };
 
 }

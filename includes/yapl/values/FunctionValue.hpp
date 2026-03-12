@@ -7,6 +7,7 @@
 #include "StringValue.hpp"
 
 namespace yapl {
+struct CodeObject;
 struct Frame;
 
 class FunctionValue final : public Value
