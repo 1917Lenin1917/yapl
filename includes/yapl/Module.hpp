@@ -5,6 +5,7 @@
 #pragma once
 #include <filesystem>
 #include <memory>
+#include <span>
 #include <string>
 
 #include "ASTNode.hpp"

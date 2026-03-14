@@ -116,7 +116,9 @@ int run_vm_mode(const std::filesystem::path &full_path)
       module.Generate();
       module.SerializeCache();
 
-      ByteCodeVM VM;
+      ByteCodeVM VM{ path };
+			// VM.base_path = path; // I hate you.
+
       module.Run(VM, VM.modules["__builtins__"]);
       return 0;
     }

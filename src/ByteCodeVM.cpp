@@ -5,12 +5,14 @@
 #include "yapl/ByteCodeVM.hpp"
 
 #include <algorithm>
+#include <ranges>
 #include <fstream>
 #include <yapl/Lexer.hpp>
 #include <yapl/Parser.hpp>
 #include <yapl/values/ArrayValue.hpp>
 #include <yapl/values/UserDefinedValue.hpp>
 
+#include "yapl/CodeObject.hpp"
 #include "yapl/Module.hpp"
 #include "yapl/Utils.hpp"
 #include "yapl/values/CodeObjectValue.hpp"
@@ -20,6 +22,7 @@
 #include "yapl/values/ModuleValue.hpp"
 #include "yapl/values/TypeObjectValue.hpp"
 #include "yapl/values/BuiltinFunctionValue.hpp"
+#include "yapl/exceptions/DiagnosticsError.hpp"
 
 
 #ifdef __linux__
@@ -69,7 +72,8 @@ void input(ByteCodeVM& VM)
 }
 
 
-ByteCodeVM::ByteCodeVM()
+ByteCodeVM::ByteCodeVM(const std::filesystem::path& path)
+	:base_path(path)
 {
   const auto frame = std::make_shared<Frame>();
   frame->globals = frame;
@@ -78,9 +82,8 @@ ByteCodeVM::ByteCodeVM()
 
   m_FrameStack.push_back(frame);
 
-  auto fn = mk_builtin("print", print);
-
-  frame->names["print"] = std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, fn, "__main__", "print", false);
+  frame->names["print"] = std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, mk_builtin("print", print), "__main__", "print", false);
+  frame->names["input"] = std::make_shared<Variable>(true, VALUE_TYPE::BUILTIN_FUNCTION, mk_builtin("input", input), "__main__", "input", false);
   frame->names[IntegerTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(IntegerTypeObject), "__main__", IntegerTypeObject->name, false);
   frame->names[FloatTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(FloatTypeObject), "__main__", FloatTypeObject->name, false);
   frame->names[ArrayTypeObject->name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE,  mk_type(ArrayTypeObject), "__main__", ArrayTypeObject->name, false);
@@ -509,21 +512,28 @@ void ByteCodeVM::Run(const CodeObject &code)
       }
       case IMPORT_NAME:
       {
-        auto& frame = *m_FrameStack.back();
+        auto frame = m_FrameStack.back();
 
         auto _frame = m_Stack.top();
         auto module_frame = static_cast<ModuleValue*>(_frame.get())->module;
 
-        const int names_idx = code.op_codes[idx++];
-        auto name = code.names[names_idx];
+        const std::size_t names_idx = code.op_codes[idx++];
+				const std::string name = code.names[names_idx];
 
-        auto found = FindInFrame(*module_frame, name);
-        frame.names[name] = std::make_shared<Variable>(
+				auto export_var = std::ranges::find_if(module_frame->code_object->exports, [&name](const Export& _export) {
+					return _export.name == name;
+				});
+
+        auto found = export_var->kind == ExportKind::NAME ?
+						FindInFrame(*module_frame, export_var->name) :
+						module_frame->locals[export_var->index];
+
+        frame->names[export_var->name] = std::make_shared<Variable>(
           true,
           found ? found->type : VALUE_TYPE::UNDEFINED,
           found ? found->value : mk_undefined(),
           module_frame->code_object ? module_frame->code_object->name : "__module__",
-          name
+          export_var->name
         );
         break;
       }
@@ -724,6 +734,7 @@ void ByteCodeVM::InvokeFunction(
   call_frame.locals = std::move(locals);
 
   function_object->tp->nb_call(*this, function_object);
+
   m_FrameStack.pop_back();
 }
 
@@ -738,9 +749,15 @@ void ByteCodeVM::LoadModule(const std::string& module_name)
   {
     module.Tokenize();
     module.Parse();
-    module.Resolve();
+    auto result = module.Resolve();
+
+		ThrowIfHasDiagnosticErrors(
+			module_name,
+			result->diagnostics,
+			module.GetLines()
+		);
     module.Generate();
-    module.SerializeCache();
+    // module.SerializeCache();
   }
 
   auto module_frame = module.Run(*this, modules["__builtins__"]);

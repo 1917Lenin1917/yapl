@@ -30,7 +30,7 @@ struct Frame
 class ByteCodeVM
 {
 public:
-  explicit ByteCodeVM();
+  ByteCodeVM(const std::filesystem::path& path);
 
   ~ByteCodeVM()
   {

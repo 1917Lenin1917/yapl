@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 #include <format>
+#include <span>
 #include <vector>
 
 #include "yapl/Position.hpp"

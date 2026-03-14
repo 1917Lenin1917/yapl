@@ -156,6 +156,11 @@ void ByteCodeVisitor::visit(const BinaryOpASTNode &node)
 
 void ByteCodeVisitor::visit(const IdentifierASTNode &node)
 {
+	// FIXME: Resolver is wrong here, since for example 
+	// const SEPARATOR = " ";
+	// fn get_separator() { return SEPARATOR }
+	// results in SEPARATOR being local to this function!
+	
   const auto current_object = m_ObjectStack.back();
   const std::size_t symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
   const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
@@ -393,17 +398,17 @@ void ByteCodeVisitor::visit(const FunctionASTNode &node)
   const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
 
   m_ObjectStack.push_back(std::make_shared<CodeObject>(CodeObject{ .name = symbol.name }));
+  m_CompileContextStack.push_back({
+    .resolution_result = m_ResolutionResult,
+    .co = m_ObjectStack.back(),
+  });
 
   node.decl->visit(*this);
   node.body->visit(*this);
 
   auto f_code_object = m_ObjectStack.back();
   m_ObjectStack.pop_back();
-
-  m_CompileContextStack.push_back({
-    .resolution_result = m_ResolutionResult,
-    .co = m_ObjectStack.back(),
-  });
+	m_CompileContextStack.pop_back();
 
   current_object->constants.push_back(std::make_shared<CodeObjectValue>(f_code_object));
   const std::size_t idx = current_object->constants.size() - 1;
@@ -415,7 +420,6 @@ void ByteCodeVisitor::visit(const FunctionASTNode &node)
 
   current_object->op_codes.push_back(MAKE_FUNC);
 
-  m_CompileContextStack.pop_back();
 }
 
 void ByteCodeVisitor::visit(const FunctionDeclASTNode &node)
@@ -611,13 +615,15 @@ void ByteCodeVisitor::visit(const ExportASTNode &node)
     const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(var->id);
     const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
 
-    const std::size_t index = m_CompileContextStack.back().GetLocalIndex(symbol_id);
+    const std::size_t index = symbol.IsLocal() ?
+			 m_CompileContextStack.back().GetLocalIndex(symbol_id) :
+			 m_CompileContextStack.back().GetOrCreateNameIndex(symbol_id, symbol.name);
 
-    m_CompileContextStack.back().CreateExport(Export{
+    current_object->exports.push_back((Export{
       .kind = symbol.IsLocal() ? ExportKind::LOCAL : ExportKind::NAME,
       .index = index,
       .name = symbol.name,
-    });
+    }));
   }
 }
 

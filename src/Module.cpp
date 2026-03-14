@@ -98,6 +98,7 @@ auto Module::Generate() -> void
 {
   ByteCodeVisitor visitor{ *m_ResolutionResult };
   m_CodeObject = visitor.visit_RootASTNode(*static_cast<RootASTNode*>(m_AST.get()));
+	m_CodeObject->name = m_Filename;
 }
 
 auto Module::Run(ByteCodeVM &VM, const std::shared_ptr<Frame> &globals) const -> std::shared_ptr<Frame>
