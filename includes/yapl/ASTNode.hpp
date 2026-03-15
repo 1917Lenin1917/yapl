@@ -35,7 +35,7 @@ public:
 
   virtual std::string print(size_t indent_size) = 0;
 
-  virtual void visit(Visitor &visitor) {}
+  virtual void visit(Visitor &visitor) { }
 };
 
 class IntegerASTNode final : public BaseASTNode
@@ -370,6 +370,7 @@ public:
     : BaseASTNode(id, range), name(name), args(std::move(args)), return_type(return_type) {}
 
   std::string print(size_t indent_size) override;
+  void visit(Visitor &visitor) override { visitor.visit(*this); }
 };
 
 class GetPropertyASTNode final : public BaseASTNode

@@ -55,7 +55,7 @@ static void init_int_tp()
         return std::hash<int>{}(as_int(self.get())->value);
     };
 
-    IntegerTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
+    IntegerTypeObject->nb_make = [](const std::vector<VPtr>& args, const std::unordered_map<std::string, VPtr>& kwargs) -> VPtr
     {
         auto v = args.size() == 1 ? as_int(args[0].get())->value : 0;
         return std::make_unique<IntegerValue>(v);

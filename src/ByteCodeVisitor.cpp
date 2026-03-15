@@ -156,15 +156,46 @@ void ByteCodeVisitor::visit(const BinaryOpASTNode &node)
 
 void ByteCodeVisitor::visit(const IdentifierASTNode &node)
 {
-	// FIXME: Resolver is wrong here, since for example 
-	// const SEPARATOR = " ";
-	// fn get_separator() { return SEPARATOR }
-	// results in SEPARATOR being local to this function!
-	
   const auto current_object = m_ObjectStack.back();
   const std::size_t symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
   const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
+  const auto& scope = m_ResolutionResult.scopes.at(symbol.declaration_scope_id);
+  const auto& current_scope = m_ResolutionResult.scopes.at(m_ResolutionResult.node_to_scope.at(node.id));
 
+  if (symbol.is_builtin)
+  {
+    std::size_t index = m_CompileContextStack.back().GetOrCreateNameIndex(symbol_id, symbol.name);
+
+    current_object->op_codes.push_back( next_identifier_as_store_name ? STORE_BUILTIN : LOAD_BUILTIN);
+    current_object->op_codes.push_back(static_cast<OpCode>(index));
+    next_identifier_as_store_name = false;
+    return;
+  }
+  if (scope.kind == ScopeKind::MODULE && scope.id != current_scope.id && symbol.kind != SymbolKind::IMPORT)
+  {
+    bool is_module = false;
+    std::size_t parent_scope_id = current_scope.parent_scope_id;
+    while (parent_scope_id != -1ull)
+    {
+      auto& parent_scope = m_ResolutionResult.scopes.at(parent_scope_id);
+      if (parent_scope.kind == ScopeKind::FUNCTION)
+      {
+        is_module = true;
+        break;
+      }
+
+      parent_scope_id = parent_scope.parent_scope_id;
+    }
+    if (is_module)
+    {
+      std::size_t index = m_CompileContextStack.at(0).GetLocalIndex(symbol_id);
+
+      current_object->op_codes.push_back( next_identifier_as_store_name ? STORE_GLOBAL : LOAD_GLOBAL);
+      current_object->op_codes.push_back(static_cast<OpCode>(index));
+      next_identifier_as_store_name = false;
+      return;
+    }
+  }
   if (symbol.IsLocal())
   {
     std::size_t index = m_CompileContextStack.back().GetLocalIndex(symbol_id);
@@ -280,10 +311,10 @@ void ByteCodeVisitor::visit(const ScopeASTNode &node)
 void ByteCodeVisitor::visit(const ForLoopASTNode &node)
 {
   const auto current_object = m_ObjectStack.back();
-  m_CompileContextStack.push_back({
-    .resolution_result = m_ResolutionResult,
-    .co = m_ObjectStack.back(),
-  });
+  // m_CompileContextStack.push_back({
+  //   .resolution_result = m_ResolutionResult,
+  //   .co = m_ObjectStack.back(),
+  // });
 
   node.declaration->visit(*this);
 
@@ -312,21 +343,23 @@ void ByteCodeVisitor::visit(const ForLoopASTNode &node)
   const int out = static_cast<int>(current_object->op_codes.size()) - static_cast<int>(jmp_out_len_idx + 1);
   current_object->op_codes[jmp_out_len_idx] = static_cast<OpCode>(out);
 
-  m_CompileContextStack.pop_back();
+  // m_CompileContextStack.pop_back();
 }
 
 void ByteCodeVisitor::visit(const ForEachLoopASTNode &node)
 {
   const auto current_object = m_ObjectStack.back();
-  const std::size_t symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
-  const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
+  // const std::size_t symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
+  // const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
 
-  m_CompileContextStack.push_back({
-    .resolution_result = m_ResolutionResult,
-    .co = m_ObjectStack.back(),
-  });
+  // m_CompileContextStack.push_back({
+  //   .resolution_result = m_ResolutionResult,
+  //   .co = m_ObjectStack.back(),
+  // });
 
-  std::size_t index = m_CompileContextStack.back().AllocateLocal(symbol_id, symbol.name);
+  // std::size_t index = m_CompileContextStack.back().AllocateLocal(symbol_id, symbol.name);
+  m_CompileContextStack.back().co->locals.push_back(node.identifier.value);
+  const std::size_t index = m_CompileContextStack.back().co->locals.size() - 1;
 
   current_object->op_codes.push_back(LOAD_UNDEF);
 
@@ -350,7 +383,7 @@ void ByteCodeVisitor::visit(const ForEachLoopASTNode &node)
   current_object->op_codes.push_back(JMP);
   current_object->op_codes.push_back(static_cast<OpCode>(idx - current_object->op_codes.size() - 2));
 
-  m_CompileContextStack.pop_back();
+  // m_CompileContextStack.pop_back();
 }
 
 void ByteCodeVisitor::visit(const WhileLoopASTNode &node)
@@ -371,10 +404,10 @@ void ByteCodeVisitor::visit(const WhileLoopASTNode &node)
   current_object->op_codes.push_back(static_cast<OpCode>(0)); // placeholder
   const std::size_t jmp_back_len_idx = current_object->op_codes.size() - 1;
 
-  const std::size_t back = cond_start - jmp_back_len_idx + 1;
+  const std::size_t back = cond_start - jmp_back_len_idx - 1;
   current_object->op_codes[jmp_back_len_idx] = static_cast<OpCode>(back);
 
-  const std::size_t out = current_object->op_codes.size() - jmp_out_len_idx + 1;
+  const std::size_t out = current_object->op_codes.size() - jmp_out_len_idx -1;
   current_object->op_codes[jmp_out_len_idx] = static_cast<OpCode>(out);
 }
 
@@ -456,10 +489,8 @@ void ByteCodeVisitor::visit(const FunctionCallASTNode &node)
 
   const auto current_object = m_ObjectStack.back();
 
-  if (is_kw_func)
+  if (kw_args > 0)
   {
-    is_kw_func = false;
-
     current_object->op_codes.push_back(KW_CALL);
     current_object->op_codes.push_back(static_cast<OpCode>(pos_args));
     current_object->op_codes.push_back(static_cast<OpCode>(kw_args));
@@ -512,15 +543,15 @@ void ByteCodeVisitor::visit(const MethodCallASTNode &node)
   node.base_expr->visit(*this);
 
   const auto current_object = m_ObjectStack.back();
-  const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
-  const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
+  // const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
+  // const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
+  //
+  // const std::size_t index = m_CompileContextStack.back().GetOrCreateNameIndex(symbol_id, symbol.name);
+  m_CompileContextStack.back().co->names.push_back(node.name.value);
+  const std::size_t index = m_CompileContextStack.back().co->names.size() - 1;
 
-  const std::size_t index = m_CompileContextStack.back().GetOrCreateNameIndex(symbol_id, symbol.name);
-
-  if (is_kw_func)
+  if (kw_args > 0)
   {
-    is_kw_func = false;
-
     current_object->op_codes.push_back(KW_CALL_METHOD);
     current_object->op_codes.push_back(static_cast<OpCode>(index));
     current_object->op_codes.push_back(static_cast<OpCode>(pos_args));
@@ -539,10 +570,8 @@ void ByteCodeVisitor::visit(const GetPropertyASTNode &node)
   node.base_expr->visit(*this);
 
   const auto current_object = m_ObjectStack.back();
-  const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
-  const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
-
-  const std::size_t index = m_CompileContextStack.back().GetOrCreateNameIndex(symbol_id, symbol.name);
+  m_CompileContextStack.back().co->names.push_back(node.name.value);
+  const std::size_t index = m_CompileContextStack.back().co->names.size() - 1;
 
   current_object->op_codes.push_back(GET_PROPERTY);
   current_object->op_codes.push_back(static_cast<OpCode>(index));
@@ -550,14 +579,17 @@ void ByteCodeVisitor::visit(const GetPropertyASTNode &node)
 
 void ByteCodeVisitor::visit(const SetPropertyASTNode &node)
 {
+  // TODO: Maybe attributes should also be symbols?
   node.RHS->visit(*this);
   node.base_expr->visit(*this);
 
   const auto current_object = m_ObjectStack.back();
-  const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
-  const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
+  // const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
+  // const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
 
-  const std::size_t index = m_CompileContextStack.back().GetOrCreateNameIndex(symbol_id, symbol.name);
+  // const std::size_t index = m_CompileContextStack.back().GetOrCreateNameIndex(symbol_id, symbol.name);
+  m_CompileContextStack.back().co->names.push_back(node.name.value);
+  const std::size_t index = m_CompileContextStack.back().co->names.size() - 1;
 
   current_object->op_codes.push_back(SET_PROPERTY);
   current_object->op_codes.push_back(static_cast<OpCode>(index));
@@ -569,12 +601,13 @@ void ByteCodeVisitor::visit(const ClassASTNode &node)
 
   for (const auto& _method_node : node.member_functions)
   {
-    const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(_method_node->id);
-    const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
+    // const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(_method_node->id);
+    // const auto& symbol = m_ResolutionResult.symbols.at(symbol_id);
 
     const auto method_node = static_cast<FunctionASTNode*>(_method_node.get());
+    const auto decl_node = static_cast<FunctionDeclASTNode*>(method_node->decl.get());
 
-    m_ObjectStack.push_back(std::make_shared<CodeObject>(CodeObject{ .name = symbol.name }));
+    m_ObjectStack.push_back(std::make_shared<CodeObject>(CodeObject{ .name = decl_node->name.value }));
     m_CompileContextStack.push_back({
       .resolution_result = m_ResolutionResult,
       .co = m_ObjectStack.back(),
@@ -593,7 +626,7 @@ void ByteCodeVisitor::visit(const ClassASTNode &node)
     current_object->op_codes.push_back(LOAD_CONST);
     current_object->op_codes.push_back(static_cast<OpCode>(code_idx));
 
-    emitConstantForNode<std::string, StringValue>(symbol.name);
+    emitConstantForNode<std::string, StringValue>(decl_node->name.value);
   }
 
   const auto& symbol_id = m_ResolutionResult.node_to_symbol.at(node.id);
@@ -677,8 +710,6 @@ void ByteCodeVisitor::visit(const StatementIndexASTNode &node)
 
 void ByteCodeVisitor::visit(const KeyParamExpressionASTNode &node)
 {
-  is_kw_func = true;
-
   node.expression->visit(*this);
   emitConstantForNode<std::string, StringValue>(node.identifier.value);
 }

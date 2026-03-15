@@ -20,6 +20,7 @@
 #include "yapl/Module.hpp"
 #include "yapl/Resolver.hpp"
 #include "yapl/exceptions/DiagnosticsError.hpp"
+#include "yapl/exceptions/SyntaxError.hpp"
 #include "yapl/values/BuiltinFunctionValue.hpp"
 #include "yapl/values/DictValue.hpp"
 #include "yapl/values/ModuleValue.hpp"
@@ -123,7 +124,17 @@ int run_vm_mode(const std::filesystem::path &full_path)
       return 0;
     }
   }
-  catch (const std::exception &error)
+  catch (const DiagnosticsError &error)
+  {
+    std::cerr << error.what() << std::endl;
+    return 1;
+  }
+  catch (const SyntaxError &error)
+  {
+    std::cerr << error.what() << std::endl;
+    return 1;
+  }
+  catch (const std::runtime_error &error)
   {
     std::cerr << error.what() << std::endl;
     return 1;

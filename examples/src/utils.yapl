@@ -23,12 +23,12 @@ fn pad_right(string, char, len) {
   return string + padding;
 }
 
-export fn join(arr, =sep) {
+export fn join(arr) {
   let result = ""  // <- here!
 
   for let i = 0; i < arr.size(); i += 1; {
     result += arr.get(i)
-    if i != arr.size() - 1 { result += sep }
+    if i != arr.size() - 1 { result += get_separator() }
   }
   return result
 }

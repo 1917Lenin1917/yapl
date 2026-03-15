@@ -4,24 +4,3 @@ fn get_separator() { return SEPARATOR }
 
 export { SEPARATOR, get_separator }
 
-
-// Module
-//
-// name:      constants
-// version:   1
-// CodeObject:
-// - names:     [ get_separator ]
-// - locals:    [ SEPARATOR ]
-// - constants: [ <CodeObject 'get_separator'>, ", " ]
-// - exports: [
-//  Export{
-//      .kind = "local",
-//      .index = 0,
-//      .export_name = "SEPARATOR"
-//  },
-//  Export{
-//      .kind = "name",
-//      .index = 0,
-//      .export_name = "get_separator"
-//  },
-// ]

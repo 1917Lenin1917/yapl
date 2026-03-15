@@ -36,6 +36,12 @@ enum OpCode : std::uint32_t {
   INIT_VAR,   // sets `is_tdz` to false and assigns value from stack top
   DEINIT_VAR, // sets `is_tdz` to true
 
+  LOAD_GLOBAL,
+  STORE_GLOBAL,
+
+  LOAD_BUILTIN,
+  STORE_BUILTIN,
+
   LOAD_LOCAL,
   STORE_LOCAL,
 

@@ -10,6 +10,8 @@
 #include <memory>
 
 namespace yapl {
+struct DictEq;
+struct DictHash;
 class ArrayValue;
 }
 
@@ -26,7 +28,7 @@ class BaseASTNode;
 
 using VPtr = std::shared_ptr<Value>;
 
-using make_fn = std::function<VPtr(const std::vector<VPtr>& args)>;
+using make_fn = std::function<VPtr(const std::vector<VPtr>& args, const std::unordered_map<std::string, VPtr>& kwargs)>;
 using call_fn = std::function<VPtr(ByteCodeVM& VM, const VPtr& self)>;
 using hash_fn = std::function<std::size_t(const VPtr&)>;
 using unop_fn = std::function<VPtr(const VPtr&)>;

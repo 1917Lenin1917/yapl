@@ -136,7 +136,6 @@ private:
   std::vector<CompileContext> m_CompileContextStack;
 
   bool next_identifier_as_store_name = false;
-  bool is_kw_func = false;
   bool m_IsSetIndex = false;
 
   const ResolutionResult& m_ResolutionResult;

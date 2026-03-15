@@ -304,6 +304,54 @@ void print_code_object(const CodeObject &code_object, std::ostream &output)
         break;
       }
 
+      case OpCode::CALL_METHOD:
+      {
+        std::size_t operand = 0;
+        if (read_operand(instruction_pointer, operand)) {
+          output << " " << operand;
+          if (operand < code_object.names.size()) {
+            output << " (" << code_object.names[operand] << ")";
+          }
+        } else {
+          output << " <missing operand>";
+        }
+        std::size_t method_amount = 0;
+        if (read_operand(instruction_pointer, method_amount)) {
+          output << " " << method_amount;
+        } else {
+          output << " <missing operand>";
+        }
+        output << "\n";
+        break;
+      }
+
+      case OpCode::KW_CALL_METHOD:
+      {
+        std::size_t operand = 0;
+        if (read_operand(instruction_pointer, operand)) {
+          output << " " << operand;
+          if (operand < code_object.names.size()) {
+            output << " (" << code_object.names[operand] << ")";
+          }
+        } else {
+          output << " <missing operand>";
+        }
+        std::size_t method_amount = 0;
+        if (read_operand(instruction_pointer, method_amount)) {
+          output << " " << method_amount;
+        } else {
+          output << " <missing operand>";
+        }
+        std::size_t method_amount_2 = 0;
+        if (read_operand(instruction_pointer, method_amount_2)) {
+          output << " " << method_amount_2;
+        } else {
+          output << " <missing operand>";
+        }
+        output << "\n";
+        break;
+      }
+
       case OpCode::IMPORT_NAME:
       case OpCode::LOAD_NAME:
       case OpCode::STORE_NAME:

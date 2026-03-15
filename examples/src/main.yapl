@@ -1,4 +1,8 @@
-const a = 20;
-a = 20;
-let a = 10;
-print(a)
+fn fib(num) {
+  if num <= 1 { return 1 }
+
+  return fib(num - 1) + fib(num - 2)
+}
+
+const result = fib(30)
+print(result)

@@ -123,7 +123,7 @@ auto Module::Run(ByteCodeVM &VM, const std::shared_ptr<Frame> &globals) const ->
     .code_object = m_CodeObject,
     .locals = std::move(locals),
   });
-  module_frame->globals = globals ? globals : module_frame;
+  module_frame->globals = globals ? globals : nullptr;
 
   VM.m_FrameStack.push_back(module_frame);
   VM.Run(*m_CodeObject);

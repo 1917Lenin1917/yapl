@@ -33,7 +33,7 @@ static void init_size_iterator_type()
   //   return SizeIteratorTypeObject->nb_next(self);
   // };
 
-  SizeIteratorTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
+  SizeIteratorTypeObject->nb_make = [](const std::vector<VPtr>& args, const std::unordered_map<std::string, VPtr>& kwargs) -> VPtr
   {
     auto iterable = args[0];
     auto len_v = as_int(args[0].get())->value;

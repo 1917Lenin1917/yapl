@@ -945,6 +945,8 @@ auto Parser::Export() -> std::vector<ASTPtr>
       ret.push_back(std::move(var));
     }
     ret.push_back(std::make_unique<ExportASTNode>(std::move(vars), m_NodeId++, LocationFromToken(export_token)));
+
+    return ret;
   }
 
   if (next_token.type == TOKEN_TYPE::CLASS)

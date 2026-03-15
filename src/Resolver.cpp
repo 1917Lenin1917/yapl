@@ -216,7 +216,57 @@ void Resolver::visit(const ForLoopASTNode& node)
   PopScope();
 }
 
-void Resolver::visit(const ForEachLoopASTNode &node) { }
+void Resolver::visit(const ForEachLoopASTNode& node)
+{
+  BindNodeToScope(node.id, CurrentScopeId());
+
+  const std::size_t parent_scope_id = CurrentScopeId();
+
+  if (node.iterable_expr != nullptr) {
+    node.iterable_expr->visit(*this);
+  }
+
+  const std::size_t loop_scope_id = PushScope(
+    ScopeKind::BLOCK,
+    node.id,
+    parent_scope_id
+  );
+
+  auto& scope = CurrentScope();
+
+  const auto duplicate_iterator = scope.name_to_symbol.find(node.identifier.value);
+  if (duplicate_iterator != scope.name_to_symbol.end()) {
+    const auto& previous_symbol = m_Result.symbols[duplicate_iterator->second];
+    ReportDuplicateDeclaration(node.identifier, previous_symbol);
+  } else {
+    const std::size_t shadowed_symbol_id = LookupInParentScopes(node.identifier.value);
+    if (shadowed_symbol_id != -1ull) {
+      ReportShadowingDeclaration(node.identifier, m_Result.symbols[shadowed_symbol_id]);
+    }
+
+    const std::size_t symbol_id = m_SymbolId++;
+
+    m_Result.symbols.push_back(Symbol{
+      .id = symbol_id,
+      .name = node.identifier.value,
+      .kind = SymbolKind::MUTABLE,
+      .is_exported = false,
+      .declaration_scope_id = scope.id,
+      .declaration_node_id = node.id,
+      .declaration_location = ToLocation(node.identifier),
+      .reference_locations = {},
+      .reference_node_ids = {},
+    });
+
+    scope.name_to_symbol.emplace(node.identifier.value, symbol_id);
+    scope.declared_symbols.push_back(symbol_id);
+  }
+
+  BindNodeToScope(node.scope->id, loop_scope_id);
+  node.scope->visit(*this);
+
+  PopScope();
+}
 
 void Resolver::visit(const WhileLoopASTNode& node)
 {
@@ -273,25 +323,30 @@ void Resolver::visit(const FunctionASTNode& node)
     ReportShadowingDeclaration(function_decl->name, m_Result.symbols[shadowed_symbol_id]);
   }
 
-  const std::size_t function_symbol_id = m_SymbolId++;
+  // TODO: for now methods shouldn't be symbols, since they can only be called like this.print(),
+  // so this messes up global name resolution for builtins for example
+  if (CurrentScope().kind != ScopeKind::CLASS)
+  {
+    const std::size_t function_symbol_id = m_SymbolId++;
 
-  m_Result.symbols.push_back({
-    .id = function_symbol_id,
-    .name = function_decl->name.value,
-    .kind = SymbolKind::FUNCTION,
-    .is_exported = false,
-    .declaration_scope_id = parent_scope.id,
-    .declaration_node_id = function_decl->id,
-    .declaration_location = ToLocation(*function_decl),
-    .reference_locations = {},
-    .reference_node_ids = {},
-  });
+    m_Result.symbols.push_back({
+      .id = function_symbol_id,
+      .name = function_decl->name.value,
+      .kind = SymbolKind::FUNCTION,
+      .is_exported = false,
+      .declaration_scope_id = parent_scope.id,
+      .declaration_node_id = function_decl->id,
+      .declaration_location = ToLocation(*function_decl),
+      .reference_locations = {},
+      .reference_node_ids = {},
+    });
 
-  parent_scope.name_to_symbol.emplace(function_decl->name.value, function_symbol_id);
-  parent_scope.declared_symbols.push_back(function_symbol_id);
+    parent_scope.name_to_symbol.emplace(function_decl->name.value, function_symbol_id);
+    parent_scope.declared_symbols.push_back(function_symbol_id);
 
-  BindNodeToSymbol(node.id, function_symbol_id);
-  BindNodeToSymbol(function_decl->id, function_symbol_id);
+    BindNodeToSymbol(node.id, function_symbol_id);
+    BindNodeToSymbol(function_decl->id, function_symbol_id);
+  }
 
   const std::size_t function_scope_id = PushScope(
     ScopeKind::FUNCTION,
@@ -299,15 +354,11 @@ void Resolver::visit(const FunctionASTNode& node)
     parent_scope_id
   );
 
-  if (function_decl->args != nullptr) {
-    BindNodeToScope(function_decl->args->id, function_scope_id);
-    function_decl->args->visit(*this);
-  }
+  BindNodeToScope(function_decl->args->id, function_scope_id);
+  function_decl->args->visit(*this);
 
-  if (node.body != nullptr) {
-    BindNodeToScope(node.body->id, function_scope_id);
-    node.body->visit(*this);
-  }
+  BindNodeToScope(node.body->id, function_scope_id);
+  node.body->visit(*this);
 
   PopScope();
 }

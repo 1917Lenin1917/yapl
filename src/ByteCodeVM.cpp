@@ -222,8 +222,9 @@ void ByteCodeVM::Run(const CodeObject &code)
         const auto local_idx = code.op_codes[idx++];
         auto& var = frame.locals[local_idx];
 
-        var->is_tdz = true;
-        var->value = nullptr;
+        // TODO: this still probably should do something, but only be called at the end of the function scope
+        // var->is_tdz = true;
+        // var->value = nullptr;
         break;
       }
       case UNARY_OP:
@@ -235,6 +236,62 @@ void ByteCodeVM::Run(const CodeObject &code)
       {
         HandleBinaryOp(static_cast<BinaryOp>(code.op_codes[idx++]));
         break;
+      }
+      case LOAD_GLOBAL:
+      {
+        auto& frame = *m_FrameStack.back();
+
+        // frame.globals is always module the function was defined in
+        // TODO: unless we add closures, and function within functions, in which case this might be false
+        const auto locals_index = code.op_codes[idx++];
+        const auto var = frame.globals->locals[locals_index];
+
+        m_Stack.push(var->value);
+        break;
+      }
+      case STORE_GLOBAL:
+      {
+        auto& frame = *m_FrameStack.back();
+
+        const auto locals_index = code.op_codes[idx++];
+        const auto var = frame.globals->locals[locals_index];
+        const auto value = m_Stack.top();
+        m_Stack.pop();
+
+        var->value = value;
+        var->type = value->type;
+        break;
+      }
+      case LOAD_BUILTIN:
+      {
+        auto& builtin_frame = *m_FrameStack.at(0);
+
+        const auto name_idx = code.op_codes[idx++];
+        const auto& name = code.names[name_idx];
+
+        const auto var = FindInFrame(builtin_frame, name);
+        m_Stack.push(var->value);
+        break;
+      }
+      case STORE_BUILTIN:
+      {
+        auto& builtin_frame = *m_FrameStack.at(0);
+
+        const auto names_index = code.op_codes[idx++];
+        const auto& name = code.names[names_index];
+
+        const auto var = FindInFrame(builtin_frame, name);
+
+        const auto value = m_Stack.top();
+        m_Stack.pop();
+
+        if (!var)
+          throw std::runtime_error(std::format("Unknown variable {}", name));
+
+        var->value = value;
+        var->type = value->type;
+        break;
+
       }
       case LOAD_NAME:
       {
@@ -300,16 +357,21 @@ void ByteCodeVM::Run(const CodeObject &code)
       }
       case MAKE_FUNC:
       {
-        auto& frame = *m_FrameStack.back();
+        const auto frame = m_FrameStack.back();
 
         const auto code_object_value = m_Stack.top();
         const auto casted = static_cast<CodeObjectValue*>(code_object_value.get());
         const auto name = casted->code_object->name;
         m_Stack.pop();
 
-        auto fn = mk_func(name, static_cast<CodeObjectValue*>(code_object_value.get())->code_object, frame.globals ? frame.globals : m_FrameStack.back());
-
-        frame.names[name] = std::make_shared<Variable>(true, VALUE_TYPE::FUNCTION, fn, frame.code_object ? frame.code_object->name : "__main__", name, false);
+        frame->names[name] = std::make_shared<Variable>(Variable{
+          .is_const = true,
+          .type = VALUE_TYPE::FUNCTION,
+          .value = mk_func(name, casted->code_object, frame),
+          .module_name = frame->code_object->name,
+          .name = name,
+          .is_tdz = false,
+        });
         break;
       }
       case KW_CALL:
@@ -459,8 +521,7 @@ void ByteCodeVM::Run(const CodeObject &code)
         const auto method_amount = code.op_codes[idx++];
         const auto name = code.names[name_idx];
 
-        auto& frame = *m_FrameStack.back();
-        auto globals = frame.globals ? frame.globals : m_FrameStack.back();
+        const auto frame = m_FrameStack.back();
 
         std::unordered_map<std::string, VPtr> methods;
         for (std::size_t i = 0; i < method_amount; ++i)
@@ -471,14 +532,14 @@ void ByteCodeVM::Run(const CodeObject &code)
           const auto code_object_value = m_Stack.top();
           m_Stack.pop();
 
-          auto fn = mk_func(casted->value, static_cast<CodeObjectValue*>(code_object_value.get())->code_object, globals);
+          auto fn = mk_func(casted->value, static_cast<CodeObjectValue*>(code_object_value.get())->code_object, frame);
           methods[casted->value] = fn;
         }
 
         TypeObject* user_type = new TypeObject {
           .name = name,
           .methods = std::move(methods),
-          .nb_make = [&user_type, this](const std::vector<VPtr>& args) -> VPtr
+          .nb_make = [&user_type, this](const std::vector<VPtr>& args, const std::unordered_map<std::string, VPtr>& kwargs) -> VPtr
           {
             const auto new_value  = std::make_shared<UserDefinedValue>(user_type);
             const auto& constructor = user_type->methods["init"];
@@ -488,7 +549,7 @@ void ByteCodeVM::Run(const CodeObject &code)
             init_args.push_back(new_value);
             for (const auto& v : args) init_args.push_back(v);
 
-            InvokeFunction(constructor, std::move(init_args));
+            InvokeFunction(constructor, std::move(init_args), kwargs);
             return new_value;
           }
         };
@@ -496,7 +557,13 @@ void ByteCodeVM::Run(const CodeObject &code)
         init_base_methods(user_type);
         m_Types.push_back(user_type);
         const auto user_type_value = mk_type(user_type);
-        frame.names[name] = std::make_shared<Variable>(true, VALUE_TYPE::TYPE, user_type_value, frame.code_object ? frame.code_object->name : "__main__", name);
+        frame->names[name] = std::make_shared<Variable>(Variable{
+          .is_const = true,
+          .type = VALUE_TYPE::TYPE,
+          .value = user_type_value,
+          .module_name = frame->code_object->name,
+          .name = name,
+        });
 
         break;
       }
@@ -520,20 +587,20 @@ void ByteCodeVM::Run(const CodeObject &code)
         const std::size_t names_idx = code.op_codes[idx++];
 				const std::string name = code.names[names_idx];
 
-				auto export_var = std::ranges::find_if(module_frame->code_object->exports, [&name](const Export& _export) {
+				auto export_var = *std::ranges::find_if(module_frame->code_object->exports, [&name](const Export& _export) {
 					return _export.name == name;
 				});
 
-        auto found = export_var->kind == ExportKind::NAME ?
-						FindInFrame(*module_frame, export_var->name) :
-						module_frame->locals[export_var->index];
+        auto found = export_var.kind == ExportKind::NAME ?
+						FindInFrame(*module_frame, export_var.name) :
+						module_frame->locals[export_var.index];
 
-        frame->names[export_var->name] = std::make_shared<Variable>(
+        frame->names[export_var.name] = std::make_shared<Variable>(
           true,
           found ? found->type : VALUE_TYPE::UNDEFINED,
           found ? found->value : mk_undefined(),
           module_frame->code_object ? module_frame->code_object->name : "__module__",
-          export_var->name
+          export_var.name
         );
         break;
       }
@@ -749,7 +816,7 @@ void ByteCodeVM::LoadModule(const std::string& module_name)
   {
     module.Tokenize();
     module.Parse();
-    auto result = module.Resolve();
+    const auto result = module.Resolve();
 
 		ThrowIfHasDiagnosticErrors(
 			module_name,

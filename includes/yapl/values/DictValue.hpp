@@ -80,7 +80,7 @@ static void init_dict_tp()
     return mk_str(res);
   };
 
-  DictTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
+  DictTypeObject->nb_make = [](const std::vector<VPtr>& args, const std::unordered_map<std::string, VPtr>& kwargs) -> VPtr
   {
     return mk_dict();
   };

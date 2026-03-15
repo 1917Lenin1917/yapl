@@ -117,7 +117,7 @@ void init_str_tp()
         return std::hash<std::string>{}(as_str(self.get())->value);
     };
 
-    StringTypeObject->nb_make = [](const std::vector<VPtr>& args) -> VPtr
+    StringTypeObject->nb_make = [](const std::vector<VPtr>& args, const std::unordered_map<std::string, VPtr>& kwargs) -> VPtr
     {
         if (args.empty())
             return mk_str("");

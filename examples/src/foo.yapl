@@ -1,0 +1,19 @@
+import { join } from 'utils'
+import { get_separator } from 'constants'
+
+class Foo {
+  fn init(this, =name) {
+    this.names = [name]
+  }
+
+  fn add_name(this, name) {
+    this.names.append(name);
+  }
+
+  fn print(this) {
+    print("Foo{", join(this.names), "}")
+  }
+}
+
+export const foo = Foo(name="Maksim")
+//export { foo }
